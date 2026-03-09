@@ -17,14 +17,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder m)
     {
-        // ── Pribadi ───────────────────────────────────────────────────────────
         m.Entity<Pribadi>().HasKey(e => e.PribadiID);
         m.Entity<Pribadi>()
             .HasOne(e => e.PribadiPPID)
             .WithOne(e => e.Pribadi)
             .HasForeignKey<PribadiPPID>(e => e.PribadiID);
 
-        // ── PermohonanPPID ────────────────────────────────────────────────────
         m.Entity<PermohonanPPID>()
             .HasOne(e => e.Status)
             .WithMany()
@@ -60,29 +58,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             new StatusPPID { StatusPPIDID = 11, NamaStatusPPID = "Selesai" }
         );
 
-        // ── Seed: Keperluan ───────────────────────────────────────────────────
         m.Entity<Keperluan>().HasData(
             new Keperluan { KeperluanID = 1, NamaKeperluan = "Observasi" },
             new Keperluan { KeperluanID = 2, NamaKeperluan = "Permintaan Data" },
             new Keperluan { KeperluanID = 3, NamaKeperluan = "Wawancara" }
         );
 
-        // ── Seed: JenisDokumenPPID ────────────────────────────────────────────
         m.Entity<JenisDokumenPPID>().HasData(
-            new JenisDokumenPPID { JenisDokumenPPIDID = 1, NamaJenisDokumenPPID = "KTP",                           IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 2, NamaJenisDokumenPPID = "Surat Permohonan",              IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 3, NamaJenisDokumenPPID = "Proposal Penelitian",           IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 4, NamaJenisDokumenPPID = "Akta Notaris",                  IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 5, NamaJenisDokumenPPID = "Dokumen Identifikasi (TTD)",    IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 6, NamaJenisDokumenPPID = "Surat Izin",                    IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 7, NamaJenisDokumenPPID = "Data Hasil",                    IsActive = true }
+            new JenisDokumenPPID { JenisDokumenPPIDID = 1, NamaJenisDokumenPPID = "KTP",                        IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 2, NamaJenisDokumenPPID = "Surat Permohonan",           IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 3, NamaJenisDokumenPPID = "Proposal Penelitian",        IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 4, NamaJenisDokumenPPID = "Akta Notaris",               IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 5, NamaJenisDokumenPPID = "Dokumen Identifikasi (TTD)", IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 6, NamaJenisDokumenPPID = "Surat Izin",                 IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 7, NamaJenisDokumenPPID = "Data Hasil",                 IsActive = true }
         );
     }
 
-    // ── Helper: generate NoPermohonan ─────────────────────────────────────────
     public async Task<string> GenerateNoPermohonan()
     {
-        var year = DateTime.Now.Year;
+        var year  = DateTime.UtcNow.Year;
         var count = await PermohonanPPID
             .CountAsync(p => p.CratedAt != null && p.CratedAt.Value.Year == year);
         return $"PPD/{year}/{(count + 1):D4}";

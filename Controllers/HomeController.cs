@@ -8,10 +8,8 @@ namespace PermintaanData.Controllers;
 
 public class HomeController(AppDbContext db) : Controller
 {
-    // GET /
     public IActionResult Index() => View(new LacakViewModel());
 
-    // GET /Home/Lacak?noPermohonan=PPD/2024/0001
     [HttpGet]
     public async Task<IActionResult> Lacak(string? noPermohonan)
     {
@@ -56,7 +54,6 @@ public class HomeController(AppDbContext db) : Controller
         return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan.Trim() });
     }
 
-    // GET/POST Kuesioner
     [HttpGet]
     public async Task<IActionResult> Kuesioner(Guid id)
     {
@@ -70,12 +67,11 @@ public class HomeController(AppDbContext db) : Controller
     {
         if (!ModelState.IsValid) return View("Kuesioner", model);
 
-        // Simpan ke catatan (bisa tambah tabel kuesioner nanti)
         var p = await db.PermohonanPPID.FindAsync(model.PermohonanPPIDID);
         if (p != null)
         {
             p.StatusPPIDID = StatusId.Selesai;
-            p.UpdatedAt    = DateTime.Now;
+            p.UpdatedAt    = DateTime.UtcNow;
             await db.SaveChangesAsync();
         }
 
@@ -83,18 +79,17 @@ public class HomeController(AppDbContext db) : Controller
         return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan });
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
     private static List<RiwayatStatusVm> BuildRiwayat(int current)
     {
         var steps = new[]
         {
-            (StatusId.TerdaftarSistem,      "Permohonan Terdaftar"),
-            (StatusId.IdentifikasiAwal,     "Identifikasi Awal"),
-            (StatusId.SuratIzinTerbit,      "Surat Izin Diterbitkan"),
-            (StatusId.Didisposisi,          "Didisposisi ke Unit"),
-            (StatusId.DiProses,             "Data Sedang Diproses"),
-            (StatusId.DataSiap,             "Data Siap Diunduh"),
-            (StatusId.Selesai,              "Selesai"),
+            (StatusId.TerdaftarSistem,  "Permohonan Terdaftar"),
+            (StatusId.IdentifikasiAwal, "Identifikasi Awal"),
+            (StatusId.SuratIzinTerbit,  "Surat Izin Diterbitkan"),
+            (StatusId.Didisposisi,      "Didisposisi ke Unit"),
+            (StatusId.DiProses,         "Data Sedang Diproses"),
+            (StatusId.DataSiap,         "Data Siap Diunduh"),
+            (StatusId.Selesai,          "Selesai"),
         };
 
         var result = new List<RiwayatStatusVm>();
@@ -109,7 +104,6 @@ public class HomeController(AppDbContext db) : Controller
             });
         }
 
-        // Sisipkan observasi jika sedang di tahap itu
         if (current is StatusId.ObservasiDijadwalkan or StatusId.ObservasiSelesai)
         {
             var idx = result.FindIndex(r => r.StatusId == StatusId.Didisposisi);

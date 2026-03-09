@@ -43,7 +43,8 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
     {
         if (!ModelState.IsValid) return View("SuratIzin", vm);
 
-        // Upload surat izin
+        var now = DateTime.UtcNow;
+
         if (vm.FileSuratIzin?.Length > 0)
         {
             var dir = Path.Combine(env.WebRootPath, "uploads", vm.PermohonanPPIDID.ToString());
@@ -53,11 +54,11 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
             await vm.FileSuratIzin.CopyToAsync(s);
             db.DokumenPPID.Add(new DokumenPPID
             {
-                PermohonanPPIDID = vm.PermohonanPPIDID,
-                NamaDokumenPPID  = "Surat Izin",
-                UploadDokumenPPID = $"/uploads/{vm.PermohonanPPIDID}/{fn}",
+                PermohonanPPIDID   = vm.PermohonanPPIDID,
+                NamaDokumenPPID    = "Surat Izin",
+                UploadDokumenPPID  = $"/uploads/{vm.PermohonanPPIDID}/{fn}",
                 JenisDokumenPPIDID = JenisDokumenId.SuratIzin,
-                CreatedAt        = DateTime.Now
+                CreatedAt          = now
             });
         }
 
@@ -66,8 +67,7 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
         {
             p.NoSuratPermohonan = vm.NoSuratIzin;
             p.StatusPPIDID      = StatusId.Didisposisi;
-            p.UpdatedAt         = DateTime.Now;
-            // Disposisi ke bidang terkait jika dipilih
+            p.UpdatedAt         = now;
             if (vm.DisposisiKe == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangTerkait))
                 p.NamaBidang = vm.NamaBidangTerkait;
         }
@@ -139,7 +139,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     public async Task<IActionResult> TerimaDisposisiPost(TerimaDisposisiVm vm)
     {
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null) { p.StatusPPIDID = StatusId.DiProses; p.UpdatedAt = DateTime.Now; }
+        if (p != null) { p.StatusPPIDID = StatusId.DiProses; p.UpdatedAt = DateTime.UtcNow; }
         await db.SaveChangesAsync();
         TempData["Success"] = "Disposisi diterima. Silakan siapkan data.";
 
@@ -160,16 +160,17 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     public async Task<IActionResult> JadwalObservasiPost(JadwalObservasiVm vm)
     {
         if (!ModelState.IsValid) return View("JadwalObservasi", vm);
+        var now = DateTime.UtcNow;
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
             Tanggal          = vm.TanggalObservasi,
             Waktu            = vm.WaktuObservasi,
             NamaPIC          = vm.NamaPIC,
-            CreatedAt        = DateTime.Now
+            CreatedAt        = now
         });
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null) { p.StatusPPIDID = StatusId.ObservasiDijadwalkan; p.UpdatedAt = DateTime.Now; }
+        if (p != null) { p.StatusPPIDID = StatusId.ObservasiDijadwalkan; p.UpdatedAt = now; }
         await db.SaveChangesAsync();
         TempData["Success"] = $"Jadwal observasi berhasil dibuat: <strong>{vm.TanggalObservasi:dd MMM yyyy}</strong> pukul {vm.WaktuObservasi:HH:mm}";
         return RedirectToAction("Index");
@@ -188,6 +189,8 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     {
         if (!ModelState.IsValid) return View("UploadData", vm);
 
+        var now = DateTime.UtcNow;
+
         if (vm.FileData?.Length > 0)
         {
             var dir = Path.Combine(env.WebRootPath, "uploads", vm.PermohonanPPIDID.ToString());
@@ -197,15 +200,15 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             await vm.FileData.CopyToAsync(s);
             db.DokumenPPID.Add(new DokumenPPID
             {
-                PermohonanPPIDID  = vm.PermohonanPPIDID,
-                NamaDokumenPPID   = "Data Hasil",
-                UploadDokumenPPID = $"/uploads/{vm.PermohonanPPIDID}/{fn}",
+                PermohonanPPIDID   = vm.PermohonanPPIDID,
+                NamaDokumenPPID    = "Data Hasil",
+                UploadDokumenPPID  = $"/uploads/{vm.PermohonanPPIDID}/{fn}",
                 JenisDokumenPPIDID = JenisDokumenId.DataHasil,
-                CreatedAt         = DateTime.Now
+                CreatedAt          = now
             });
         }
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null) { p.StatusPPIDID = StatusId.DataSiap; p.UpdatedAt = DateTime.Now; }
+        if (p != null) { p.StatusPPIDID = StatusId.DataSiap; p.UpdatedAt = now; }
         await db.SaveChangesAsync();
 
         TempData["Success"] = "Data berhasil diupload. Pemohon dapat mengunduh data.";
