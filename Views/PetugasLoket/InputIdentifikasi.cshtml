@@ -1,0 +1,49 @@
+@model PermohonanPPID
+@{
+    ViewData["Title"] = "Input Identifikasi Awal";
+    ViewData["Role"]  = "Petugas Loket";
+    Layout = "_LayoutAdmin";
+}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center text-xl">📝</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Input Identifikasi Awal</h3>
+                <p class="text-xs font-mono text-gray-400">@Model.NoPermohonan · @Model.Pribadi?.Nama</p>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm">
+            <p class="font-semibold text-blue-800 mb-2">📋 Ringkasan Permohonan</p>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div><span class="text-blue-400 text-xs">Kategori</span><p class="text-blue-800 font-medium">@Model.KategoriPemohon</p></div>
+                <div><span class="text-blue-400 text-xs">No. Surat</span><p class="text-blue-800 font-medium">@Model.NoSuratPermohonan</p></div>
+                <div class="col-span-2"><span class="text-blue-400 text-xs">Judul Penelitian</span><p class="text-blue-700">@Model.JudulPenelitian</p></div>
+                <div class="col-span-2">
+                    <span class="text-blue-400 text-xs">Keperluan</span>
+                    <div class="flex gap-1 mt-0.5">
+                        @if (Model.IsObservasi)      { <span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">Observasi</span> }
+                        @if (Model.IsPermintaanData) { <span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Permintaan Data</span> }
+                        @if (Model.IsWawancara)      { <span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">Wawancara</span> }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-sm text-amber-700 flex gap-2">
+            <span>⚠️</span>
+            <p>Setelah disubmit, sistem akan mengubah status ke <strong>Identifikasi Awal</strong>. Cetak formulir dan minta pemohon menandatangani.</p>
+        </div>
+
+        <form asp-action="InputIdentifikasiPost" asp-controller="PetugasLoket" asp-route-id="@Model.PermohonanPPIDID" method="post">
+            @Html.AntiForgeryToken()
+            <div class="flex gap-3">
+                <a href="/petugas-loket" class="flex-1 text-center border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-8 rounded-xl text-sm">
+                    📄 Konfirmasi & Cetak Dokumen →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

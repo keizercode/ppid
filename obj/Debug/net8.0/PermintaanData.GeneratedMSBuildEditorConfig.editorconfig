@@ -1,0 +1,107 @@
+is_global = true
+build_property.TargetFramework = net8.0
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v8.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = PermintaanData
+build_property.RootNamespace = PermintaanData
+build_property.ProjectDir = D:\ProjectDotnet\baru\PermintaanData\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 8.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = D:\ProjectDotnet\baru\PermintaanData
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 8.0
+build_property.EnableCodeStyleSeverity = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Home/Detail.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxEZXRhaWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Home/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Home/Kuesioner.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxLdWVzaW9uZXIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Bidang.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEJpZGFuZy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/JadwalObservasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbE9ic2VydmFzaS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Psmdi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFBzbWRpLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/TerimaDisposisi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFRlcmltYURpc3Bvc2lzaS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/UploadData.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFVwbG9hZERhdGEuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kepegawaian/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2VwZWdhd2FpYW5cSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kepegawaian/SuratIzin.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2VwZWdhd2FpYW5cU3VyYXRJemluLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/DaftarPemohon.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XERhZnRhclBlbW9ob24uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Detail.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XERldGFpbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Identifikasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XElkZW50aWZpa2FzaS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/InputIdentifikasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XElucHV0SWRlbnRpZmlrYXNpLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/UploadTTD.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XFVwbG9hZFRURC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Shared/_LayoutAdmin.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXRBZG1pbi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 

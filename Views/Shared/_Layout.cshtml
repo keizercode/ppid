@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - PPID Diskominfo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .step-done    { background-color:#22c55e; color:#fff; }
+        .step-active  { background-color:#2563eb; color:#fff; }
+        .step-pending { background-color:#e5e7eb; color:#9ca3af; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+<header class="bg-[#003876] shadow-md">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg">🏛</div>
+        <div>
+            <p class="text-white text-xs opacity-70">Dinas Lingkungan Hidup</p>
+            <h1 class="text-white font-bold text-sm">Sistem Permohonan Permintaan Data</h1>
+        </div>
+        <a href="/" class="ml-auto text-blue-200 hover:text-white text-sm">Beranda</a>
+    </div>
+</header>
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-green-50 border-l-4 border-green-500 px-4 py-3 max-w-5xl mx-auto w-full mt-3">
+        <p class="text-green-800 text-sm">@Html.Raw(TempData["Success"])</p>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="bg-red-50 border-l-4 border-red-500 px-4 py-3 max-w-5xl mx-auto w-full mt-3">
+        <p class="text-red-800 text-sm">@Html.Raw(TempData["Error"])</p>
+    </div>
+}
+
+<main class="flex-1">@RenderBody()</main>
+
+<footer class="bg-[#003876] text-white mt-10">
+    <div class="max-w-5xl mx-auto px-4 py-4 text-center text-xs opacity-60">
+        &copy; @DateTime.Now.Year Dinas Lingkungan Hidup · Sistem Informasi PPID
+    </div>
+</footer>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

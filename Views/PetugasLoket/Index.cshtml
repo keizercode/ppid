@@ -1,0 +1,72 @@
+@model List<PermohonanPPID>
+@{
+    ViewData["Title"] = "Dashboard Petugas Loket";
+    ViewData["Role"]  = "Petugas Loket";
+    Layout = "_LayoutAdmin";
+}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    @foreach(var (icon, lbl, val) in new[]{
+        ("📋","Total", Model.Count.ToString()),
+        ("🆕","Terdaftar", Model.Count(m => m.StatusPPIDID <= StatusId.IdentifikasiAwal).ToString()),
+        ("⏳","Diproses", Model.Count(m => m.StatusPPIDID > StatusId.SuratIzinTerbit && m.StatusPPIDID < StatusId.DataSiap).ToString()),
+        ("✅","Selesai", Model.Count(m => m.StatusPPIDID >= StatusId.DataSiap).ToString()),
+    }) {
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <div class="text-2xl mb-1">@icon</div>
+            <p class="text-2xl font-bold text-gray-800">@val</p>
+            <p class="text-xs text-gray-400">@lbl</p>
+        </div>
+    }
+</div>
+<div class="flex items-center justify-between mb-3">
+    <h3 class="font-semibold text-gray-700 text-sm">Daftar Permohonan</h3>
+    <a href="/petugas-loket/identifikasi" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">➕ Permohonan Baru</a>
+</div>
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50 border-b text-left">
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">No. Permohonan</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Pemohon</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tgl Masuk</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Aksi</th>
+            </tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach (var item in Model) {
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 font-mono text-xs text-blue-600">@item.NoPermohonan</td>
+                        <td class="px-4 py-3 font-medium text-gray-800">@item.Pribadi?.Nama</td>
+                        <td class="px-4 py-3 text-xs">
+                            @(item.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa" : "🏢 LSM")
+                        </td>
+                        <td class="px-4 py-3 text-xs text-gray-500">@item.CratedAt?.ToString("dd MMM yyyy")</td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                                @(item.StatusPPIDID >= StatusId.DataSiap ? "bg-green-100 text-green-700" :
+                                  item.StatusPPIDID == StatusId.TerdaftarSistem ? "bg-gray-100 text-gray-600" :
+                                  "bg-yellow-100 text-yellow-700")">
+                                @item.Status?.NamaStatusPPID
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex gap-1.5">
+                                <a href="/petugas-loket/detail/@item.PermohonanPPIDID"
+                                   class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-lg">Detail</a>
+                                @if (item.StatusPPIDID == StatusId.TerdaftarSistem) {
+                                    <a href="/petugas-loket/input-identifikasi/@item.PermohonanPPIDID"
+                                       class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-lg">Input ID</a>
+                                }
+                                @if (item.StatusPPIDID == StatusId.IdentifikasiAwal) {
+                                    <a href="/petugas-loket/upload-ttd/@item.PermohonanPPIDID"
+                                       class="text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-2 py-1 rounded-lg">Upload TTD</a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

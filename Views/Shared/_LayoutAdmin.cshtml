@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin PPID</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-60 bg-[#003876] text-white flex flex-col fixed top-0 left-0 h-full z-30 shadow-xl">
+        <div class="px-4 py-4 border-b border-blue-800">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🏛</span>
+                <div>
+                    <p class="text-xs text-blue-300">PPID DLH</p>
+                    <p class="text-sm font-bold">Admin Panel</p>
+                </div>
+            </div>
+        </div>
+        <div class="px-4 py-2 bg-blue-900 border-b border-blue-800 text-xs">
+            <span class="text-blue-300">Role: </span>
+            <span class="text-yellow-300 font-semibold">@(ViewData["Role"] ?? "Admin")</span>
+        </div>
+        <nav class="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto text-sm">
+            <p class="text-xs text-blue-400 uppercase tracking-widest px-2 py-2 mt-1">Petugas Loket</p>
+            <a href="/petugas-loket" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors">🗂 Dashboard Loket</a>
+            <a href="/petugas-loket/identifikasi" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors">➕ Permohonan Baru</a>
+
+            <p class="text-xs text-blue-400 uppercase tracking-widest px-2 py-2 mt-2">Kepegawaian</p>
+            <a href="/kepegawaian" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors">📋 Surat Izin</a>
+
+            <p class="text-xs text-blue-400 uppercase tracking-widest px-2 py-2 mt-2">KDI</p>
+            <a href="/kdi/psmdi" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors">💾 PSMDI</a>
+            <a href="/kdi/bidang" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors">🏢 Bidang Terkait</a>
+
+            <div class="pt-3 mt-2 border-t border-blue-800">
+                <a href="/" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-blue-300">🌐 Halaman Publik</a>
+            </div>
+        </nav>
+        <div class="px-4 py-3 border-t border-blue-800 text-xs text-blue-400">v1.0.0</div>
+    </aside>
+
+    <!-- Content -->
+    <div class="ml-60 flex-1 flex flex-col">
+        <header class="bg-white shadow-sm sticky top-0 z-20 px-6 py-3 flex items-center justify-between">
+            <div>
+                <h1 class="text-base font-semibold text-gray-800">@ViewData["Title"]</h1>
+                @if (ViewData["Sub"] != null) { <p class="text-xs text-gray-400">@ViewData["Sub"]</p> }
+            </div>
+            <span class="text-sm text-gray-400">@DateTime.Now.ToString("dd MMM yyyy")</span>
+        </header>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="mx-5 mt-4 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                <p class="text-green-800 text-sm">@Html.Raw(TempData["Success"])</p>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="mx-5 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <p class="text-red-800 text-sm">@Html.Raw(TempData["Error"])</p>
+            </div>
+        }
+
+        <main class="flex-1 p-5">@RenderBody()</main>
+
+        <footer class="bg-white border-t px-5 py-2 text-center text-xs text-gray-400">
+            &copy; @DateTime.Now.Year Dinas Komunikasi dan Informatika
+        </footer>
+    </div>
+</div>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
