@@ -11,6 +11,13 @@ namespace PermintaanData.Controllers;
 [Route("kepegawaian")]
 public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
+    private string UploadsRoot =>
+        Path.Combine(
+            string.IsNullOrEmpty(env.WebRootPath)
+                ? Path.Combine(env.ContentRootPath, "wwwroot")
+                : env.WebRootPath,
+            "uploads");
+
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -26,7 +33,8 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
     [HttpGet("surat-izin/{id}")]
     public async Task<IActionResult> SuratIzin(Guid id)
     {
-        var p = await db.PermohonanPPID.Include(x => x.Pribadi).FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
         return View(new SuratIzinVm
         {
@@ -47,10 +55,10 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
 
         if (vm.FileSuratIzin?.Length > 0)
         {
-            var dir = Path.Combine(env.WebRootPath, "uploads", vm.PermohonanPPIDID.ToString());
+            var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
             var fn = $"surat_izin_{vm.FileSuratIzin.FileName}";
-            using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
+            await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileSuratIzin.CopyToAsync(s);
             db.DokumenPPID.Add(new DokumenPPID
             {
@@ -83,6 +91,13 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
 [Route("kdi")]
 public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
+    private string UploadsRoot =>
+        Path.Combine(
+            string.IsNullOrEmpty(env.WebRootPath)
+                ? Path.Combine(env.ContentRootPath, "wwwroot")
+                : env.WebRootPath,
+            "uploads");
+
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -122,7 +137,8 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     [HttpGet("terima/{id}")]
     public async Task<IActionResult> TerimaDisposisi(Guid id)
     {
-        var p = await db.PermohonanPPID.Include(x => x.Pribadi).FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
         return View(new TerimaDisposisiVm
         {
@@ -151,9 +167,15 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     [HttpGet("jadwal/{id}")]
     public async Task<IActionResult> JadwalObservasi(Guid id)
     {
-        var p = await db.PermohonanPPID.Include(x => x.Pribadi).FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
-        return View(new JadwalObservasiVm { PermohonanPPIDID = id, NoPermohonan = p.NoPermohonan!, NamaPemohon = p.Pribadi?.Nama ?? "" });
+        return View(new JadwalObservasiVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan!,
+            NamaPemohon      = p.Pribadi?.Nama ?? ""
+        });
     }
 
     [HttpPost("jadwal"), ValidateAntiForgeryToken]
@@ -179,9 +201,16 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     [HttpGet("upload-data/{id}")]
     public async Task<IActionResult> UploadData(Guid id)
     {
-        var p = await db.PermohonanPPID.Include(x => x.Pribadi).FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
-        return View(new UploadDataVm { PermohonanPPIDID = id, NoPermohonan = p.NoPermohonan!, NamaPemohon = p.Pribadi?.Nama ?? "", JudulPenelitian = p.JudulPenelitian ?? "" });
+        return View(new UploadDataVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan!,
+            NamaPemohon      = p.Pribadi?.Nama ?? "",
+            JudulPenelitian  = p.JudulPenelitian ?? ""
+        });
     }
 
     [HttpPost("upload-data"), ValidateAntiForgeryToken]
@@ -193,10 +222,10 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
 
         if (vm.FileData?.Length > 0)
         {
-            var dir = Path.Combine(env.WebRootPath, "uploads", vm.PermohonanPPIDID.ToString());
+            var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
             var fn = $"data_{vm.FileData.FileName}";
-            using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
+            await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileData.CopyToAsync(s);
             db.DokumenPPID.Add(new DokumenPPID
             {

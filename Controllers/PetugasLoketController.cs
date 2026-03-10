@@ -9,6 +9,14 @@ namespace PermintaanData.Controllers;
 [Route("petugas-loket")]
 public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
+    // Folder uploads — pakai wwwroot jika ada, fallback ke ContentRoot/wwwroot
+    private string UploadsRoot =>
+        Path.Combine(
+            string.IsNullOrEmpty(env.WebRootPath)
+                ? Path.Combine(env.ContentRootPath, "wwwroot")
+                : env.WebRootPath,
+            "uploads");
+
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -46,7 +54,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
 
         var now = DateTime.UtcNow;
 
-        // 1. Cek NIK
+        // 1. Pribadi
         var pribadi = await db.Pribadi.FirstOrDefaultAsync(p => p.NIK == vm.NIK);
         if (pribadi == null)
         {
@@ -77,8 +85,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
             pribadi.Telepon   = vm.Telepon;
             pribadi.UpdatedAt = now;
         }
-
-        // Simpan Pribadi dulu agar PribadiID tersedia untuk FK
         await db.SaveChangesAsync();
 
         // 2. PribadiPPID
@@ -162,7 +168,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                 CreatedAt        = now
             });
 
-        // 5. Upload dokumen
+        // 5. Upload dokumen (opsional — tidak error jika tidak ada file)
         await UploadDokumen(permohonan.PermohonanPPIDID, vm.FileKTP,             JenisDokumenId.KTP,             "KTP",              now);
         await UploadDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now);
         await UploadDokumen(permohonan.PermohonanPPIDID, vm.FileProposal,        JenisDokumenId.Proposal,        "Proposal",         now);
@@ -211,19 +217,30 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     [HttpGet("upload-ttd/{id}")]
     public async Task<IActionResult> UploadTTD(Guid id)
     {
-        var p = await db.PermohonanPPID.Include(x => x.Pribadi).FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
-        return View(new UploadTTDVm { PermohonanPPIDID = id, NoPermohonan = p.NoPermohonan!, NamaPemohon = p.Pribadi?.Nama ?? "" });
+        return View(new UploadTTDVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan!,
+            NamaPemohon      = p.Pribadi?.Nama ?? ""
+        });
     }
 
     [HttpPost("upload-ttd"), ValidateAntiForgeryToken]
     public async Task<IActionResult> UploadTTDPost(UploadTTDVm vm)
     {
         if (!ModelState.IsValid) return View("UploadTTD", vm);
-        await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD, JenisDokumenId.IdentifikasiSigned, "Identifikasi TTD", DateTime.UtcNow);
+
+        var now = DateTime.UtcNow;
+        await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD,
+            JenisDokumenId.IdentifikasiSigned, "Identifikasi TTD", now);
+
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null) { p.StatusPPIDID = StatusId.MenungguSuratIzin; p.UpdatedAt = DateTime.UtcNow; }
+        if (p != null) { p.StatusPPIDID = StatusId.MenungguSuratIzin; p.UpdatedAt = now; }
         await db.SaveChangesAsync();
+
         TempData["Success"] = "Dokumen berhasil diupload. Permohonan diteruskan ke Kepegawaian.";
         return RedirectToAction("Index");
     }
@@ -241,14 +258,22 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         return View(p);
     }
 
-    private async Task UploadDokumen(Guid permohonanId, IFormFile? file, int jenisDokId, string nama, DateTime now)
+    // ── Helper upload ─────────────────────────────────────────────────────────
+    private async Task UploadDokumen(Guid permohonanId, IFormFile? file,
+        int jenisDokId, string nama, DateTime now)
     {
         if (file == null || file.Length == 0) return;
-        var uploadDir = Path.Combine(env.WebRootPath, "uploads", permohonanId.ToString());
+
+        // Pastikan folder wwwroot/uploads ada walau WebRootPath null
+        var uploadDir = Path.Combine(UploadsRoot, permohonanId.ToString());
         Directory.CreateDirectory(uploadDir);
+
         var fileName = $"{jenisDokId}_{Path.GetFileName(file.FileName)}";
-        using var stream = new FileStream(Path.Combine(uploadDir, fileName), FileMode.Create);
+        var filePath = Path.Combine(uploadDir, fileName);
+
+        await using var stream = new FileStream(filePath, FileMode.Create);
         await file.CopyToAsync(stream);
+
         db.DokumenPPID.Add(new DokumenPPID
         {
             PermohonanPPIDID     = permohonanId,

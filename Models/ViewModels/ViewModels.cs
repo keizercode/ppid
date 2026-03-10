@@ -198,7 +198,7 @@ public class SuratIzinVm
 
     [Required(ErrorMessage = "Disposisi ke wajib dipilih")]
     [Display(Name = "Disposisi Ke")]
-    public string DisposisiKe { get; set; } = string.Empty; // "PSMDI" | "BidangTerkait"
+    public string DisposisiKe { get; set; } = string.Empty;
 
     [Display(Name = "Nama Bidang Terkait")]
     public string? NamaBidangTerkait { get; set; }
@@ -206,8 +206,10 @@ public class SuratIzinVm
     [Display(Name = "Catatan Disposisi")]
     public string? CatatanDisposisi { get; set; }
 
-    [Display(Name = "Perlu Observasi / Wawancara")]
-    public bool PerluObservasi { get; set; }
+    // TAMBAHAN
+    public bool IsObservasi { get; set; }
+    public bool IsPermintaanData { get; set; }
+    public bool IsWawancara { get; set; }
 }
 
 // ── KDI: Terima Disposisi ─────────────────────────────────────────────────────

@@ -1,102 +1,151 @@
 @model SuratIzinVm
 @{
-    ViewData["Title"] = "Buat Surat Izin & Disposisi";
+    ViewData["Title"] = "Terbitkan Surat Izin";
     ViewData["Role"]  = "Kepegawaian";
     Layout = "_LayoutAdmin";
 }
+
 <div class="max-w-2xl mx-auto">
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm">
-        <div class="grid grid-cols-2 gap-2">
-            <div><span class="text-xs text-blue-400">Nomor</span><p class="font-mono font-semibold text-blue-800">@Model.NoPermohonan</p></div>
-            <div><span class="text-xs text-blue-400">Kategori</span><p class="text-blue-700">@Model.Kategori</p></div>
-            <div class="col-span-2"><span class="text-xs text-blue-400">Pemohon</span><p class="text-blue-800 font-medium">@Model.NamaPemohon</p></div>
-            <div class="col-span-2"><span class="text-xs text-blue-400">Judul</span><p class="text-blue-700">@Model.JudulPenelitian</p></div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-xl">📋</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Terbitkan Surat Izin</h3>
+                <p class="text-xs font-mono text-gray-400">@Model.NoPermohonan · @Model.NamaPemohon</p>
+            </div>
         </div>
-    </div>
 
-    <form asp-action="SuratIzinPost" asp-controller="Kepegawaian" method="post" enctype="multipart/form-data">
-        @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="PermohonanPPIDID" />
-        <input type="hidden" asp-for="NoPermohonan" />
-        <input type="hidden" asp-for="NamaPemohon" />
-        <input type="hidden" asp-for="Kategori" />
-        <input type="hidden" asp-for="JudulPenelitian" />
-
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
-            <h4 class="font-semibold text-gray-700 mb-4 text-sm">1. Data Surat Izin</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <!-- Info Permohonan (read-only, di LUAR form) -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm">
+            <p class="font-semibold text-blue-800 mb-2">📋 Ringkasan Permohonan</p>
+            <div class="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">No. Surat Izin <span class="text-red-500">*</span></label>
-                    <input asp-for="NoSuratIzin" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
-                    <span asp-validation-for="NoSuratIzin" class="text-red-500 text-xs mt-1 block"></span>
+                    <span class="text-blue-400 text-xs block">Kategori</span>
+                    <p class="text-blue-800">@Model.Kategori</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Tanggal Surat <span class="text-red-500">*</span></label>
-                    <input asp-for="TanggalSurat" type="date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <span class="text-blue-400 text-xs block">No. Permohonan</span>
+                    <p class="text-blue-800 font-mono font-bold">@Model.NoPermohonan</p>
                 </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Upload File Surat (PDF)</label>
-                    <input asp-for="FileSuratIzin" type="file" accept=".pdf"
-                           class="w-full text-sm text-gray-600 border border-gray-300 rounded-xl px-3 py-2 cursor-pointer
-                                  file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700" />
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Catatan</label>
-                    <textarea asp-for="Catatan" rows="2" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                <div class="col-span-2">
+                    <span class="text-blue-400 text-xs block">Judul Penelitian</span>
+                    <p class="text-blue-700">@Model.JudulPenelitian</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-5">
-            <h4 class="font-semibold text-gray-700 mb-4 text-sm">2. Disposisi Permohonan</h4>
-            <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <label class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-blue-300 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-colors">
-                        <input type="radio" asp-for="DisposisiKe" value="PSMDI" class="mt-0.5 accent-blue-600" />
-                        <div>
-                            <p class="font-semibold text-sm">💾 PSMDI</p>
-                            <p class="text-xs text-gray-400">Pusat Sistem & Manajemen Data</p>
-                        </div>
+
+        <form asp-action="SuratIzinPost" asp-controller="Kepegawaian" method="post"
+              enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="Kategori" />
+            <input type="hidden" asp-for="JudulPenelitian" />
+
+            <!-- ══════════════════════════════════════════════════
+                 Keperluan — DI DALAM form, pakai asp-for agar
+                 hidden false-value otomatis digenerate ASP.NET Core
+                 ══════════════════════════════════════════════════ -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm">
+                <p class="font-semibold text-amber-800 mb-1">🔍 Konfirmasi Keperluan Pemohon</p>
+                <p class="text-xs text-amber-600 mb-3">
+                    Data dari formulir identifikasi. Centang sesuai kebutuhan —
+                    akan disimpan dan menentukan alur setelah disposisi.
+                </p>
+
+                <div class="space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+
+                        <input asp-for="IsObservasi" type="checkbox"
+                               class="mt-1 w-4 h-4 rounded border-gray-300 accent-orange-500" />
+                        <span class="font-semibold text-orange-700">Observasi</span>
                     </label>
-                    <label class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-blue-300 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-colors">
-                        <input type="radio" asp-for="DisposisiKe" value="BidangTerkait" onchange="document.getElementById('bidang-input').classList.toggle('hidden', this.value !== 'BidangTerkait')" class="mt-0.5 accent-blue-600" />
-                        <div>
-                            <p class="font-semibold text-sm">🏢 Bidang Terkait</p>
-                            <p class="text-xs text-gray-400">Unit / Bidang pengelola data</p>
-                        </div>
+
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input asp-for="IsPermintaanData" type="checkbox"
+                               class="mt-1 w-4 h-4 rounded border-gray-300 accent-blue-500" />
+                        <span class="font-semibold text-blue-700">Permintaan Data</span>
+                    </label>
+
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input asp-for="IsWawancara" type="checkbox"
+                               class="mt-1 w-4 h-4 rounded border-gray-300 accent-purple-500" />
+                        <span class="font-semibold text-purple-700">Wawancara</span>
                     </label>
                 </div>
-                <span asp-validation-for="DisposisiKe" class="text-red-500 text-xs block"></span>
-                <div id="bidang-input" class="hidden">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Bidang Terkait</label>
-                    <input asp-for="NamaBidangTerkait" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Bidang Infrastruktur / Bidang Aplikasi..." />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Catatan Disposisi</label>
-                    <textarea asp-for="CatatanDisposisi" rows="2" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Instruksi untuk unit penerima..."></textarea>
-                </div>
-                <label class="flex items-center gap-3 cursor-pointer">
-                    <input asp-for="PerluObservasi" type="checkbox" class="w-4 h-4 accent-blue-600" />
-                    <div>
-                        <p class="text-sm font-medium text-gray-700">Perlu Observasi / Wawancara</p>
-                        <p class="text-xs text-gray-400">Unit KDI akan menjadwalkan pertemuan dengan pemohon</p>
-                    </div>
+                <p class="text-xs text-amber-500 mt-3">
+                    ⚠️ Jika <strong>Observasi</strong> atau <strong>Wawancara</strong> dicentang,
+                    KDI akan diarahkan ke halaman <strong>Jadwal Observasi</strong>.
+                </p>
+            </div>
+
+            <!-- No. Surat Izin -->
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">
+                    No. Surat Izin <span class="text-red-500">*</span>
                 </label>
+                <input asp-for="NoSuratIzin" type="text"
+                       placeholder="Contoh: 073/Surat.Izin/DINAS.LHK/2026"
+                       class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                <span asp-validation-for="NoSuratIzin" class="text-red-500 text-xs mt-1 block"></span>
             </div>
-        </div>
 
-        <div class="flex gap-3">
-            <a href="/kepegawaian" class="flex-1 text-center border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
-            <button type="submit" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-8 rounded-xl text-sm">📤 Terbitkan & Disposisi</button>
-        </div>
-    </form>
+            <!-- Upload Surat Izin -->
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">
+                    Upload File Surat Izin (PDF / JPG)
+                </label>
+                <input asp-for="FileSuratIzin" type="file" accept=".pdf,.jpg,.jpeg,.png"
+                       class="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm
+                              file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                              file:text-xs file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
+            </div>
+
+            <!-- Disposisi Ke -->
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Disposisi Ke</label>
+                <div class="space-y-2 text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input asp-for="DisposisiKe" type="radio" value="PSMDI"
+                               class="accent-blue-500" />
+                        <span>PSMDI (Unit Internal)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input asp-for="DisposisiKe" type="radio" value="BidangTerkait"
+                               class="accent-blue-500" id="radioB" />
+                        <span>Bidang Terkait</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="bidangDiv" class="mb-5 @(Model.DisposisiKe == "BidangTerkait" ? "" : "hidden")">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Bidang Terkait</label>
+                <input asp-for="NamaBidangTerkait" type="text"
+                       placeholder="Contoh: Bidang Pengendalian Pencemaran"
+                       class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <a href="/kepegawaian"
+                   class="flex-1 text-center border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">
+                    Batal
+                </a>
+                <button type="submit"
+                        class="flex-grow bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-8 rounded-xl text-sm">
+                    ✅ Terbitkan Surat &amp; Disposisi →
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
-@section Scripts {
+
 <script>
-document.querySelectorAll('input[name="DisposisiKe"]').forEach(r => {
-    r.addEventListener('change', function() {
-        document.getElementById('bidang-input').classList.toggle('hidden', this.value !== 'BidangTerkait');
+    document.querySelectorAll('input[name="DisposisiKe"]').forEach(r => {
+        r.addEventListener('change', function () {
+            document.getElementById('bidangDiv').classList.toggle('hidden', this.value !== 'BidangTerkait');
+        });
     });
-});
 </script>
-}

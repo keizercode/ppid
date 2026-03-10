@@ -1,6 +1,8 @@
 using PermintaanData.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
+// WAJIB: harus dipanggil sebelum builder dibuat
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,7 +12,6 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// HttpClient untuk proxy ke API eksternal
 builder.Services.AddHttpClient("WilayahApi", c => {
     c.BaseAddress = new Uri(builder.Configuration["ExternalApi:WilayahBase"]!);
     c.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -27,14 +28,20 @@ builder.Services.AddHttpClient("BidangApi", c => {
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+app.UseDeveloperExceptionPage();
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+// Pastikan folder wwwroot & uploads selalu ada
+var wwwroot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(wwwroot);
+Directory.CreateDirectory(Path.Combine(wwwroot, "uploads"));
+
+// Serve static files dari wwwroot secara eksplisit
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(wwwroot),
+    RequestPath  = ""
+});
+
 app.UseRouting();
 app.UseAuthorization();
 
