@@ -4,61 +4,80 @@
     ViewData["Role"]  = "KDI";
     Layout = "_LayoutAdmin";
 }
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-    <a href="/kdi/psmdi" class="bg-white rounded-2xl border border-gray-100 p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
-        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">💾</div>
-        <div>
+
+<!-- Quick Access Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <a href="/kdi/psmdi" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+        <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0">💾</div>
+        <div class="flex-1 min-w-0">
             <p class="font-bold text-gray-800">PSMDI</p>
-            <p class="text-sm text-gray-500 mt-0.5">Pusat Sistem & Manajemen Data Informasi</p>
-            <span class="mt-1 inline-block text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                @Model.Count(p => string.IsNullOrEmpty(p.NamaBidang)) masuk
-            </span>
+            <p class="text-sm text-gray-400 mt-0.5">Pusat Sistem & Manajemen Data Informasi</p>
+        </div>
+        <div class="flex-shrink-0 text-right">
+            <span class="block text-2xl font-extrabold text-blue-600">@Model.Count(p => string.IsNullOrEmpty(p.NamaBidang))</span>
+            <span class="text-xs text-gray-400">masuk</span>
         </div>
     </a>
-    <a href="/kdi/bidang" class="bg-white rounded-2xl border border-gray-100 p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
-        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">🏢</div>
-        <div>
+    <a href="/kdi/bidang" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+        <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0">🏢</div>
+        <div class="flex-1 min-w-0">
             <p class="font-bold text-gray-800">Bidang Terkait</p>
-            <p class="text-sm text-gray-500 mt-0.5">Unit / bidang pengelola data terkait</p>
-            <span class="mt-1 inline-block text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                @Model.Count(p => !string.IsNullOrEmpty(p.NamaBidang)) masuk
-            </span>
+            <p class="text-sm text-gray-400 mt-0.5">Unit / bidang pengelola data terkait</p>
+        </div>
+        <div class="flex-shrink-0 text-right">
+            <span class="block text-2xl font-extrabold text-emerald-600">@Model.Count(p => !string.IsNullOrEmpty(p.NamaBidang))</span>
+            <span class="text-xs text-gray-400">masuk</span>
         </div>
     </a>
 </div>
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="px-5 py-3 border-b border-gray-100"><p class="font-semibold text-gray-700 text-sm">Semua Disposisi Masuk</p></div>
+
+<!-- All disposisi table -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+        <p class="font-bold text-gray-700 text-sm">Semua Disposisi Masuk</p>
+        <span class="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">@Model.Count total</span>
+    </div>
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
-            <thead><tr class="bg-gray-50 border-b text-left">
-                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Nomor</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Pemohon</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Judul</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Disposisi</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Aksi</th>
-            </tr></thead>
-            <tbody class="divide-y divide-gray-100">
+            <thead>
+                <tr class="border-b border-gray-50">
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nomor</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pemohon</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Judul</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Disposisi</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
                 @foreach (var item in Model) {
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 font-mono text-xs text-blue-600">@item.NoPermohonan</td>
-                        <td class="px-4 py-3 font-medium text-gray-800 text-xs">@item.Pribadi?.Nama</td>
-                        <td class="px-4 py-3 text-xs text-gray-600 max-w-xs truncate">@item.JudulPenelitian</td>
-                        <td class="px-4 py-3">
-                            @if (string.IsNullOrEmpty(item.NamaBidang))
-                            { <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">💾 PSMDI</span> }
-                            else
-                            { <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">🏢 @item.NamaBidang</span> }
+                    <tr class="hover:bg-blue-50/30 transition-colors group">
+                        <td class="px-5 py-3.5 font-mono text-xs text-blue-600 font-semibold">@item.NoPermohonan</td>
+                        <td class="px-5 py-3.5 font-semibold text-gray-800 text-xs">@item.Pribadi?.Nama</td>
+                        <td class="px-5 py-3.5 text-xs text-gray-500 max-w-xs truncate">@item.JudulPenelitian</td>
+                        <td class="px-5 py-3.5">
+                            @if (string.IsNullOrEmpty(item.NamaBidang)) {
+                                <span class="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-medium">💾 PSMDI</span>
+                            } else {
+                                <span class="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-medium">🏢 @item.NamaBidang</span>
+                            }
                         </td>
-                        <td class="px-4 py-3">
-                            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">@item.Status?.NamaStatusPPID</span>
+                        <td class="px-5 py-3.5">
+                            <span class="text-xs bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full font-medium">@item.Status?.NamaStatusPPID</span>
                         </td>
-                        <td class="px-4 py-3">
-                            <a href="/kdi/terima/@item.PermohonanPPIDID" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg">Proses</a>
+                        <td class="px-5 py-3.5">
+                            <a href="/kdi/terima/@item.PermohonanPPIDID"
+                               class="text-xs bg-[#002d7a] hover:bg-blue-900 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">Proses</a>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+        @if (!Model.Any()) {
+            <div class="text-center py-16">
+                <div class="text-4xl mb-3">📭</div>
+                <p class="text-gray-400 text-sm">Belum ada disposisi masuk</p>
+            </div>
+        }
     </div>
 </div>

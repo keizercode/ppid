@@ -3,46 +3,127 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - PPID Diskominfo</title>
+    <title>@ViewData["Title"] — PPID DLH Jakarta</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
-        .step-done    { background-color:#22c55e; color:#fff; }
-        .step-active  { background-color:#2563eb; color:#fff; }
+        * { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .step-done    { background-color:#059669; color:#fff; }
+        .step-active  { background-color:#1d4ed8; color:#fff; }
         .step-pending { background-color:#e5e7eb; color:#9ca3af; }
+
+        /* Glass nav */
+        .glass-nav {
+            background: rgba(0, 33, 80, 0.97);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Subtle page texture */
+        body { background-color: #f0f4f8; }
+
+        /* Card hover */
+        .card-hover {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+
+        /* Animated gradient hero */
+        .hero-gradient {
+            background: linear-gradient(135deg, #001f5b 0%, #003d99 50%, #0055c8 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-gradient::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+        }
+        .hero-gradient::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -5%;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+        }
+
+        /* Alert slide down */
+        .alert-enter {
+            animation: slideDown 0.3s ease;
+        }
+        @@keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
-<header class="bg-[#003876] shadow-md">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-        <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg">🏛</div>
-        <div>
-            <p class="text-white text-xs opacity-70">Dinas Lingkungan Hidup</p>
-            <h1 class="text-white font-bold text-sm">Sistem Permohonan Permintaan Data</h1>
+<body class="min-h-screen flex flex-col">
+
+<!-- NAV -->
+<header class="glass-nav shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-white/10 border border-white/20 rounded-xl flex items-center justify-center text-lg">🏛</div>
+            <div>
+                <p class="text-white/50 text-[10px] uppercase tracking-[0.15em] leading-none">Dinas Lingkungan Hidup</p>
+                <p class="text-white font-semibold text-sm leading-tight">Sistem Permohonan Data</p>
+            </div>
         </div>
-        <a href="/" class="ml-auto text-blue-200 hover:text-white text-sm">Beranda</a>
+        <a href="/" class="text-white/60 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
+            <span>Beranda</span>
+        </a>
     </div>
 </header>
 
+<!-- ALERTS -->
 @if (TempData["Success"] != null)
 {
-    <div class="bg-green-50 border-l-4 border-green-500 px-4 py-3 max-w-5xl mx-auto w-full mt-3">
-        <p class="text-green-800 text-sm">@Html.Raw(TempData["Success"])</p>
+    <div class="alert-enter bg-emerald-50 border-b border-emerald-200">
+        <div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2">
+            <span class="text-emerald-500 text-lg">✓</span>
+            <p class="text-emerald-800 text-sm font-medium">@Html.Raw(TempData["Success"])</p>
+        </div>
     </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="bg-red-50 border-l-4 border-red-500 px-4 py-3 max-w-5xl mx-auto w-full mt-3">
-        <p class="text-red-800 text-sm">@Html.Raw(TempData["Error"])</p>
+    <div class="alert-enter bg-red-50 border-b border-red-200">
+        <div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2">
+            <span class="text-red-500 text-lg">✕</span>
+            <p class="text-red-800 text-sm font-medium">@Html.Raw(TempData["Error"])</p>
+        </div>
     </div>
 }
 
 <main class="flex-1">@RenderBody()</main>
 
-<footer class="bg-[#003876] text-white mt-10">
-    <div class="max-w-5xl mx-auto px-4 py-4 text-center text-xs opacity-60">
-        &copy; @DateTime.Now.Year Dinas Lingkungan Hidup · Sistem Informasi PPID
+<footer class="border-t border-gray-200 bg-white mt-10">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 bg-[#003876]/10 rounded-lg flex items-center justify-center text-sm">🏛</div>
+                <div>
+                    <p class="text-gray-800 font-semibold text-sm">PPID Dinas Lingkungan Hidup</p>
+                    <p class="text-gray-400 text-xs">Pemerintah Provinsi DKI Jakarta</p>
+                </div>
+            </div>
+            <p class="text-gray-400 text-xs">&copy; @DateTime.Now.Year · Sistem Informasi PPID</p>
+        </div>
     </div>
 </footer>
+
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

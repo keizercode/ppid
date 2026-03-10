@@ -4,43 +4,96 @@
     ViewData["Role"]  = "Petugas Loket";
     Layout = "_LayoutAdmin";
 }
+
 <div class="max-w-lg mx-auto">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
-        <div class="text-center mb-5">
-            <div class="text-4xl mb-2">✍️</div>
-            <h3 class="font-bold text-gray-800">Upload Dokumen Identifikasi</h3>
-            <p class="text-sm text-gray-500 mt-0.5">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <!-- Header -->
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl">✍️</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Upload Dokumen Identifikasi TTD</h3>
+            <p class="text-xs text-gray-400 mt-0.5">
                 <span class="font-mono">@Model.NoPermohonan</span> · @Model.NamaPemohon
             </p>
         </div>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-5 text-sm text-blue-700">
-            <p class="font-semibold mb-1">Instruksi:</p>
-            <ol class="list-decimal list-inside space-y-0.5 text-xs">
-                <li>Cetak dokumen identifikasi awal dari sistem</li>
-                <li>Minta pemohon menandatangani dokumen</li>
-                <li>Scan / foto dokumen yang sudah ditandatangani</li>
-                <li>Upload di sini</li>
+    </div>
+
+    <div class="p-6">
+        <!-- Instruksi steps -->
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5">
+            <p class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Instruksi Upload</p>
+            <ol class="space-y-2">
+                @foreach (var (no, text) in new[]{
+                    ("1", "Cetak dokumen identifikasi awal dari sistem"),
+                    ("2", "Minta pemohon menandatangani dokumen"),
+                    ("3", "Scan atau foto dokumen yang sudah ditandatangani"),
+                    ("4", "Upload dokumen di formulir di bawah ini"),
+                }) {
+                    <li class="flex items-start gap-2.5">
+                        <span class="w-5 h-5 bg-blue-200 text-blue-700 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 mt-0.5">@no</span>
+                        <span class="text-blue-700 text-xs">@text</span>
+                    </li>
+                }
             </ol>
         </div>
+
         <form asp-action="UploadTTDPost" asp-controller="PetugasLoket" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="PermohonanPPIDID" />
             <input type="hidden" asp-for="NoPermohonan" />
             <input type="hidden" asp-for="NamaPemohon" />
-            <div class="mb-5">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Dokumen Identifikasi (Sudah TTD) <span class="text-red-500">*</span>
-                </label>
-                <input asp-for="FileDokumenTTD" type="file" accept=".pdf,.jpg,.jpeg,.png"
-                       class="w-full text-sm text-gray-600 border border-gray-300 rounded-xl px-3 py-2 cursor-pointer
-                              file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold
-                              file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                <span asp-validation-for="FileDokumenTTD" class="text-red-500 text-xs mt-1 block"></span>
+
+            <div class="mb-6">
+                <label class="lbl">Dokumen Identifikasi (Sudah TTD) <span class="text-red-400">*</span></label>
+
+                <!-- Dropzone -->
+                <div id="dropzone"
+                     class="border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-xl p-8 text-center transition-all cursor-pointer bg-gray-50 hover:bg-blue-50 group">
+                    <div class="text-3xl mb-2">📎</div>
+                    <p class="text-sm font-semibold text-gray-600 group-hover:text-blue-700 transition-colors">Klik untuk pilih file</p>
+                    <p class="text-xs text-gray-400 mt-1">PDF, JPG, PNG — maks. 10MB</p>
+                    <input asp-for="FileDokumenTTD" type="file" id="fileTTD"
+                           accept=".pdf,.jpg,.jpeg,.png" class="hidden" />
+                    <p id="fileName" class="text-xs text-blue-600 mt-2.5 font-semibold hidden"></p>
+                </div>
+                <span asp-validation-for="FileDokumenTTD" class="text-red-500 text-xs mt-1.5 block"></span>
             </div>
+
             <div class="flex gap-3">
-                <a href="/petugas-loket" class="flex-1 text-center border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
-                <button type="submit" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-8 rounded-xl text-sm">⬆ Upload</button>
+                <a href="/petugas-loket"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                    Batal
+                </a>
+                <button type="submit"
+                        class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                    ⬆ Upload Dokumen
+                </button>
             </div>
         </form>
     </div>
 </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+</style>
+
+@section Scripts {
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileTTD');
+const fileName  = document.getElementById('fileName');
+
+dropzone.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', function() {
+    if (this.files[0]) {
+        fileName.textContent = '✓ ' + this.files[0].name;
+        fileName.classList.remove('hidden');
+        dropzone.classList.add('border-blue-400', 'bg-blue-50');
+        dropzone.classList.remove('border-gray-200', 'bg-gray-50');
+    }
+});
+</script>
+}

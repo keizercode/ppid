@@ -1,3 +1,4 @@
+@* === JadwalObservasi.cshtml === *@
 @model JadwalObservasiVm
 @{
     ViewData["Title"] = "Buat Jadwal Observasi";
@@ -5,44 +6,52 @@
     Layout = "_LayoutAdmin";
 }
 <div class="max-w-lg mx-auto">
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
-    <div class="flex items-center gap-3 mb-5">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
         <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-xl">🗓</div>
         <div>
             <h3 class="font-bold text-gray-800">Jadwal Observasi / Wawancara</h3>
-            <p class="text-xs text-gray-400">@Model.NamaPemohon · <span class="font-mono">@Model.NoPermohonan</span></p>
+            <p class="text-xs text-gray-400 mt-0.5">@Model.NamaPemohon · <span class="font-mono">@Model.NoPermohonan</span></p>
         </div>
     </div>
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-xs text-amber-700 flex gap-2">
-        <span>💡</span>
-        <p>Jadwal ini akan ditampilkan kepada pemohon secara online melalui halaman lacak permohonan.</p>
+    <div class="p-6">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-xs text-amber-700 flex gap-2 items-start">
+            <span class="mt-0.5">💡</span>
+            <p>Jadwal ini akan ditampilkan kepada pemohon secara online melalui halaman lacak permohonan.</p>
+        </div>
+        <form asp-action="JadwalObservasiPost" asp-controller="Kdi" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="lbl">Tanggal <span class="text-red-400">*</span></label>
+                    <input asp-for="TanggalObservasi" type="date" class="fld" />
+                    <span asp-validation-for="TanggalObservasi" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Jam <span class="text-red-400">*</span></label>
+                    <input asp-for="WaktuObservasi" type="time" class="fld" />
+                    <span asp-validation-for="WaktuObservasi" class="err"></span>
+                </div>
+            </div>
+            <div class="mb-5">
+                <label class="lbl">Nama PIC <span class="text-red-400">*</span></label>
+                <input asp-for="NamaPIC" class="fld" placeholder="Nama penanggung jawab" />
+                <span asp-validation-for="NamaPIC" class="err"></span>
+            </div>
+            <div class="flex gap-3">
+                <a href="/kdi" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">Batal</a>
+                <button type="submit" class="flex-grow bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">📅 Buat Jadwal</button>
+            </div>
+        </form>
     </div>
-    <form asp-action="JadwalObservasiPost" asp-controller="Kdi" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="PermohonanPPIDID" />
-        <input type="hidden" asp-for="NoPermohonan" />
-        <input type="hidden" asp-for="NamaPemohon" />
-        <div class="grid grid-cols-2 gap-3 mb-4">
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Tanggal <span class="text-red-500">*</span></label>
-                <input asp-for="TanggalObservasi" type="date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <span asp-validation-for="TanggalObservasi" class="text-red-500 text-xs mt-1 block"></span>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Jam <span class="text-red-500">*</span></label>
-                <input asp-for="WaktuObservasi" type="time" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <span asp-validation-for="WaktuObservasi" class="text-red-500 text-xs mt-1 block"></span>
-            </div>
-        </div>
-        <div class="mb-5">
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Nama PIC <span class="text-red-500">*</span></label>
-            <input asp-for="NamaPIC" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nama penanggung jawab" />
-            <span asp-validation-for="NamaPIC" class="text-red-500 text-xs mt-1 block"></span>
-        </div>
-        <div class="flex gap-3">
-            <a href="/kdi" class="flex-1 text-center border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
-            <button type="submit" class="flex-grow bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 px-8 rounded-xl text-sm">📅 Buat Jadwal</button>
-        </div>
-    </form>
 </div>
 </div>
+<style>
+    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+    .fld { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:9px 14px; font-size:13.5px; background:#fafafa; outline:none; transition:all .15s; }
+    .fld:focus { box-shadow:0 0 0 2.5px #3b82f6; border-color:transparent; background:white; }
+    .err { color:#ef4444; font-size:11px; margin-top:3px; display:block; }
+</style>

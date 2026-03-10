@@ -5,24 +5,29 @@
     Layout = "_LayoutAdmin";
     bool showUmum = TempData["InfoUmum"]?.ToString() == "true";
 }
-<div class="max-w-lg mx-auto">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">🔍</div>
-            <div>
-                <h3 class="font-bold text-gray-800">Langkah 1 — Identifikasi Pemohon</h3>
-                <p class="text-xs text-gray-400">Tentukan kategori pemohon</p>
-            </div>
-        </div>
 
+<div class="max-w-lg mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <!-- Header -->
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">🔍</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Langkah 1 — Identifikasi Pemohon</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Tentukan kategori pemohon sebelum mendaftar</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+        <!-- Alert umum -->
         @if (showUmum) {
-            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex gap-3">
-                <span class="text-amber-500 text-lg mt-0.5">ℹ️</span>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex gap-3 items-start">
+                <span class="text-amber-500 text-lg mt-0.5 flex-shrink-0">ℹ️</span>
                 <div>
-                    <p class="font-semibold text-amber-800 text-sm">Pemohon Umum — Arahkan ke Website PPID</p>
-                    <p class="text-amber-700 text-sm mt-1">Pemohon umum tidak didaftarkan melalui sistem ini.</p>
+                    <p class="font-bold text-amber-800 text-sm">Pemohon Umum — Arahkan ke Website PPID</p>
+                    <p class="text-amber-700 text-xs mt-1 leading-relaxed">Pemohon umum tidak didaftarkan melalui sistem ini. Silakan arahkan ke portal PPID Diskominfo.</p>
                     <a href="https://ppid.diskominfo.go.id" target="_blank"
-                       class="inline-block mt-1 text-amber-800 font-bold text-sm hover:underline">
+                       class="inline-flex items-center gap-1 mt-2 text-amber-800 font-bold text-xs hover:underline">
                         🌐 ppid.diskominfo.go.id →
                     </a>
                 </div>
@@ -31,26 +36,41 @@
 
         <form asp-action="IdentifikasiPost" asp-controller="PetugasLoket" method="post">
             @Html.AntiForgeryToken()
-            <div class="space-y-3 mb-6">
-                @foreach (var (val, icon, lbl, desc) in new[]{
-                    ("Mahasiswa","🎓","Mahasiswa / Pelajar","KTP + Surat Permohonan + Proposal Penelitian"),
-                    ("LSM","🏢","LSM / Organisasi","KTP + Akta Notaris + Surat Permohonan"),
-                    ("Umum","👤","Umum","Diarahkan ke website PPID Diskominfo"),
+
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Pilih Kategori Pemohon</p>
+
+            <div class="space-y-2.5 mb-6">
+                @foreach (var (val, icon, lbl, desc, border) in new[]{
+                    ("Mahasiswa",  "🎓", "Mahasiswa / Pelajar",  "KTP + Surat Permohonan + Proposal Penelitian", "has-[:checked]:border-blue-500   has-[:checked]:bg-blue-50"),
+                    ("LSM",        "🏢", "LSM / Organisasi",     "KTP + Akta Notaris + Surat Permohonan",        "has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50"),
+                    ("Umum",       "👤", "Umum",                 "Diarahkan ke website PPID Diskominfo",         "has-[:checked]:border-amber-400   has-[:checked]:bg-amber-50"),
                 }) {
-                    <label class="flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-blue-300 cursor-pointer transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
-                        <input type="radio" asp-for="Kategori" value="@val" class="mt-0.5 accent-blue-600" />
-                        <div>
-                            <p class="font-semibold text-sm text-gray-800">@icon @lbl</p>
-                            <p class="text-xs text-gray-400">@desc</p>
+                    <label class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100 hover:border-gray-200 cursor-pointer transition-all @border">
+                        <input type="radio" asp-for="Kategori" value="@val" class="mt-0.5 accent-blue-600 flex-shrink-0" />
+                        <div class="flex items-start gap-3 flex-1">
+                            <span class="text-xl mt-0.5">@icon</span>
+                            <div>
+                                <p class="font-bold text-sm text-gray-800">@lbl</p>
+                                <p class="text-xs text-gray-400 mt-0.5">@desc</p>
+                            </div>
                         </div>
                     </label>
                 }
             </div>
-            <span asp-validation-for="Kategori" class="text-red-500 text-xs block -mt-3 mb-3"></span>
+
+            <span asp-validation-for="Kategori" class="text-red-500 text-xs block -mt-3 mb-4"></span>
+
             <div class="flex gap-3">
-                <a href="/petugas-loket" class="flex-1 text-center border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
-                <button type="submit" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-8 rounded-xl text-sm">Lanjutkan →</button>
+                <a href="/petugas-loket"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                    Batal
+                </a>
+                <button type="submit"
+                        class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                    Lanjutkan →
+                </button>
             </div>
         </form>
     </div>
+</div>
 </div>
