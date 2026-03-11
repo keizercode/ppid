@@ -5,38 +5,38 @@
     var pr = Model.Pribadi;
     var dokDataHasil = p.Dokumen.FirstOrDefault(d => d.JenisDokumenPPIDID == JenisDokumenId.DataHasil);
 
-    string statusColor = p.StatusPPIDID == StatusId.Selesai  ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                         p.StatusPPIDID == StatusId.DataSiap ? "bg-blue-50 text-blue-700 border-blue-200" :
-                         p.StatusPPIDID == StatusId.Baru     ? "bg-gray-50 text-gray-600 border-gray-200"  :
-                                                               "bg-amber-50 text-amber-700 border-amber-200";
-    string statusDot   = p.StatusPPIDID == StatusId.Selesai  ? "bg-emerald-400" :
-                         p.StatusPPIDID == StatusId.DataSiap ? "bg-blue-400" :
-                         p.StatusPPIDID == StatusId.Baru     ? "bg-gray-400"  : "bg-amber-400";
+    string statusBg  = p.StatusPPIDID == StatusId.Selesai  ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                       p.StatusPPIDID == StatusId.DataSiap ? "bg-blue-50 text-blue-700 border-blue-200" :
+                       p.StatusPPIDID == StatusId.Baru     ? "bg-gray-100 text-gray-500 border-gray-200" :
+                                                              "bg-amber-50 text-amber-700 border-amber-200";
+    string statusDot = p.StatusPPIDID == StatusId.Selesai  ? "bg-emerald-500" :
+                       p.StatusPPIDID == StatusId.DataSiap ? "bg-blue-500" :
+                       p.StatusPPIDID == StatusId.Baru     ? "bg-gray-400" : "bg-amber-500";
 }
 
-<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
 
-    <!-- Breadcrumb -->
-    <a href="/" class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium mb-6 transition-colors">
+    <!-- Back -->
+    <a href="/" class="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm font-medium mb-6 transition-colors">
         ← Cek Nomor Lain
     </a>
 
     <!-- ══ HEADER CARD ══ -->
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
+    <div class="bg-white rounded-2xl border border-gray-200 p-5 mb-5 shadow-sm">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Nomor Permohonan</p>
-                <h2 class="text-2xl font-extrabold font-mono text-gray-800 tracking-tight">@p.NoPermohonan</h2>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Nomor Permohonan</p>
+                <h2 class="text-2xl font-extrabold font-mono text-gray-900 tracking-tight">@p.NoPermohonan</h2>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                    <span class="text-gray-400 text-xs">📅 Diajukan: @p.TanggalPermohonan?.ToString("dd MMMM yyyy")</span>
-                    <span class="text-gray-300 text-xs hidden sm:inline">·</span>
-                    <span class="text-xs font-medium @(p.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
+                    <span class="text-gray-400 text-xs">📅 @p.TanggalPermohonan?.ToString("dd MMMM yyyy")</span>
+                    <span class="text-gray-200 text-xs hidden sm:inline">·</span>
+                    <span class="text-xs font-semibold @(p.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
                         @(p.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa/Pelajar" : "🏢 LSM")
                     </span>
                 </div>
             </div>
-            <div class="flex items-center gap-2 border @statusColor rounded-full px-4 py-2 self-start sm:self-center">
-                <span class="w-2 h-2 rounded-full @statusDot"></span>
+            <div class="flex items-center gap-2 border @statusBg rounded-full px-4 py-2 self-start sm:self-center">
+                <span class="w-2 h-2 rounded-full @statusDot flex-shrink-0"></span>
                 <span class="text-sm font-semibold">@(p.Status?.NamaStatusPPID ?? "—")</span>
             </div>
         </div>
@@ -45,32 +45,29 @@
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
         <!-- ══ TIMELINE ══ -->
-        <div class="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6">Alur Proses</p>
-            <ol class="relative space-y-0">
+        <div class="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Alur Proses</p>
+            <ol class="space-y-0">
                 @foreach (var step in Model.Riwayat)
                 {
                     <li class="flex gap-4 pb-6 last:pb-0 relative">
-                        <!-- Connector line -->
                         @if (step != Model.Riwayat.Last())
                         {
                             <div class="absolute left-4 top-9 bottom-0 w-px @(step.Selesai ? "bg-emerald-200" : "bg-gray-100")"></div>
                         }
 
-                        <!-- Dot -->
                         <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10
-                            @(step.Selesai      ? "bg-emerald-500 text-white shadow-sm shadow-emerald-200" :
-                              step.AktifSekarang ? "bg-blue-600 text-white shadow-sm shadow-blue-200"     :
+                            @(step.Selesai      ? "bg-emerald-500 text-white" :
+                              step.AktifSekarang ? "bg-[#1B3B6F] text-white"  :
                                                    "bg-gray-100 text-gray-400")">
                             @(step.Selesai ? "✓" : step.AktifSekarang ? "●" : "○")
                         </div>
 
-                        <!-- Content -->
                         <div class="flex-1 pt-0.5">
-                            <div class="rounded-xl px-4 py-3
-                                @(step.AktifSekarang ? "bg-blue-50 border border-blue-100"     :
-                                  step.Selesai        ? "bg-emerald-50 border border-emerald-100" :
-                                                        "bg-gray-50 border border-gray-100")">
+                            <div class="rounded-xl px-4 py-3 border
+                                @(step.AktifSekarang ? "bg-blue-50 border-blue-100" :
+                                  step.Selesai        ? "bg-emerald-50 border-emerald-100" :
+                                                        "bg-gray-50 border-gray-100")">
                                 <p class="font-semibold text-sm
                                     @(step.AktifSekarang ? "text-blue-800"    :
                                       step.Selesai        ? "text-emerald-700" : "text-gray-400")">
@@ -90,31 +87,31 @@
         <!-- ══ INFO PANELS ══ -->
         <div class="lg:col-span-2 space-y-4">
 
-            <!-- Detail Info -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Detail Permohonan</p>
-                <dl class="space-y-3">
+            <!-- Detail -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Detail Permohonan</p>
+                <dl class="space-y-3.5">
                     <div>
-                        <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-0.5">Pemohon</dt>
+                        <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-0.5">Pemohon</dt>
                         <dd class="font-semibold text-gray-800 text-sm">@pr?.Nama</dd>
                     </div>
                     @if (!string.IsNullOrEmpty(Model.PribadiPPID?.Lembaga))
                     {
                         <div>
-                            <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-0.5">Lembaga</dt>
+                            <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-0.5">Lembaga</dt>
                             <dd class="text-gray-700 text-sm">@Model.PribadiPPID.Lembaga</dd>
                         </div>
                     }
                     <div>
-                        <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-0.5">Judul Penelitian</dt>
+                        <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-0.5">Judul Penelitian</dt>
                         <dd class="text-gray-700 text-sm leading-snug">@p.JudulPenelitian</dd>
                     </div>
                     <div>
-                        <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-1">Keperluan</dt>
+                        <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-1.5">Keperluan</dt>
                         <dd class="flex flex-wrap gap-1.5">
-                            @if (p.IsObservasi)      { <span class="bg-orange-100 text-orange-700 text-xs px-2.5 py-0.5 rounded-full font-medium">Observasi</span> }
-                            @if (p.IsPermintaanData) { <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-0.5 rounded-full font-medium">Permintaan Data</span> }
-                            @if (p.IsWawancara)      { <span class="bg-violet-100 text-violet-700 text-xs px-2.5 py-0.5 rounded-full font-medium">Wawancara</span> }
+                            @if (p.IsObservasi)      { <span class="bg-orange-50 border border-orange-200 text-orange-700 text-xs px-2.5 py-0.5 rounded-full font-semibold">Observasi</span> }
+                            @if (p.IsPermintaanData) { <span class="bg-blue-50 border border-blue-200 text-blue-700 text-xs px-2.5 py-0.5 rounded-full font-semibold">Permintaan Data</span> }
+                            @if (p.IsWawancara)      { <span class="bg-violet-50 border border-violet-200 text-violet-700 text-xs px-2.5 py-0.5 rounded-full font-semibold">Wawancara</span> }
                         </dd>
                     </div>
                 </dl>
@@ -123,14 +120,14 @@
             <!-- Jadwal Observasi -->
             @if (Model.Jadwal.Any())
             {
-                <div class="bg-orange-50 border border-orange-200 rounded-2xl p-5">
+                <div class="bg-white rounded-2xl border border-orange-200 shadow-sm p-5">
                     <div class="flex items-center gap-2 mb-3">
-                        <div class="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center text-sm">🗓</div>
-                        <p class="font-bold text-orange-800 text-sm">Jadwal Observasi</p>
+                        <div class="w-7 h-7 bg-orange-50 border border-orange-200 rounded-lg flex items-center justify-center text-sm">🗓</div>
+                        <p class="font-bold text-gray-800 text-sm">Jadwal Observasi</p>
                     </div>
                     @foreach (var j in Model.Jadwal)
                     {
-                        <div class="bg-white/60 rounded-xl px-3 py-2.5 mb-2">
+                        <div class="bg-orange-50 rounded-xl px-3 py-2.5 mb-2 border border-orange-100">
                             <p class="text-sm font-bold text-orange-800">@j.Tanggal?.ToString("dddd, dd MMM yyyy")</p>
                             <p class="text-xs text-orange-600 font-medium">Pukul @j.Waktu?.ToString("HH:mm") WIB</p>
                             @if (!string.IsNullOrEmpty(j.NamaPIC)) {
@@ -145,15 +142,15 @@
             <!-- Data Tersedia -->
             @if (p.StatusPPIDID >= StatusId.DataSiap)
             {
-                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-sm">✅</div>
-                        <p class="font-bold text-emerald-800 text-sm">Data Siap Diunduh</p>
+                <div class="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-7 h-7 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-center text-sm">✅</div>
+                        <p class="font-bold text-gray-800 text-sm">Data Siap Diunduh</p>
                     </div>
                     @if (dokDataHasil != null)
                     {
                         <a href="@dokDataHasil.UploadDokumenPPID"
-                           class="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors shadow-sm">
+                           class="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors">
                             ⬇ Unduh Data
                         </a>
                     }

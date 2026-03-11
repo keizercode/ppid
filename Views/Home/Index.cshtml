@@ -1,102 +1,147 @@
 @model LacakViewModel
 @{ ViewData["Title"] = "Lacak Permohonan"; }
 
-<!-- ═══════════════ HERO ═══════════════ -->
-<section style="background: linear-gradient(135deg, #001e55 0%, #003d99 60%, #0055c8 100%); position:relative; overflow:hidden;">
-    <!-- Decorative circles -->
-    <div style="position:absolute;top:-80px;right:-80px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.05) 0%,transparent 70%);pointer-events:none;"></div>
-    <div style="position:absolute;bottom:-60px;left:-60px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.1) 0%,transparent 70%);pointer-events:none;"></div>
-
-    <div class="relative max-w-3xl mx-auto px-6 py-20 text-center">
-        <!-- Icon pill -->
-        <div class="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4 py-1.5 text-white/70 text-xs font-medium mb-6 backdrop-blur-sm">
-            <span>📂</span> Portal Permintaan Data PPID
+<!-- ══ HERO ══ -->
+<section class="bg-[#1B3B6F] relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5">
+        <div style="background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.5) 39px,rgba(255,255,255,.5) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.5) 39px,rgba(255,255,255,.5) 40px);width:100%;height:100%;"></div>
+    </div>
+    <div class="relative max-w-2xl mx-auto px-6 py-16 text-center">
+        <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-white/80 text-xs font-semibold mb-5 tracking-wide">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> PORTAL PPID · DLH JAKARTA
         </div>
-
-        <h1 class="text-white font-extrabold text-3xl sm:text-4xl leading-tight mb-3">
-            Lacak Status Permohonan<br/>
-            <span style="color:#7dd3fc;">Permintaan Data</span>
+        <h1 class="text-white font-extrabold text-3xl sm:text-4xl leading-tight mb-3 tracking-tight">
+            Lacak Status<br/>Permohonan Data
         </h1>
-        <p class="text-white/60 text-sm sm:text-base mb-10 max-w-lg mx-auto leading-relaxed">
-            Masukkan nomor permohonan yang Anda terima saat pendaftaran untuk melihat status terkini dan mengunduh data.
+        <p class="text-white/60 text-sm sm:text-base mb-8 max-w-sm mx-auto leading-relaxed">
+            Masukkan nomor permohonan untuk melihat status terkini dan mengunduh data.
         </p>
 
         <!-- Search form -->
-        <form asp-action="LacakPost" method="post" class="max-w-xl mx-auto">
+        <form asp-action="LacakPost" method="post" class="max-w-lg mx-auto">
             @Html.AntiForgeryToken()
-            <div class="flex flex-col sm:flex-row gap-2.5">
+            <div class="flex flex-col sm:flex-row gap-2">
                 <div class="flex-1 relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">🔍</span>
                     <input asp-for="NoPermohonan"
-                           class="w-full h-12 pl-10 pr-4 rounded-xl text-gray-800 text-sm bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-400 font-medium"
+                           class="w-full h-12 pl-10 pr-4 rounded-xl text-gray-800 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-400 font-medium"
                            placeholder="Contoh: PPD/2024/0001"
                            autocomplete="off" />
                 </div>
                 <button type="submit"
-                        class="h-12 bg-amber-400 hover:bg-amber-300 text-gray-900 font-bold px-7 rounded-xl transition-all text-sm whitespace-nowrap shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+                        class="h-12 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-gray-900 font-bold px-7 rounded-xl transition-colors text-sm whitespace-nowrap shadow-sm">
                     Cek Status →
                 </button>
             </div>
-            <span asp-validation-for="NoPermohonan" class="text-amber-300 text-xs mt-2 block"></span>
+            <span asp-validation-for="NoPermohonan" class="text-amber-300 text-xs mt-2 block text-left"></span>
         </form>
     </div>
 </section>
 
-<!-- ═══════════════ STEPS ═══════════════ -->
-<section class="max-w-6xl mx-auto px-6 py-16">
+<!-- ══ STEPS ══ -->
+<section class="max-w-5xl mx-auto px-6 py-14">
     <div class="text-center mb-10">
-        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">Panduan Pengajuan</p>
-        <h2 class="text-xl font-bold text-gray-800">Cara Mengajukan Permohonan</h2>
+        <p class="text-xs font-bold text-[#1B3B6F] uppercase tracking-widest mb-2">Panduan</p>
+        <h2 class="text-xl font-bold text-gray-900">Cara Mengajukan Permohonan</h2>
         <p class="text-gray-400 text-sm mt-1">Ikuti langkah berikut untuk mengajukan permohonan data</p>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         @{
             var steps = new[]{
-                new { Num="01", Icon="🚶", Title="Datang ke Loket", Desc="Bawa KTP, surat permohonan, dan dokumen pendukung sesuai kategori Anda.", Color="from-blue-500 to-blue-600" },
-                new { Num="02", Icon="📋", Title="Identifikasi & Daftar", Desc="Petugas loket mendaftarkan dan memberikan nomor permohonan unik.", Color="from-violet-500 to-violet-600" },
-                new { Num="03", Icon="✍️", Title="Tandatangani Dokumen", Desc="Tanda tangani formulir identifikasi awal yang dicetak petugas.", Color="from-amber-500 to-orange-500" },
-                new { Num="04", Icon="📥", Title="Pantau & Unduh Data", Desc="Gunakan nomor permohonan untuk memantau dan mengunduh data.", Color="from-emerald-500 to-emerald-600" },
+                new { Num="01", Icon="user", Title="Datang ke Loket", Desc="Bawa KTP, surat permohonan, dan dokumen pendukung sesuai kategori Anda." },
+                new { Num="02", Icon="clipboard", Title="Identifikasi & Daftar", Desc="Petugas loket mendaftarkan dan memberikan nomor permohonan unik." },
+                new { Num="03", Icon="pencil", Title="Tandatangani Dokumen", Desc="Tanda tangani formulir identifikasi awal yang dicetak petugas." },
+                new { Num="04", Icon="download", Title="Pantau & Unduh Data", Desc="Gunakan nomor permohonan untuk memantau dan mengunduh data." },
             };
         }
+
         @foreach (var s in steps)
         {
-            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 group">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br @s.Color flex items-center justify-center text-lg shadow-sm">
-                        @s.Icon
+            <div class="bg-white rounded-2xl p-5 border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all group">
+
+                <div class="flex items-start justify-between mb-4">
+
+                    <div class="w-10 h-10 rounded-xl bg-[#1B3B6F]/5 border border-[#1B3B6F]/10 flex items-center justify-center">
+
+                        @if (s.Icon == "user")
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#1B3B6F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 10-16 0"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        }
+
+                        @if (s.Icon == "clipboard")
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#1B3B6F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="2" width="6" height="4" rx="1"/>
+                                <path d="M9 4H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2h-2"/>
+                            </svg>
+                        }
+
+                        @if (s.Icon == "pencil")
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-[#1B3B6F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M15.232 5.232l3.536 3.536M9 11l6.232-6.232a2.5 2.5 0 013.536 3.536L12.536 14.5 9 15l.5-3.536z"/>
+                            </svg>
+                        }
+
+                        @if (s.Icon == "download")
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#1B3B6F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 10l5 5 5-5"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 21h14"/>
+                            </svg>
+                        }
+
                     </div>
-                    <span class="text-3xl font-black text-gray-100 leading-none">@s.Num</span>
+
+                    <span class="text-3xl font-black text-[#1B3B6F]/20 leading-none select-none">
+                        @s.Num
+                    </span>
+
                 </div>
-                <h3 class="font-bold text-gray-800 text-sm mb-1.5">@s.Title</h3>
-                <p class="text-gray-400 text-xs leading-relaxed">@s.Desc</p>
+
+                <h3 class="font-bold text-gray-800 text-sm mb-1.5">
+                    @s.Title
+                </h3>
+
+                <p class="text-gray-400 text-xs leading-relaxed">
+                    @s.Desc
+                </p>
+
             </div>
         }
     </div>
 </section>
 
-<!-- ═══════════════ KATEGORI ═══════════════ -->
-<section class="max-w-6xl mx-auto px-6 pb-16">
+<!-- ══ REQUIREMENTS ══ -->
+<section class="max-w-5xl mx-auto px-6 pb-14">
     <div class="text-center mb-8">
-        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">Persyaratan</p>
-        <h2 class="text-xl font-bold text-gray-800">Dokumen yang Diperlukan</h2>
+        <p class="text-xs font-bold text-[#1B3B6F] uppercase tracking-widest mb-2">Persyaratan</p>
+        <h2 class="text-xl font-bold text-gray-900">Dokumen yang Diperlukan</h2>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Mahasiswa -->
-        <div class="bg-white rounded-2xl border border-blue-100 p-6 shadow-sm">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">🎓</div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center text-xl">🎓</div>
                 <div>
                     <p class="font-bold text-gray-800 text-sm">Mahasiswa / Pelajar</p>
-                    <p class="text-blue-600 text-xs">3 dokumen wajib</p>
+                    <p class="text-blue-600 text-xs font-medium">3 dokumen wajib</p>
                 </div>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-2.5">
                 @foreach (var d in new[]{"Fotokopi KTP", "Surat Permohonan", "Proposal Penelitian"})
                 {
                     <div class="flex items-center gap-2.5">
-                        <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs flex-shrink-0">✓</span>
+                        <div class="w-5 h-5 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
+                            <span class="text-blue-600 text-[10px] font-bold">✓</span>
+                        </div>
                         <span class="text-gray-600 text-sm">@d</span>
                     </div>
                 }
@@ -104,19 +149,21 @@
         </div>
 
         <!-- LSM -->
-        <div class="bg-white rounded-2xl border border-emerald-100 p-6 shadow-sm">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl">🏢</div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center text-xl">🏢</div>
                 <div>
                     <p class="font-bold text-gray-800 text-sm">LSM / Organisasi</p>
-                    <p class="text-emerald-600 text-xs">3 dokumen wajib</p>
+                    <p class="text-emerald-600 text-xs font-medium">3 dokumen wajib</p>
                 </div>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-2.5">
                 @foreach (var d in new[]{"Fotokopi KTP Perwakilan", "Akta Notaris Lembaga", "Surat Permohonan"})
                 {
                     <div class="flex items-center gap-2.5">
-                        <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs flex-shrink-0">✓</span>
+                        <div class="w-5 h-5 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center flex-shrink-0">
+                            <span class="text-emerald-600 text-[10px] font-bold">✓</span>
+                        </div>
                         <span class="text-gray-600 text-sm">@d</span>
                     </div>
                 }
@@ -124,17 +171,17 @@
         </div>
 
         <!-- Umum -->
-        <div class="bg-gray-50 rounded-2xl border border-gray-200 p-6 shadow-sm">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-gray-200 rounded-xl flex items-center justify-center text-xl">👤</div>
+        <div class="bg-gray-50 rounded-2xl border border-gray-200 p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-xl">👤</div>
                 <div>
                     <p class="font-bold text-gray-800 text-sm">Masyarakat Umum</p>
-                    <p class="text-gray-500 text-xs">Via website PPID</p>
+                    <p class="text-gray-500 text-xs font-medium">Via website PPID</p>
                 </div>
             </div>
             <p class="text-gray-500 text-sm mb-4 leading-relaxed">Permohonan masyarakat umum dilayani melalui portal resmi PPID Diskominfo Jakarta.</p>
             <a href="https://ppid.jakarta.go.id/permohonan-informasi" target="_blank"
-               class="inline-flex items-center gap-1.5 bg-[#003876] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+               class="inline-flex items-center gap-1.5 bg-[#1B3B6F] hover:bg-[#142d56] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
                 🌐 Kunjungi Website PPID
             </a>
         </div>

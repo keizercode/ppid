@@ -6,21 +6,59 @@
 }
 
 <!-- Stats -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    @foreach(var (icon, lbl, val, color) in new[]{
-        ("📋","Total",         Model.Count.ToString(),                                                              "from-slate-400 to-slate-500"),
-        ("🆕","Terdaftar",     Model.Count(m => m.StatusPPIDID <= StatusId.IdentifikasiAwal).ToString(),           "from-blue-400 to-blue-600"),
-        ("⏳","Diproses",      Model.Count(m => m.StatusPPIDID > StatusId.SuratIzinTerbit && m.StatusPPIDID < StatusId.DataSiap).ToString(), "from-amber-400 to-orange-500"),
-        ("✅","Selesai",       Model.Count(m => m.StatusPPIDID >= StatusId.DataSiap).ToString(),                   "from-emerald-400 to-emerald-600"),
-    }) {
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br @color flex items-center justify-center text-lg flex-shrink-0 shadow-sm">@icon</div>
-            <div>
-                <p class="text-2xl font-extrabold text-gray-800 leading-none">@val</p>
-                <p class="text-xs text-gray-400 mt-0.5 font-medium">@lbl</p>
-            </div>
-        </div>
-    }
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+@foreach(var (icon, lbl, val, color) in new[]{
+("document","Total",Model.Count.ToString(),"from-slate-400 to-slate-600"),
+("user","Terdaftar",Model.Count(m => m.StatusPPIDID <= StatusId.IdentifikasiAwal).ToString(),"from-blue-400 to-blue-600"),
+("clock","Diproses",Model.Count(m => m.StatusPPIDID > StatusId.SuratIzinTerbit && m.StatusPPIDID < StatusId.DataSiap).ToString(),"from-amber-400 to-orange-500"),
+("check","Selesai",Model.Count(m => m.StatusPPIDID >= StatusId.DataSiap).ToString(),"from-emerald-400 to-emerald-600"),
+}){
+
+<div class="group bg-white rounded-2xl border border-gray-100 shadow-sm
+hover:shadow-lg transition-all duration-300 hover:-translate-y-1
+p-5 flex items-center gap-4">
+
+<div class="w-11 h-11 rounded-xl bg-gradient-to-br @color
+flex items-center justify-center text-white shadow-sm">
+
+@if(icon == "document"){
+<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M6 2h7l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+</svg>
+}
+
+@if(icon == "user"){
+<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M20 21a8 8 0 0 0-16 0"/>
+<circle cx="12" cy="7" r="4"/>
+</svg>
+}
+
+@if(icon == "clock"){
+<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+<circle cx="12" cy="12" r="10"/>
+<path d="M12 6v6l4 2"/>
+</svg>
+}
+
+@if(icon == "check"){
+<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M20 6L9 17l-5-5"/>
+</svg>
+}
+
+</div>
+
+<div>
+<p class="text-3xl font-bold text-gray-800">@val</p>
+<p class="text-xs text-gray-400 font-medium">@lbl</p>
+</div>
+
+</div>
+
+}
+
 </div>
 
 <!-- Table Header -->
