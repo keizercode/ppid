@@ -1,4 +1,5 @@
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\appsettings.json
+D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.staticwebassets.runtime.json
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.staticwebassets.endpoints.json
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.exe
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.deps.json
@@ -86,6 +87,7 @@ D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.csproj.Core
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.MvcApplicationPartsAssemblyInfo.cache
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.RazorAssemblyInfo.cache
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.RazorAssemblyInfo.cs
+D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.sourcelink.json
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\rjimswa.dswa.cache.json
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
@@ -101,5 +103,3 @@ D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\refint\PermintaanData.dll
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.pdb
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.genruntimeconfig.cache
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\ref\PermintaanData.dll
-D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.sourcelink.json
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.staticwebassets.runtime.json

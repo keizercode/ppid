@@ -1,7 +1,7 @@
 @model SuratIzinVm
 @{
     ViewData["Title"] = "Terbitkan Surat Izin";
-    ViewData["Role"]  = "Kepegawaian";
+    ViewData["Role"] = "Kepegawaian";
     Layout = "_LayoutAdmin";
 }
 
@@ -48,78 +48,122 @@
                 <!-- Keperluan -->
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
                     <p class="text-xs font-bold text-amber-700 uppercase tracking-wide mb-1">Konfirmasi Keperluan</p>
-                    <p class="text-xs text-amber-600 mb-3">Centang sesuai kebutuhan pemohon — menentukan alur setelah disposisi.</p>
-                    <div class="space-y-2.5">
-                        @foreach (var (forName, color, label) in new[]{
-                            (nameof(Model.IsObservasi),      "orange", "🔍 Observasi"),
-                            (nameof(Model.IsPermintaanData), "blue",   "📊 Permintaan Data"),
-                            (nameof(Model.IsWawancara),      "violet", "🎤 Wawancara"),
-                        }) {
-                            <label class="flex items-center gap-3 cursor-pointer bg-white rounded-lg px-3 py-2.5 border border-amber-100 hover:border-amber-300 transition-colors">
-                                <input asp-for="@forName" type="checkbox" class="w-4 h-4 rounded" />
-                                <span class="font-semibold text-gray-700 text-sm">@label</span>
+                    <p class="text-xs text-amber-600 mb-3">Centang sesuai kebutuhan pemohon — menentukan alur setelah
+                        disposisi.</p>
+                        <div class="space-y-2.5">
+                            <label
+                                class="flex items-center gap-3 cursor-pointer bg-white rounded-lg px-3 py-2.5 border border-amber-100 hover:border-amber-300 transition-colors">
+                                <input asp-for="IsObservasi" type="checkbox" class="w-4 h-4 rounded" />
+                                <span class="font-semibold text-gray-700 text-sm">🔍 Observasi</span>
                             </label>
-                        }
-                    </div>
-                    <p class="text-[11px] text-amber-500 mt-3">⚠️ Jika Observasi/Wawancara dicentang, KDI akan diarahkan ke halaman Jadwal Observasi.</p>
-                </div>
+                            <label
+                                class="flex items-center gap-3 cursor-pointer bg-white rounded-lg px-3 py-2.5 border border-amber-100 hover:border-amber-300 transition-colors">
+                                <input asp-for="IsPermintaanData" type="checkbox" class="w-4 h-4 rounded" />
+                                <span class="font-semibold text-gray-700 text-sm">📊 Permintaan Data</span>
+                            </label>
+                            <label
+                                class="flex items-center gap-3 cursor-pointer bg-white rounded-lg px-3 py-2.5 border border-amber-100 hover:border-amber-300 transition-colors">
+                                <input asp-for="IsWawancara" type="checkbox" class="w-4 h-4 rounded" />
+                                <span class="font-semibold text-gray-700 text-sm">🎤 Wawancara</span>
+                            </label>
+                        </div>
+                        <p class="text-[11px] text-amber-500 mt-3">⚠️ Jika Observasi/Wawancara dicentang, KDI akan diarahkan
+                            ke halaman Jadwal Observasi.</p>
+                        </div>
 
-                <!-- No. Surat -->
-                <div class="mb-4">
-                    <label class="lbl">No. Surat Izin <span class="text-red-400">*</span></label>
-                    <input asp-for="NoSuratIzin" type="text" placeholder="Contoh: 073/Surat.Izin/DINAS.LHK/2026" class="fld" />
-                    <span asp-validation-for="NoSuratIzin" class="err"></span>
-                </div>
+                        <!-- No. Surat -->
+                        <div class="mb-4">
+                            <label class="lbl">No. Surat Izin <span class="text-red-400">*</span></label>
+                            <input asp-for="NoSuratIzin" type="text" placeholder="Contoh: 073/Surat.Izin/DINAS.LHK/2026"
+                                   class="fld" />
+                            <span asp-validation-for="NoSuratIzin" class="err"></span>
+                        </div>
 
-                <!-- Upload -->
-                <div class="mb-5">
-                    <label class="lbl">Upload File Surat Izin</label>
-                    <input asp-for="FileSuratIzin" type="file" accept=".pdf,.jpg,.jpeg,.png"
-                           class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                </div>
+                        <!-- Upload -->
+                        <div class="mb-5">
+                            <label class="lbl">Upload File Surat Izin</label>
+                            <input asp-for="FileSuratIzin" type="file" accept=".pdf,.jpg,.jpeg,.png"
+                                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                        </div>
 
-                <!-- Disposisi -->
-                <div class="mb-4">
-                    <label class="lbl">Disposisi Ke</label>
-                    <div class="grid grid-cols-2 gap-2 mt-1">
-                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
-                            <input asp-for="DisposisiKe" type="radio" value="PSMDI" class="accent-blue-600" />
-                            <span class="text-sm font-semibold text-gray-700">💾 PSMDI</span>
-                        </label>
-                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
-                            <input asp-for="DisposisiKe" type="radio" value="BidangTerkait" id="radioB" class="accent-blue-600" />
-                            <span class="text-sm font-semibold text-gray-700">🏢 Bidang Terkait</span>
-                        </label>
-                    </div>
-                </div>
+                        <!-- Disposisi -->
+                        <div class="mb-4">
+                            <label class="lbl">Disposisi Ke</label>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <label
+                                    class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                                    <input asp-for="DisposisiKe" type="radio" value="PSMDI" class="accent-blue-600" />
+                                    <span class="text-sm font-semibold text-gray-700">💾 PSMDI</span>
+                                </label>
+                                <label
+                                    class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                                    <input asp-for="DisposisiKe" type="radio" value="BidangTerkait" id="radioB"
+                                           class="accent-blue-600" />
+                                    <span class="text-sm font-semibold text-gray-700">🏢 Bidang Terkait</span>
+                                </label>
+                            </div>
+                        </div>
 
-                <div id="bidangDiv" class="mb-5 @(Model.DisposisiKe == "BidangTerkait" ? "" : "hidden")">
-                    <label class="lbl">Nama Bidang Terkait</label>
-                    <input asp-for="NamaBidangTerkait" type="text" placeholder="Contoh: Bidang Pengendalian Pencemaran" class="fld" />
-                </div>
+                        <div id="bidangDiv" class="mb-5 @(Model.DisposisiKe == "BidangTerkait" ? "" : "hidden")">
+                            <label class="lbl">Nama Bidang Terkait</label>
+                            <input asp-for="NamaBidangTerkait" type="text" placeholder="Contoh: Bidang Pengendalian Pencemaran"
+                                   class="fld" />
+                        </div>
 
-                <div class="flex gap-3 pt-2">
-                    <a href="/kepegawaian" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">Batal</a>
-                    <button type="submit" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
-                        ✅ Terbitkan & Disposisi →
-                    </button>
+                        <div class="flex gap-3 pt-2">
+                            <a href="/kepegawaian"
+                               class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">Batal</a>
+                            <button type="submit"
+                                    class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                                ✅ Terbitkan & Disposisi →
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
-</div>
 
-<style>
-    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
-    .fld { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:9px 14px; font-size:13.5px; background:#fafafa; outline:none; transition:all .15s; }
-    .fld:focus { box-shadow:0 0 0 2.5px #3b82f6; border-color:transparent; background:white; }
-    .err { color:#ef4444; font-size:11px; margin-top:3px; display:block; }
-</style>
+        <style>
+            .lbl {
+                display: block;
+                font-size: 11px;
+                font-weight: 700;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 4px;
+            }
 
-<script>
-    document.querySelectorAll('input[name="DisposisiKe"]').forEach(r => {
-        r.addEventListener('change', function () {
-            document.getElementById('bidangDiv').classList.toggle('hidden', this.value !== 'BidangTerkait');
-        });
-    });
-</script>
+            .fld {
+                display: block;
+                width: 100%;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                padding: 9px 14px;
+                font-size: 13.5px;
+                background: #fafafa;
+                outline: none;
+                transition: all .15s;
+            }
+
+            .fld:focus {
+                box-shadow: 0 0 0 2.5px #3b82f6;
+                border-color: transparent;
+                background: white;
+            }
+
+            .err {
+                color: #ef4444;
+                font-size: 11px;
+                margin-top: 3px;
+                display: block;
+            }
+        </style>
+
+        <script>
+            document.querySelectorAll('input[name="DisposisiKe"]').forEach(r => {
+                r.addEventListener('change', function () {
+                    document.getElementById('bidangDiv').classList.toggle('hidden', this.value !== 'BidangTerkait');
+                });
+            });
+        </script>

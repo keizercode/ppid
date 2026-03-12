@@ -42,6 +42,7 @@
     <form asp-action="DaftarPemohonPost" method="post" enctype="multipart/form-data" id="mainForm">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Kategori" />
+        <input type="hidden" asp-for="LoketJenis" />
 
         <!-- Section helper macro — we use a styled div pattern -->
 
@@ -201,32 +202,52 @@
         </div>
 
         <!-- ── 5. KEPERLUAN ── -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
-            <div class="flex items-center gap-2.5 mb-1 pb-3 border-b border-gray-50">
-                <span class="w-6 h-6 bg-blue-600 rounded-md text-white text-[11px] font-black flex items-center justify-center">5</span>
-                <p class="font-bold text-gray-700 text-sm">Keperluan <span class="text-gray-400 font-normal text-xs">(bisa lebih dari 1)</span></p>
-            </div>
-            <p class="text-xs text-gray-400 mb-4">Berikan tanda "-" pada deskripsi jika tidak dibutuhkan</p>
-            <div class="space-y-3">
-                @foreach (var (chkFor, chkId, detailId, icon, label, color) in new[]{
-                    (nameof(Model.IsObservasi),      "chk-obs",  "obs-detail",  "🔍", "Observasi",       "orange"),
-                    (nameof(Model.IsPermintaanData), "chk-data", "data-detail", "📊", "Permintaan Data", "blue"),
-                    (nameof(Model.IsWawancara),      "chk-waw",  "waw-detail",  "🎤", "Wawancara",       "violet"),
-                }) {
-                    <div class="border border-gray-100 rounded-xl overflow-hidden">
-                        <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
-                            <input type="checkbox" name="@chkFor" id="@chkId" onchange="toggleDetail('@detailId', this)"
-                                   class="w-4 h-4 rounded accent-blue-600" />
-                            <span class="font-semibold text-gray-700 text-sm">@icon @label</span>
-                        </label>
-                        <div id="@detailId" class="hidden px-4 pb-4">
-                            <textarea name="Detail@(label.Replace(" ",""))" rows="2" class="fld resize-none text-sm"
-                                placeholder="Jelaskan @(label.ToLower()) yang diperlukan..."></textarea>
-                        </div>
-                    </div>
-                }
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+    <div class="flex items-center gap-2.5 mb-1 pb-3 border-b border-gray-50">
+        <span class="w-6 h-6 bg-blue-600 rounded-md text-white text-[11px] font-black flex items-center justify-center">5</span>
+        <p class="font-bold text-gray-700 text-sm">Keperluan <span class="text-gray-400 font-normal text-xs">(bisa lebih dari 1)</span></p>
+    </div>
+    <p class="text-xs text-gray-400 mb-4">Berikan tanda "-" pada deskripsi jika tidak dibutuhkan</p>
+    <div class="space-y-3">
+
+        <div class="border border-gray-100 rounded-xl overflow-hidden">
+            <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
+                <input asp-for="IsObservasi" type="checkbox" id="chk-obs"
+                       onchange="toggleDetail('obs-detail', this)" class="w-4 h-4 rounded accent-blue-600" />
+                <span class="font-semibold text-gray-700 text-sm">🔍 Observasi</span>
+            </label>
+            <div id="obs-detail" class="@(Model.IsObservasi ? "" : "hidden") px-4 pb-4">
+                <textarea asp-for="DetailObservasi" rows="2" class="fld resize-none text-sm"
+                    placeholder="Jelaskan observasi yang diperlukan..."></textarea>
             </div>
         </div>
+
+        <div class="border border-gray-100 rounded-xl overflow-hidden">
+            <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
+                <input asp-for="IsPermintaanData" type="checkbox" id="chk-data"
+                       onchange="toggleDetail('data-detail', this)" class="w-4 h-4 rounded accent-blue-600" />
+                <span class="font-semibold text-gray-700 text-sm">📊 Permintaan Data</span>
+            </label>
+            <div id="data-detail" class="@(Model.IsPermintaanData ? "" : "hidden") px-4 pb-4">
+                <textarea asp-for="DetailPermintaanData" rows="2" class="fld resize-none text-sm"
+                    placeholder="Jelaskan data yang diperlukan..."></textarea>
+            </div>
+        </div>
+
+        <div class="border border-gray-100 rounded-xl overflow-hidden">
+            <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
+                <input asp-for="IsWawancara" type="checkbox" id="chk-waw"
+                       onchange="toggleDetail('waw-detail', this)" class="w-4 h-4 rounded accent-blue-600" />
+                <span class="font-semibold text-gray-700 text-sm">🎤 Wawancara</span>
+            </label>
+            <div id="waw-detail" class="@(Model.IsWawancara ? "" : "hidden") px-4 pb-4">
+                <textarea asp-for="DetailWawancara" rows="2" class="fld resize-none text-sm"
+                    placeholder="Jelaskan topik wawancara yang diperlukan..."></textarea>
+            </div>
+        </div>
+
+    </div>
+</div>
 
         <!-- ── 6. UNIT KERJA ── -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
@@ -271,7 +292,13 @@
             </div>
         </div>
 
-        <div class="flex gap-3 mb-10">
+
+<div asp-validation-summary="ModelOnly"
+id="val-summary"
+     class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-700 text-xs">
+</div>
+
+<div class="flex gap-3 mb-10">
             <a asp-action="Index" asp-controller="PetugasLoket"
                class="flex-1 text-center border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold py-3 rounded-xl text-sm transition-colors">
                 Batal
@@ -407,5 +434,14 @@ function setSelectByValue(id, val) {
     for(let o of sel.options) { if(o.value === val) { sel.value = val; break; } }
 }
 loadProvinsi(); loadBidang();
+
+document.getElementById('mainForm').addEventListener('submit', function() {
+    const summary = document.getElementById('val-summary');
+    const errors  = document.querySelectorAll('[data-valmsg-for]');
+    // Show jika ada error setelah re-render
+    if (document.querySelectorAll('.err:not(:empty)').length > 0) {
+        summary.style.display = 'block';
+    }
+});
 </script>
 }
