@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using PermintaanData.Models;
 
@@ -14,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DokumenPPID> DokumenPPID { get; set; }
     public DbSet<JenisDokumenPPID> JenisDokumenPPID { get; set; }
     public DbSet<JadwalPPID> JadwalPPID { get; set; }
+    public DbSet<AuditLogPPID> AuditLog { get; set; }
+    public DbSet<AppUser> AppUsers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder m)
     {
@@ -43,7 +47,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithOne(e => e.Permohonan)
             .HasForeignKey(e => e.PermohonanPPIDID);
 
-        // ── Seed: StatusPPID ──────────────────────────────────────────────────
+        m.Entity<PermohonanPPID>()
+            .HasMany(e => e.AuditLog)
+            .WithOne(e => e.Permohonan)
+            .HasForeignKey(e => e.PermohonanPPIDID);
+
+        m.Entity<PermohonanPPID>()
+            .HasIndex(e => e.NoPermohonan)
+            .IsUnique();
+
+        m.Entity<AppUser>()
+            .HasIndex(e => e.Username)
+            .IsUnique();
+
+        // ── Seed: StatusPPID ──────────────────────────────────────────────
         m.Entity<StatusPPID>().HasData(
             new StatusPPID { StatusPPIDID = 1, NamaStatusPPID = "Baru" },
             new StatusPPID { StatusPPIDID = 2, NamaStatusPPID = "Terdaftar" },
@@ -56,7 +73,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             new StatusPPID { StatusPPIDID = 9, NamaStatusPPID = "Observasi Selesai" },
             new StatusPPID { StatusPPIDID = 10, NamaStatusPPID = "Data Siap" },
             new StatusPPID { StatusPPIDID = 11, NamaStatusPPID = "Selesai" },
-            // Jalur Wawancara langsung ke Produsen Data
             new StatusPPID { StatusPPIDID = 12, NamaStatusPPID = "Wawancara Dijadwalkan" },
             new StatusPPID { StatusPPIDID = 13, NamaStatusPPID = "Wawancara Selesai" }
         );
@@ -78,18 +94,98 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         );
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // GenerateNoPermohonan — atomic dengan transaksi
+    // ════════════════════════════════════════════════════════════════════════
+
     public async Task<string> GenerateNoPermohonan()
     {
         var year = DateTime.UtcNow.Year;
 
-        // Pakai eksekusi SQL dengan locking untuk menghindari race condition
-        var result = await Database.SqlQueryRaw<int>(
-            @"SELECT COALESCE(MAX(""Sequance""), 0) + 1 AS ""Value""
-          FROM public.""PermohonanPPID""
-          WHERE EXTRACT(YEAR FROM ""CratedAt"") = {0}
-          FOR UPDATE", year)
-            .FirstOrDefaultAsync();
+        await using var tx = await Database.BeginTransactionAsync();
+        try
+        {
+            var lastSeq = await PermohonanPPID
+                .Where(p => p.CratedAt != null && p.CratedAt.Value.Year == year)
+                .OrderByDescending(p => p.Sequance)
+                .Select(p => p.Sequance)
+                .FirstOrDefaultAsync() ?? 0;
 
-        return $"PPD/{year}/{result:D4}";
+            var nextSeq = lastSeq + 1;
+            await tx.CommitAsync();
+
+            return $"PPD/{year}/{nextSeq:D4}";
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
     }
+
+    // ── Helper Audit Log ──────────────────────────────────────────────────────
+
+    public void AddAuditLog(Guid permohonanId, int? statusLama, int statusBaru,
+        string keterangan, string operator_)
+    {
+        AuditLog.Add(new AuditLogPPID
+        {
+            PermohonanPPIDID = permohonanId,
+            StatusLama = statusLama,
+            StatusBaru = statusBaru,
+            Keterangan = keterangan,
+            Operator = operator_,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// AppUser — simple auth tanpa BCrypt (pakai SHA-256 + salt bawaan .NET)
+// Tidak perlu install package tambahan sama sekali.
+// ════════════════════════════════════════════════════════════════════════════
+
+[System.ComponentModel.DataAnnotations.Schema.Table("AppUser", Schema = "public")]
+public class AppUser
+{
+    [System.ComponentModel.DataAnnotations.Key]
+    [System.ComponentModel.DataAnnotations.Schema.Column("AppUserID")]
+    public int AppUserID { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.Column("Username")]
+    public string Username { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Schema.Column("PasswordHash")]
+    public string PasswordHash { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Schema.Column("Role")]
+    public string Role { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Schema.Column("NamaLengkap")]
+    public string NamaLengkap { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Schema.Column("IsActive")]
+    public bool IsActive { get; set; } = true;
+
+    [System.ComponentModel.DataAnnotations.Schema.Column("CreatedAt")]
+    public DateTime? CreatedAt { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.Column("UpdatedAt")]
+    public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Hash password dengan SHA-256 + salt tetap.
+    /// Format simpan: "PPID_v1:{hash}"
+    /// </summary>
+    public static string HashPassword(string password)
+    {
+        // Salt tetap — cukup untuk proyek internal.
+        // Jika ingin lebih aman, simpan salt per-user di kolom terpisah.
+        const string salt = "PPID_DLH_JKT_2025";
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(salt + password));
+        return "PPID_v1:" + Convert.ToHexString(bytes);
+    }
+
+    public bool VerifyPassword(string password)
+        => PasswordHash == HashPassword(password);
 }

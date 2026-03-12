@@ -67,15 +67,15 @@ public class PermohonanPPID
     [Column("UpdatedAt")] public DateTime? UpdatedAt { get; set; }
     [Column("BidangID")] public Guid? BidangID { get; set; }
     [Column("NamaBidang")] public string? NamaBidang { get; set; }
-    /// <summary>Nama unit/bidang yang menjadi produsen data untuk wawancara langsung.</summary>
     [Column("NamaProdusenData")] public string? NamaProdusenData { get; set; }
-    [Column("LoketJenis")] public string? LoketJenis { get; set; } // "Kepegawaian" | "Umum"
+    [Column("LoketJenis")] public string? LoketJenis { get; set; }
 
     [ForeignKey("PribadiID")] public Pribadi? Pribadi { get; set; }
     [ForeignKey("StatusPPIDID")] public StatusPPID? Status { get; set; }
     public ICollection<PermohonanPPIDDetail> Detail { get; set; } = new List<PermohonanPPIDDetail>();
     public ICollection<DokumenPPID> Dokumen { get; set; } = new List<DokumenPPID>();
     public ICollection<JadwalPPID> Jadwal { get; set; } = new List<JadwalPPID>();
+    public ICollection<AuditLogPPID> AuditLog { get; set; } = new List<AuditLogPPID>();
 }
 
 [Table("PermohonanPPIDDetail", Schema = "public")]
@@ -141,7 +141,7 @@ public class JadwalPPID
 {
     [Key, Column("JadwalPPIDID")] public Guid JadwalPPIDID { get; set; } = Guid.NewGuid();
     [Column("PermohonanPPIDID")] public Guid? PermohonanPPIDID { get; set; }
-    [Column("JenisJadwal")] public string JenisJadwal { get; set; } = "Observasi"; // "Observasi" | "Wawancara"
+    [Column("JenisJadwal")] public string JenisJadwal { get; set; } = "Observasi";
     [Column("Tanggal")] public DateOnly? Tanggal { get; set; }
     [Column("Waktu")] public TimeOnly? Waktu { get; set; }
     [Column("NamaPIC")] public string? NamaPIC { get; set; }
@@ -151,37 +151,43 @@ public class JadwalPPID
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 }
 
-// ── Konstanta Status & Jenis Dokumen ─────────────────────────────────────────
+// ── BARU: Audit Log ───────────────────────────────────────────────────────────
 
 /// <summary>
-/// Alur status permohonan PPID.
-/// ─────────────────────────────────────────────────────────────
-/// LOKET KEPEGAWAIAN (Mahasiswa)  →  semua keperluan (Obs, Waw, Data)
-/// LOKET UMUM        (LSM)        →  Observasi + Permintaan Data
-///
-/// Routing setelah Surat Izin terbit (Kepegawaian):
-///   HasPermintaanData || HasObservasi  →  Didisposisi  →  KDI
-///   IsWawancara ONLY                  →  WawancaraDijadwalkan  →  Produsen Data
-///   Wawancara + Data/Obs (kombinasi)  →  Didisposisi  →  KDI
-///                                         (KDI juga jadwalkan wawancara jika perlu)
-/// ─────────────────────────────────────────────────────────────
+/// Mencatat setiap perubahan status pada permohonan PPID.
+/// Diisi otomatis oleh setiap controller yang mengubah StatusPPIDID.
 /// </summary>
+[Table("AuditLogPPID", Schema = "public")]
+public class AuditLogPPID
+{
+    [Key, Column("AuditLogID")] public Guid AuditLogID { get; set; } = Guid.NewGuid();
+    [Column("PermohonanPPIDID")] public Guid PermohonanPPIDID { get; set; }
+    [Column("StatusLama")] public int? StatusLama { get; set; }
+    [Column("StatusBaru")] public int? StatusBaru { get; set; }
+    [Column("Keterangan")] public string? Keterangan { get; set; }
+    [Column("Operator")] public string? Operator { get; set; }
+    [Column("CreatedAt")] public DateTime CreatedAt { get; set; }
+
+    [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
+}
+
+// ── Konstanta Status & Jenis Dokumen ─────────────────────────────────────────
+
 public static class StatusId
 {
     public const int Baru = 1;
     public const int TerdaftarSistem = 2;
     public const int IdentifikasiAwal = 3;
     public const int MenungguSuratIzin = 4;
-    public const int SuratIzinTerbit = 5;  // ditetapkan sebelum disposisi
-    public const int Didisposisi = 6;  // → KDI (ada data / observasi)
+    public const int SuratIzinTerbit = 5;
+    public const int Didisposisi = 6;
     public const int DiProses = 7;
     public const int ObservasiDijadwalkan = 8;
     public const int ObservasiSelesai = 9;
     public const int DataSiap = 10;
     public const int Selesai = 11;
-    // ── Jalur Wawancara (langsung ke Produsen Data) ───────────
-    public const int WawancaraDijadwalkan = 12;  // wawancara-only: langsung ke unit produsen data
-    public const int WawancaraSelesai = 13;  // wawancara selesai → DataSiap atau Selesai
+    public const int WawancaraDijadwalkan = 12;
+    public const int WawancaraSelesai = 13;
 }
 
 public static class JenisDokumenId
@@ -202,9 +208,19 @@ public static class KeperluanId
     public const int Wawancara = 3;
 }
 
-/// <summary>Jenis loket tempat pemohon mendaftar.</summary>
 public static class LoketJenis
 {
-    public const string Kepegawaian = "Kepegawaian"; // Mahasiswa/Peneliti – semua keperluan
-    public const string Umum = "Umum";        // LSM/Organisasi – Obs + Data
+    public const string Kepegawaian = "Kepegawaian";
+    public const string Umum = "Umum";
+}
+
+// ── Role constants ────────────────────────────────────────────────────────────
+
+public static class AppRoles
+{
+    public const string Loket = "Loket";
+    public const string Kepegawaian = "Kepegawaian";
+    public const string KDI = "KDI";
+    public const string ProdusenData = "ProdusenData";
+    public const string Admin = "Admin";
 }

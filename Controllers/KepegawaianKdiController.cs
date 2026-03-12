@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
@@ -6,11 +7,12 @@ using PermintaanData.Models.ViewModels;
 
 namespace PermintaanData.Controllers;
 
-// ════════════════════════════════════════════════════════════════════════════════
-// KEPEGAWAIAN — Menerbitkan Surat Izin & Mendisposisi ke KDI atau Produsen Data
-// ════════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// KEPEGAWAIAN
+// ════════════════════════════════════════════════════════════════════════════
 
 [Route("kepegawaian")]
+[Authorize(Roles = "Kepegawaian,Admin")]
 public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
     private string UploadsRoot =>
@@ -19,6 +21,8 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
                 ? Path.Combine(env.ContentRootPath, "wwwroot")
                 : env.WebRootPath,
             "uploads");
+
+    private string CurrentUser => User.Identity?.Name ?? "Kepegawaian";
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
@@ -48,7 +52,6 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
             NamaPemohon = p.Pribadi?.Nama ?? "",
             Kategori = p.KategoriPemohon ?? "",
             JudulPenelitian = p.JudulPenelitian ?? "",
-            // Pre-fill keperluan dari data pemohon (dapat di-override kepegawaian)
             IsObservasi = p.IsObservasi,
             IsPermintaanData = p.IsPermintaanData,
             IsWawancara = p.IsWawancara,
@@ -83,46 +86,40 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
+        var statusLama = p.StatusPPIDID;
+
         p.NoSuratPermohonan = vm.NoSuratIzin;
         p.UpdatedAt = now;
+
+        // ── BUG FIX: Update keperluan sesuai konfirmasi kepegawaian ─────────
         p.IsObservasi = vm.IsObservasi;
         p.IsPermintaanData = vm.IsPermintaanData;
         p.IsWawancara = vm.IsWawancara;
 
-        // ── ROUTING LOGIC ───────────────────────────────────────────────────
-        //
-        //  Aturan bisnis:
-        //  ┌───────────────────────────────────────────────────────────────┐
-        //  │ WAWANCARA-ONLY (tanpa data & tanpa observasi)                 │
-        //  │   → Status: WawancaraDijadwalkan                              │
-        //  │   → Diteruskan ke Produsen Data (/produsen-data)              │
-        //  │   → Produsen Data menjadwalkan & melayani wawancara langsung  │
-        //  │                                                               │
-        //  │ ADA PERMINTAAN DATA atau OBSERVASI (± wawancara)              │
-        //  │   → Status: SuratIzinTerbit → Didisposisi                    │
-        //  │   → Diteruskan ke KDI (/kdi)                                 │
-        //  │   → KDI menangani data + observasi; wawancara dapat           │
-        //  │     dijadwalkan secara terpisah oleh KDI                      │
-        //  └───────────────────────────────────────────────────────────────┘
-        //
+        // ── ROUTING ──────────────────────────────────────────────────────────
         if (vm.IsWawancaraOnly)
         {
-            // Wawancara langsung ke Produsen Data
             p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
             p.NamaProdusenData = vm.NamaProdusenData ?? vm.NamaBidangTerkait;
-            // NamaBidang tidak diisi (bukan jalur KDI)
         }
         else
         {
-            // Ada data / observasi → ke KDI
-            // Gunakan SuratIzinTerbit secara singkat, langsung ke Didisposisi
             p.StatusPPIDID = StatusId.Didisposisi;
-
-            if (vm.DisposisiKe == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangTerkait))
-                p.NamaBidang = vm.NamaBidangTerkait;
-            else
-                p.NamaBidang = null; // null = PSMDI
+            p.NamaBidang = vm.DisposisiKe == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangTerkait)
+                ? vm.NamaBidangTerkait
+                : null;
         }
+
+        // ── Audit Log ─────────────────────────────────────────────────────
+        db.AddAuditLog(
+            vm.PermohonanPPIDID,
+            statusLama,
+            p.StatusPPIDID!.Value,
+            vm.IsWawancaraOnly
+                ? $"Surat izin {vm.NoSuratIzin} diterbitkan, diteruskan ke Produsen Data"
+                : $"Surat izin {vm.NoSuratIzin} diterbitkan, didisposisi ke {(p.NamaBidang ?? "PSMDI")}",
+            CurrentUser
+        );
 
         await db.SaveChangesAsync();
 
@@ -135,12 +132,12 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
     }
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// KDI — Memproses Permintaan Data + Observasi
-//        (Juga menangani wawancara jika dikombinasikan dengan data/observasi)
-// ════════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// KDI
+// ════════════════════════════════════════════════════════════════════════════
 
 [Route("kdi")]
+[Authorize(Roles = "KDI,Admin")]
 public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
     private string UploadsRoot =>
@@ -150,48 +147,72 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
                 : env.WebRootPath,
             "uploads");
 
+    private string CurrentUser => User.Identity?.Name ?? "KDI";
+
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q, int? status)
     {
-        var list = await db.PermohonanPPID
+        var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
             .Where(p => p.StatusPPIDID >= StatusId.Didisposisi
                      && p.StatusPPIDID <= StatusId.ObservasiSelesai)
-            .OrderByDescending(p => p.UpdatedAt)
-            .ToListAsync();
-        return View(list);
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+
+        if (status.HasValue)
+            query = query.Where(p => p.StatusPPIDID == status.Value);
+
+        ViewData["Q"] = q;
+        ViewData["Status"] = status;
+        return View(await query.OrderByDescending(p => p.UpdatedAt).ToListAsync());
     }
 
     [HttpGet("psmdi")]
-    public async Task<IActionResult> Psmdi()
+    public async Task<IActionResult> Psmdi(string? q)
     {
-        var list = await db.PermohonanPPID
+        var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
             .Where(p => p.StatusPPIDID >= StatusId.Didisposisi
                      && p.StatusPPIDID <= StatusId.ObservasiSelesai
                      && p.NamaBidang == null)
-            .OrderByDescending(p => p.UpdatedAt)
-            .ToListAsync();
-        return View(list);
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+
+        ViewData["Q"] = q;
+        return View(await query.OrderByDescending(p => p.UpdatedAt).ToListAsync());
     }
 
     [HttpGet("bidang")]
-    public async Task<IActionResult> Bidang()
+    public async Task<IActionResult> Bidang(string? q)
     {
-        var list = await db.PermohonanPPID
+        var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
             .Where(p => p.StatusPPIDID >= StatusId.Didisposisi
                      && p.StatusPPIDID <= StatusId.ObservasiSelesai
                      && p.NamaBidang != null)
-            .OrderByDescending(p => p.UpdatedAt)
-            .ToListAsync();
-        return View(list);
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+
+        ViewData["Q"] = q;
+        return View(await query.OrderByDescending(p => p.UpdatedAt).ToListAsync());
     }
 
-    // ── Terima Disposisi ──────────────────────────────────────────────────────
+    // ── Terima Disposisi ──────────────────────────────────────────────────
 
     [HttpGet("terima/{id}")]
     public async Task<IActionResult> TerimaDisposisi(Guid id)
@@ -208,11 +229,8 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             NamaPemohon = p.Pribadi?.Nama ?? "",
             JudulPenelitian = p.JudulPenelitian ?? "",
             LatarBelakang = p.LatarBelakang ?? "",
-            // Observasi dan Wawancara dipisah:
-            // - PerluObservasi: butuh penjadwalan di lapangan (site visit)
-            // - PerluWawancara: butuh jadwal wawancara dengan unit penghasil data
             PerluObservasi = p.IsObservasi,
-            PerluWawancara = p.IsWawancara,  // kombinasi: wawancara + data/observasi
+            PerluWawancara = p.IsWawancara,
         });
     }
 
@@ -220,26 +238,28 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     public async Task<IActionResult> TerimaDisposisiPost(TerimaDisposisiVm vm)
     {
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null)
-        {
-            p.StatusPPIDID = StatusId.DiProses;
-            p.UpdatedAt = DateTime.UtcNow;
-        }
+        if (p == null) return NotFound();
+
+        var statusLama = p.StatusPPIDID;
+        p.StatusPPIDID = StatusId.DiProses;
+        p.UpdatedAt = DateTime.UtcNow;
+
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.DiProses,
+            $"Disposisi diterima KDI. Catatan: {vm.Catatan}", CurrentUser);
+
         await db.SaveChangesAsync();
         TempData["Success"] = "Disposisi diterima. Silakan siapkan data.";
 
-        // Tentukan langkah berikutnya berdasarkan keperluan
         if (vm.PerluObservasi)
             return RedirectToAction("JadwalObservasi", new { id = vm.PermohonanPPIDID });
 
         if (vm.PerluWawancara)
-            // Wawancara dikombinasikan dengan data — jadwalkan wawancara juga
             return RedirectToAction("JadwalWawancara", new { id = vm.PermohonanPPIDID });
 
         return RedirectToAction("UploadData", new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Jadwal Observasi ──────────────────────────────────────────────────────
+    // ── Jadwal Observasi ──────────────────────────────────────────────────
 
     [HttpGet("jadwal/{id}")]
     public async Task<IActionResult> JadwalObservasi(Guid id)
@@ -247,6 +267,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var p = await db.PermohonanPPID.Include(x => x.Pribadi)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+
         return View(new JadwalObservasiVm
         {
             PermohonanPPIDID = id,
@@ -259,6 +280,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     public async Task<IActionResult> JadwalObservasiPost(JadwalObservasiVm vm)
     {
         if (!ModelState.IsValid) return View("JadwalObservasi", vm);
+
         var now = DateTime.UtcNow;
         db.JadwalPPID.Add(new JadwalPPID
         {
@@ -269,14 +291,26 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             NamaPIC = vm.NamaPIC,
             CreatedAt = now
         });
+
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null) { p.StatusPPIDID = StatusId.ObservasiDijadwalkan; p.UpdatedAt = now; }
+        if (p != null)
+        {
+            var statusLama = p.StatusPPIDID;
+            p.StatusPPIDID = StatusId.ObservasiDijadwalkan;
+            p.UpdatedAt = now;
+            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.ObservasiDijadwalkan,
+                $"Observasi dijadwalkan {vm.TanggalObservasi:dd MMM yyyy} pukul {vm.WaktuObservasi:HH:mm}, PIC: {vm.NamaPIC}",
+                CurrentUser);
+        }
+
         await db.SaveChangesAsync();
         TempData["Success"] = $"Jadwal observasi: <strong>{vm.TanggalObservasi:dd MMM yyyy}</strong> pukul {vm.WaktuObservasi:HH:mm}";
         return RedirectToAction("Index");
     }
 
-    // ── Selesai Observasi ──────────────────────────────────────────────────────
+    // ── BUG FIX: Selesai Observasi ────────────────────────────────────────
+    // Sebelumnya tidak ada endpoint ini, status ObservasiSelesai tidak pernah
+    // di-set sehingga permohonan stuck di ObservasiDijadwalkan.
 
     [HttpGet("selesai-observasi/{id}")]
     public async Task<IActionResult> SelesaiObservasi(Guid id)
@@ -284,7 +318,15 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var p = await db.PermohonanPPID.Include(x => x.Pribadi)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
-        return View(new UploadDataVm
+
+        // Hanya permohonan yang sudah dijadwal observasi yang bisa diselesaikan
+        if (p.StatusPPIDID != StatusId.ObservasiDijadwalkan)
+        {
+            TempData["Error"] = "Permohonan ini tidak dalam status Observasi Dijadwalkan.";
+            return RedirectToAction("Index");
+        }
+
+        return View(new SelesaiObservasiVm
         {
             PermohonanPPIDID = id,
             NoPermohonan = p.NoPermohonan!,
@@ -294,20 +336,26 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     }
 
     [HttpPost("selesai-observasi"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> SelesaiObservasiPost(UploadDataVm vm)
+    public async Task<IActionResult> SelesaiObservasiPost(SelesaiObservasiVm vm)
     {
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
+
+        var now = DateTime.UtcNow;
+        var statusLama = p.StatusPPIDID;
+
         p.StatusPPIDID = StatusId.ObservasiSelesai;
-        p.UpdatedAt = DateTime.UtcNow;
+        p.UpdatedAt = now;
+
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.ObservasiSelesai,
+            $"Observasi selesai. Catatan: {vm.Catatan}", CurrentUser);
+
         await db.SaveChangesAsync();
         TempData["Success"] = "Observasi selesai. Lanjutkan ke upload data.";
         return RedirectToAction("UploadData", new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Jadwal Wawancara (kombinasi dengan data) ──────────────────────────────
-    // Digunakan ketika pemohon memilih Wawancara + (Observasi/Data).
-    // Wawancara-only ditangani oleh ProdusenDataController.
+    // ── Jadwal Wawancara (kombinasi dengan data) ──────────────────────────
 
     [HttpGet("jadwal-wawancara/{id}")]
     public async Task<IActionResult> JadwalWawancara(Guid id)
@@ -334,8 +382,8 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     public async Task<IActionResult> JadwalWawancaraPost(JadwalWawancaraVm vm)
     {
         if (!ModelState.IsValid) return View("JadwalWawancara", vm);
-        var now = DateTime.UtcNow;
 
+        var now = DateTime.UtcNow;
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
@@ -346,14 +394,16 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             CreatedAt = now
         });
 
-        // Status tetap DiProses; wawancara adalah bagian dari proses,
-        // bukan status utama (hanya wawancara-only yang punya status sendiri)
+        db.AddAuditLog(vm.PermohonanPPIDID, null, StatusId.DiProses,
+            $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} pukul {vm.WaktuWawancara:HH:mm}",
+            CurrentUser);
+
         await db.SaveChangesAsync();
         TempData["Success"] = $"Jadwal wawancara: <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> pukul {vm.WaktuWawancara:HH:mm}";
         return RedirectToAction("UploadData", new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Upload Data ───────────────────────────────────────────────────────────
+    // ── Upload Data ───────────────────────────────────────────────────────
 
     [HttpGet("upload-data/{id}")]
     public async Task<IActionResult> UploadData(Guid id)
@@ -361,6 +411,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var p = await db.PermohonanPPID.Include(x => x.Pribadi)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+
         return View(new UploadDataVm
         {
             PermohonanPPIDID = id,
@@ -395,28 +446,27 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         }
 
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null) { p.StatusPPIDID = StatusId.DataSiap; p.UpdatedAt = now; }
-        await db.SaveChangesAsync();
+        if (p != null)
+        {
+            var statusLama = p.StatusPPIDID;
+            p.StatusPPIDID = StatusId.DataSiap;
+            p.UpdatedAt = now;
+            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.DataSiap,
+                "Data hasil diupload, pemohon dapat mengunduh.", CurrentUser);
+        }
 
+        await db.SaveChangesAsync();
         TempData["Success"] = "Data berhasil diupload. Pemohon dapat mengunduh data.";
         return RedirectToAction("Index");
     }
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// PRODUSEN DATA — Melayani Wawancara / Interview Langsung (Wawancara-Only)
-//
-// Alur:
-//   Kepegawaian menerbitkan surat izin
-//     → StatusPPIDID = WawancaraDijadwalkan
-//     → NamaProdusenData diisi dengan nama unit yang bertanggung jawab
-//   Produsen Data menerima notifikasi, menjadwalkan wawancara
-//   Setelah wawancara selesai → StatusPPIDID = WawancaraSelesai
-//   Jika perlu hasil tertulis → upload data → StatusPPIDID = DataSiap
-//   Jika tidak ada data → langsung Selesai
-// ════════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// PRODUSEN DATA
+// ════════════════════════════════════════════════════════════════════════════
 
 [Route("produsen-data")]
+[Authorize(Roles = "ProdusenData,Admin")]
 public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
     private string UploadsRoot =>
@@ -426,21 +476,26 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
                 : env.WebRootPath,
             "uploads");
 
-    /// <summary>Dashboard Produsen Data — menampilkan permintaan wawancara masuk.</summary>
+    private string CurrentUser => User.Identity?.Name ?? "ProdusenData";
+
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q)
     {
-        var list = await db.PermohonanPPID
+        var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
             .Where(p => p.StatusPPIDID == StatusId.WawancaraDijadwalkan
                      || p.StatusPPIDID == StatusId.WawancaraSelesai)
-            .OrderByDescending(p => p.UpdatedAt)
-            .ToListAsync();
-        return View(list);
-    }
+            .AsQueryable();
 
-    // ── Jadwal Wawancara ──────────────────────────────────────────────────────
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+
+        ViewData["Q"] = q;
+        return View(await query.OrderByDescending(p => p.UpdatedAt).ToListAsync());
+    }
 
     [HttpGet("jadwal/{id}")]
     public async Task<IActionResult> JadwalWawancara(Guid id)
@@ -467,8 +522,8 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
     public async Task<IActionResult> JadwalWawancaraPost(JadwalWawancaraVm vm)
     {
         if (!ModelState.IsValid) return View("JadwalWawancara", vm);
-        var now = DateTime.UtcNow;
 
+        var now = DateTime.UtcNow;
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
@@ -478,14 +533,15 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             NamaPIC = vm.NamaPIC,
             CreatedAt = now
         });
-        // Status tetap WawancaraDijadwalkan (sudah di-set oleh Kepegawaian)
-        await db.SaveChangesAsync();
 
-        TempData["Success"] = $"Jadwal wawancara <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> pukul {vm.WaktuWawancara:HH:mm} berhasil dibuat. Pemohon dapat melihat jadwal ini secara online.";
+        db.AddAuditLog(vm.PermohonanPPIDID, null, StatusId.WawancaraDijadwalkan,
+            $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} pukul {vm.WaktuWawancara:HH:mm}, narasumber: {vm.NamaPIC}",
+            CurrentUser);
+
+        await db.SaveChangesAsync();
+        TempData["Success"] = $"Jadwal wawancara <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> pukul {vm.WaktuWawancara:HH:mm} berhasil dibuat.";
         return RedirectToAction("Index");
     }
-
-    // ── Selesai Wawancara ─────────────────────────────────────────────────────
 
     [HttpGet("selesai/{id}")]
     public async Task<IActionResult> SelesaiWawancara(Guid id)
@@ -493,6 +549,7 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
         var p = await db.PermohonanPPID.Include(x => x.Pribadi)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+
         return View(new UploadDataVm
         {
             PermohonanPPIDID = id,
@@ -502,11 +559,6 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
         });
     }
 
-    /// <summary>
-    /// Menandai wawancara selesai.
-    /// Jika ada file hasil wawancara (transkip/notulen) → status DataSiap.
-    /// Jika tidak ada file → status WawancaraSelesai → Selesai.
-    /// </summary>
     [HttpPost("selesai"), ValidateAntiForgeryToken]
     public async Task<IActionResult> SelesaiWawancaraPost(UploadDataVm vm)
     {
@@ -514,9 +566,10 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
+        var statusLama = p.StatusPPIDID;
+
         if (vm.FileData?.Length > 0)
         {
-            // Ada dokumen hasil (transkip, notulen, dll) — bisa diunduh pemohon
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
             var fn = $"data_{vm.FileData.FileName}";
@@ -535,10 +588,12 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
         }
         else
         {
-            // Tidak ada file hasil — wawancara langsung, tandai selesai
             p.StatusPPIDID = StatusId.WawancaraSelesai;
             TempData["Success"] = "Wawancara selesai. Pemohon dapat mengisi kuesioner kepuasan.";
         }
+
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, p.StatusPPIDID!.Value,
+            "Wawancara selesai oleh Produsen Data.", CurrentUser);
 
         p.UpdatedAt = now;
         await db.SaveChangesAsync();

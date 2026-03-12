@@ -1,0 +1,122 @@
+@model LoginVm
+@{
+    ViewData["Title"] = "Login Admin";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — PPID Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>* { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+</head>
+<body class="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4">
+
+<div class="w-full max-w-sm">
+
+    <!-- Brand -->
+    <div class="text-center mb-8">
+        <div class="w-14 h-14 bg-[#1B3B6F] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+            <svg viewBox="0 0 40 20" class="w-8 h-4">
+                <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle"
+                      font-size="12" font-weight="700" fill="white"
+                      font-family="Plus Jakarta Sans, sans-serif">PPID</text>
+            </svg>
+        </div>
+        <h1 class="text-xl font-extrabold text-gray-900">PPID DLH Jakarta</h1>
+        <p class="text-gray-400 text-sm mt-1">Masuk ke panel admin</p>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-red-700 text-sm">
+                @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors)) {
+                    <p>@err.ErrorMessage</p>
+                }
+            </div>
+        }
+
+        <form asp-action="LoginPost" asp-controller="Auth" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+            <div class="mb-4">
+                <label class="lbl">Username</label>
+                <input asp-for="Username" class="fld" placeholder="loket / kepegawaian / kdi" autocomplete="username" />
+                <span asp-validation-for="Username" class="err"></span>
+            </div>
+
+            <div class="mb-5">
+                <label class="lbl">Password</label>
+                <div class="relative">
+                    <input asp-for="Password" type="password" id="pwdInput"
+                           class="fld pr-10" placeholder="••••••••" autocomplete="current-password" />
+                    <button type="button" onclick="togglePwd()"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-sm">
+                        👁
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="err"></span>
+            </div>
+
+            <label class="flex items-center gap-2.5 mb-5 cursor-pointer">
+                <input asp-for="RememberMe" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
+                <span class="text-sm text-gray-600 font-medium">Ingat saya selama 7 hari</span>
+            </label>
+
+            <button type="submit"
+                    class="w-full bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 rounded-xl transition-colors shadow-sm text-sm">
+                Masuk →
+            </button>
+        </form>
+    </div>
+
+    <!-- Role hints -->
+    <div class="mt-4 bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Akun Default</p>
+        <div class="space-y-1.5 text-xs text-gray-500">
+            @foreach (var (user, role, pass) in new[]{
+                ("loket",       "Petugas Loket",      "loket123"),
+                ("kepegawaian", "Kepegawaian",         "kepeg123"),
+                ("kdi",         "KDI",                 "kdi123"),
+                ("produsen",    "Produsen Data",       "produsen123"),
+                ("admin",       "Administrator",       "admin123"),
+            }) {
+                <div class="flex items-center justify-between">
+                    <span class="font-mono font-semibold text-gray-700">@user</span>
+                    <span class="text-gray-400">@role</span>
+                    <span class="font-mono text-gray-300">@pass</span>
+                </div>
+            }
+        </div>
+        <p class="text-[10px] text-red-400 mt-2.5 font-medium">⚠️ Ganti password setelah deploy production!</p>
+    </div>
+
+    <p class="text-center text-xs text-gray-300 mt-6">
+        &copy; @DateTime.Now.Year · PPID DLH DKI Jakarta
+    </p>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+    .fld { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px; font-size:13.5px; background:#fafafa; outline:none; transition:all .15s; }
+    .fld:focus { box-shadow:0 0 0 2.5px #3b82f6; border-color:transparent; background:white; }
+    .err { color:#ef4444; font-size:11px; margin-top:3px; display:block; }
+</style>
+
+<script>
+function togglePwd() {
+    const inp = document.getElementById('pwdInput');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+</script>
+
+</body>
+</html>

@@ -6,6 +6,7 @@ D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.deps.json
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.runtimeconfig.json
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.dll
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.pdb
+D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\BCrypt.Net-Next.dll
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Humanizer.dll
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Microsoft.Bcl.AsyncInterfaces.dll
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Microsoft.CodeAnalysis.dll

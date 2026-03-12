@@ -29,26 +29,39 @@ public class RiwayatStatusVm
     public bool AktifSekarang { get; set; }
 }
 
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+
+public class LoginVm
+{
+    [Required(ErrorMessage = "Username wajib diisi")]
+    [Display(Name = "Username")]
+    public string Username { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Password wajib diisi")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Password")]
+    public string Password { get; set; } = string.Empty;
+
+    [Display(Name = "Ingat saya")]
+    public bool RememberMe { get; set; }
+}
+
 // ── PETUGAS LOKET: Identifikasi ───────────────────────────────────────────────
 
 public class IdentifikasiPemohonVm
 {
     [Required(ErrorMessage = "Kategori wajib dipilih")]
-    public string Kategori { get; set; } = string.Empty; // "Mahasiswa" | "LSM"
-
-    /// <summary>Ditentukan otomatis dari kategori: Mahasiswa→Kepegawaian, LSM→Umum</summary>
+    public string Kategori { get; set; } = string.Empty;
     public string LoketJenis { get; set; } = string.Empty;
 }
 
-// ── PETUGAS LOKET: Daftar Pemohon (FORMULIR UTAMA) ────────────────────────────
+// ── PETUGAS LOKET: Daftar Pemohon ─────────────────────────────────────────────
 
 public class DaftarPemohonVm
 {
-    // ── Meta ──────────────────────────────────────────────────────────────────
     public string Kategori { get; set; } = "Mahasiswa";
     public string LoketJenis { get; set; } = Models.LoketJenis.Kepegawaian;
 
-    // ── Data Pribadi ─────────────────────────────────────────────────────────
     [Required(ErrorMessage = "NIK wajib diisi")]
     [StringLength(16, MinimumLength = 16, ErrorMessage = "NIK harus 16 digit")]
     [Display(Name = "NIK")]
@@ -65,7 +78,6 @@ public class DaftarPemohonVm
     [EmailAddress(ErrorMessage = "Format email tidak valid")]
     public string? Email { get; set; }
 
-    // ── Alamat ────────────────────────────────────────────────────────────────
     [Display(Name = "Provinsi")]
     public string? ProvinsiID { get; set; }
     public string? NamaProvinsi { get; set; }
@@ -82,29 +94,15 @@ public class DaftarPemohonVm
     public string? KelurahanID { get; set; }
     public string? NamaKelurahan { get; set; }
 
-    [Display(Name = "RT")]
-    public string? RT { get; set; }
+    [Display(Name = "RT")] public string? RT { get; set; }
+    [Display(Name = "RW")] public string? RW { get; set; }
+    [Display(Name = "Alamat Lengkap")] public string? Alamat { get; set; }
 
-    [Display(Name = "RW")]
-    public string? RW { get; set; }
+    [Display(Name = "Lembaga / Universitas")] public string? Lembaga { get; set; }
+    [Display(Name = "Fakultas")] public string? Fakultas { get; set; }
+    [Display(Name = "Program Studi / Jurusan")] public string? Jurusan { get; set; }
+    [Display(Name = "Pekerjaan")] public string? Pekerjaan { get; set; }
 
-    [Display(Name = "Alamat Lengkap")]
-    public string? Alamat { get; set; }
-
-    // ── Data Lembaga/Institusi ────────────────────────────────────────────────
-    [Display(Name = "Lembaga / Universitas")]
-    public string? Lembaga { get; set; }
-
-    [Display(Name = "Fakultas")]
-    public string? Fakultas { get; set; }
-
-    [Display(Name = "Program Studi / Jurusan")]
-    public string? Jurusan { get; set; }
-
-    [Display(Name = "Pekerjaan")]
-    public string? Pekerjaan { get; set; }
-
-    // ── Data Permohonan ───────────────────────────────────────────────────────
     [Required(ErrorMessage = "No. Surat Permohonan wajib diisi")]
     [Display(Name = "No. Surat Permohonan")]
     public string NoSuratPermohonan { get; set; } = string.Empty;
@@ -125,46 +123,22 @@ public class DaftarPemohonVm
     [Display(Name = "Tujuan Permohonan")]
     public string TujuanPermohonan { get; set; } = string.Empty;
 
-    // ── Keperluan (checkboxes — dapat lebih dari 1) ───────────────────────────
-    [Display(Name = "Observasi")]
-    public bool IsObservasi { get; set; }
+    [Display(Name = "Observasi")] public bool IsObservasi { get; set; }
+    [Display(Name = "Permintaan Data")] public bool IsPermintaanData { get; set; }
+    [Display(Name = "Wawancara / Interview")] public bool IsWawancara { get; set; }
 
-    [Display(Name = "Permintaan Data")]
-    public bool IsPermintaanData { get; set; }
+    [Display(Name = "Deskripsi Observasi")] public string? DetailObservasi { get; set; }
+    [Display(Name = "Data yang Diperlukan")] public string? DetailPermintaanData { get; set; }
+    [Display(Name = "Topik / Materi Wawancara")] public string? DetailWawancara { get; set; }
 
-    /// <summary>
-    /// Wawancara/Interview → langsung ke produsen data.
-    /// Tersedia di kedua loket, namun routing-nya berbeda setelah disposisi.
-    /// </summary>
-    [Display(Name = "Wawancara / Interview")]
-    public bool IsWawancara { get; set; }
-
-    [Display(Name = "Deskripsi Observasi")]
-    public string? DetailObservasi { get; set; }
-
-    [Display(Name = "Data yang Diperlukan")]
-    public string? DetailPermintaanData { get; set; }
-
-    [Display(Name = "Topik / Materi Wawancara")]
-    public string? DetailWawancara { get; set; }
-
-    // ── Bidang ────────────────────────────────────────────────────────────────
     [Display(Name = "Unit Kerja / Bidang")]
     public string? BidangID { get; set; }
     public string? NamaBidang { get; set; }
 
-    // ── Dokumen Upload ────────────────────────────────────────────────────────
-    [Display(Name = "KTP")]
-    public IFormFile? FileKTP { get; set; }
-
-    [Display(Name = "Surat Permohonan")]
-    public IFormFile? FileSuratPermohonan { get; set; }
-
-    [Display(Name = "Proposal Penelitian")]
-    public IFormFile? FileProposal { get; set; }
-
-    [Display(Name = "Akta Notaris (LSM)")]
-    public IFormFile? FileAktaNotaris { get; set; }
+    [Display(Name = "KTP")] public IFormFile? FileKTP { get; set; }
+    [Display(Name = "Surat Permohonan")] public IFormFile? FileSuratPermohonan { get; set; }
+    [Display(Name = "Proposal Penelitian")] public IFormFile? FileProposal { get; set; }
+    [Display(Name = "Akta Notaris (LSM)")] public IFormFile? FileAktaNotaris { get; set; }
 }
 
 // ── PETUGAS LOKET: Upload TTD ─────────────────────────────────────────────────
@@ -181,7 +155,7 @@ public class UploadTTDVm
     public IFormFile? FileDokumenTTD { get; set; }
 }
 
-// ── KEPEGAWAIAN: Surat Izin & Disposisi ───────────────────────────────────────
+// ── KEPEGAWAIAN: Surat Izin ───────────────────────────────────────────────────
 
 public class SuratIzinVm
 {
@@ -205,16 +179,10 @@ public class SuratIzinVm
     [Display(Name = "File Surat Izin (PDF)")]
     public IFormFile? FileSuratIzin { get; set; }
 
-    // ── Keperluan (di-verify ulang oleh Kepegawaian) ─────────────────────────
     public bool IsObservasi { get; set; }
     public bool IsPermintaanData { get; set; }
     public bool IsWawancara { get; set; }
 
-    // ── Routing Disposisi ─────────────────────────────────────────────────────
-    /// <summary>
-    /// Hanya aktif ketika HasPermintaanData || HasObservasi.
-    /// Pilihan: "PSMDI" | "BidangTerkait"
-    /// </summary>
     [Display(Name = "Disposisi Ke (KDI)")]
     public string DisposisiKe { get; set; } = "PSMDI";
 
@@ -224,18 +192,10 @@ public class SuratIzinVm
     [Display(Name = "Catatan Disposisi")]
     public string? CatatanDisposisi { get; set; }
 
-    /// <summary>
-    /// Untuk keperluan Wawancara-only: nama unit/bidang yang menjadi
-    /// produsen data dan akan melayani wawancara langsung.
-    /// </summary>
     [Display(Name = "Unit Produsen Data (Wawancara)")]
     public string? NamaProdusenData { get; set; }
 
-    // ── Computed helpers ──────────────────────────────────────────────────────
-    /// <summary>Ada keperluan Permintaan Data atau Observasi → routing ke KDI.</summary>
     public bool HasKdiRoute => IsPermintaanData || IsObservasi;
-
-    /// <summary>Wawancara tanpa keperluan lain → routing langsung ke Produsen Data.</summary>
     public bool IsWawancaraOnly => IsWawancara && !IsPermintaanData && !IsObservasi;
 }
 
@@ -249,20 +209,8 @@ public class TerimaDisposisiVm
     public string JudulPenelitian { get; set; } = string.Empty;
     public string LatarBelakang { get; set; } = string.Empty;
     public string? CatatanDisposisi { get; set; }
-
-    /// <summary>
-    /// TRUE hanya jika IsObservasi = true.
-    /// Wawancara TIDAK termasuk di sini — wawancara sudah dirouting ke Produsen Data
-    /// atau akan dijadwalkan secara terpisah oleh KDI.
-    /// </summary>
     public bool PerluObservasi { get; set; }
-
-    /// <summary>
-    /// TRUE jika IsWawancara = true DAN permohonan ini diproses oleh KDI
-    /// (kombinasi wawancara + data/observasi).
-    /// </summary>
     public bool PerluWawancara { get; set; }
-
     public string? Catatan { get; set; }
 }
 
@@ -287,12 +235,21 @@ public class JadwalObservasiVm
     public string NamaPIC { get; set; } = string.Empty;
 }
 
-// ── PRODUSEN DATA: Jadwal Wawancara ──────────────────────────────────────────
+// ── KDI: Selesai Observasi (BARU) ────────────────────────────────────────────
 
-/// <summary>
-/// Digunakan oleh Produsen Data untuk menjadwalkan wawancara langsung
-/// dengan pemohon (hanya untuk permohonan wawancara-only).
-/// </summary>
+public class SelesaiObservasiVm
+{
+    public Guid PermohonanPPIDID { get; set; }
+    public string NoPermohonan { get; set; } = string.Empty;
+    public string NamaPemohon { get; set; } = string.Empty;
+    public string JudulPenelitian { get; set; } = string.Empty;
+
+    [Display(Name = "Catatan Hasil Observasi")]
+    public string? Catatan { get; set; }
+}
+
+// ── Jadwal Wawancara ──────────────────────────────────────────────────────────
+
 public class JadwalWawancaraVm
 {
     public Guid PermohonanPPIDID { get; set; }
@@ -318,7 +275,7 @@ public class JadwalWawancaraVm
     public string? Lokasi { get; set; }
 }
 
-// ── KDI: Upload Data ──────────────────────────────────────────────────────────
+// ── KDI / Produsen Data: Upload Data ─────────────────────────────────────────
 
 public class UploadDataVm
 {

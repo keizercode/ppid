@@ -73,33 +73,73 @@ public class HomeController(AppDbContext db) : Controller
             p.StatusPPIDID = StatusId.Selesai;
             p.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
+
+            // Audit log
+            db.AuditLog.Add(new AuditLogPPID
+            {
+                PermohonanPPIDID = model.PermohonanPPIDID,
+                StatusLama = p.StatusPPIDID,
+                StatusBaru = StatusId.Selesai,
+                Keterangan = "Kuesioner kepuasan diisi pemohon",
+                Operator = "Pemohon",
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
         }
 
         TempData["Success"] = "Terima kasih! Kuesioner berhasil dikirim.";
         return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan });
     }
 
-    // ── BuildRiwayat ──────────────────────────────────────────────────────────
-    /// <summary>
-    /// Membangun timeline status berdasarkan keperluan permohonan.
-    /// Jalur berbeda tergantung kombinasi keperluan yang dipilih.
-    /// </summary>
+    // ════════════════════════════════════════════════════════════════════════
+    // TIMELINE BUILDER
+    // Menggunakan posisi index (bukan perbandingan nilai integer StatusId)
+    // sehingga status wawancara (12,13) tidak bentrok dengan Selesai (11).
+    // ════════════════════════════════════════════════════════════════════════
+
     private static List<RiwayatStatusVm> BuildRiwayat(PermohonanPPID p)
     {
-        var current = p.StatusPPIDID ?? 1;
+        var current = p.StatusPPIDID ?? StatusId.TerdaftarSistem;
 
-        (int, string)[] steps = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi
-            ? new[]
+        // Tentukan urutan langkah berdasarkan keperluan
+        var steps = GetSteps(p);
+
+        // Cari posisi current di dalam steps
+        int currentIdx = steps.FindIndex(s => s.StatusId == current);
+
+        // Jika status tidak ada di urutan (misal status transisi), cari posisi terdekat
+        if (currentIdx < 0)
+            currentIdx = FindNearestIdx(steps, current);
+
+        return steps.Select((s, i) => new RiwayatStatusVm
+        {
+            StatusId = s.StatusId,
+            Label = s.Label,
+            Selesai = i < currentIdx,
+            AktifSekarang = i == currentIdx
+        }).ToList();
+    }
+
+    private static List<(int StatusId, string Label)> GetSteps(PermohonanPPID p)
+    {
+        bool isWawancaraOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
+
+        if (isWawancaraOnly)
+        {
+            return new List<(int, string)>
             {
-            (StatusId.TerdaftarSistem,      "Permohonan Terdaftar"),
-            (StatusId.IdentifikasiAwal,     "Identifikasi Awal"),
-            (StatusId.SuratIzinTerbit,      "Surat Izin Diterbitkan"),
-            (StatusId.WawancaraDijadwalkan, "Wawancara Dijadwalkan"),
-            (StatusId.WawancaraSelesai,     "Wawancara Selesai"),
-            (StatusId.Selesai,              "Selesai"),
-            }
-            : new[]
-            {
+                (StatusId.TerdaftarSistem,      "Permohonan Terdaftar"),
+                (StatusId.IdentifikasiAwal,     "Identifikasi Awal"),
+                (StatusId.SuratIzinTerbit,      "Surat Izin Diterbitkan"),
+                (StatusId.WawancaraDijadwalkan, "Wawancara Dijadwalkan"),
+                (StatusId.WawancaraSelesai,     "Wawancara Selesai"),
+                (StatusId.Selesai,              "Selesai"),
+            };
+        }
+
+        // Jalur KDI (Data / Observasi ± Wawancara)
+        var steps = new List<(int, string)>
+        {
             (StatusId.TerdaftarSistem,  "Permohonan Terdaftar"),
             (StatusId.IdentifikasiAwal, "Identifikasi Awal"),
             (StatusId.SuratIzinTerbit,  "Surat Izin Diterbitkan"),
@@ -107,32 +147,41 @@ public class HomeController(AppDbContext db) : Controller
             (StatusId.DiProses,         "Data Sedang Diproses"),
             (StatusId.DataSiap,         "Data Siap Diunduh"),
             (StatusId.Selesai,          "Selesai"),
-            };
+        };
 
-        var list = steps.ToList();
-
-        // Sisipkan observasi jika perlu
-        if (!p.IsWawancara || p.IsPermintaanData || p.IsObservasi)
+        // Sisipkan langkah Observasi hanya jika pemohon butuh observasi
+        if (p.IsObservasi)
         {
-            if (p.IsObservasi && (
-                current == StatusId.ObservasiDijadwalkan ||
-                current == StatusId.ObservasiSelesai ||
-                current >= StatusId.DiProses))
-            {
-                var idx = list.FindIndex(s => s.Item1 == StatusId.Didisposisi);
-                list.Insert(idx + 1, (StatusId.ObservasiDijadwalkan, "Observasi / Wawancara"));
-            }
+            var idx = steps.FindIndex(s => s.Item1 == StatusId.Didisposisi);
+            steps.Insert(idx + 1, (StatusId.ObservasiDijadwalkan, "Observasi Dijadwalkan"));
+            steps.Insert(idx + 2, (StatusId.ObservasiSelesai, "Observasi Selesai"));
         }
 
-        int currentIdx = list.FindIndex(s => s.Item1 == current);
-        if (currentIdx < 0) currentIdx = list.Count - 1;
-
-        return list.Select((s, i) => new RiwayatStatusVm
+        // Sisipkan langkah Wawancara (kombinasi) jika ada wawancara di jalur KDI
+        if (p.IsWawancara)
         {
-            StatusId = s.Item1,
-            Label = s.Item2,
-            Selesai = i < currentIdx,
-            AktifSekarang = i == currentIdx
-        }).ToList();
+            // Wawancara di jalur KDI ditampilkan setelah DiProses
+            var idx = steps.FindIndex(s => s.Item1 == StatusId.DiProses);
+            if (idx >= 0)
+                steps.Insert(idx + 1, (StatusId.WawancaraDijadwalkan, "Wawancara Dijadwalkan"));
+        }
+
+        return steps;
+    }
+
+    /// <summary>
+    /// Jika status tidak ada persis di daftar step (status transisi internal),
+    /// cari posisi berdasarkan urutan numerik terdekat yang lebih kecil.
+    /// </summary>
+    private static int FindNearestIdx(List<(int StatusId, string Label)> steps, int current)
+    {
+        // Cari step dengan StatusId terbesar yang masih <= current
+        int best = -1;
+        for (int i = 0; i < steps.Count; i++)
+        {
+            if (steps[i].StatusId <= current)
+                best = i;
+        }
+        return best >= 0 ? best : steps.Count - 1;
     }
 }
