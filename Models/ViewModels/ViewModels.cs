@@ -8,7 +8,17 @@ namespace PermintaanData.Models.ViewModels;
 public class LacakViewModel
 {
     [Required(ErrorMessage = "Nomor permohonan wajib diisi")]
+    [Display(Name = "Nomor Permohonan")]
     public string NoPermohonan { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Kode verifikasi 6-karakter yang dicetak di formulir pemohon.
+    /// Wajib diisi bersamaan dengan NoPermohonan untuk mencegah enumerasi.
+    /// </summary>
+    [Required(ErrorMessage = "Kode verifikasi wajib diisi")]
+    [Display(Name = "Kode Verifikasi")]
+    [StringLength(6, MinimumLength = 6, ErrorMessage = "Kode verifikasi harus 6 karakter")]
+    public string TokenLacak { get; set; } = string.Empty;
 }
 
 public class DetailLacakViewModel
@@ -235,7 +245,7 @@ public class JadwalObservasiVm
     public string NamaPIC { get; set; } = string.Empty;
 }
 
-// ── KDI: Selesai Observasi (BARU) ────────────────────────────────────────────
+// ── KDI: Selesai Observasi ────────────────────────────────────────────────────
 
 public class SelesaiObservasiVm
 {

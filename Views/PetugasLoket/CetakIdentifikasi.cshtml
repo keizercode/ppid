@@ -2,18 +2,18 @@
 @{
     Layout = null;
 
-    var pr   = Model.Pribadi;
+    var pr = Model.Pribadi;
     var ppid = pr?.PribadiPPID;
 
-    var tujuan      = Model.TujuanPermohonan ?? "";
-    bool isTugasMK  = tujuan.Contains("Tugas Mata Kuliah");
+    var tujuan = Model.TujuanPermohonan ?? "";
+    bool isTugasMK = tujuan.Contains("Tugas Mata Kuliah");
     bool isTugasAkh = tujuan.Contains("Tugas Akhir");
-    bool isSkripsi  = tujuan.Contains("Skripsi");
-    bool isLainnya  = !isTugasMK && !isTugasAkh && !isSkripsi && !string.IsNullOrEmpty(tujuan);
+    bool isSkripsi = tujuan.Contains("Skripsi");
+    bool isLainnya = !isTugasMK && !isTugasAkh && !isSkripsi && !string.IsNullOrEmpty(tujuan);
 
-    var detailObs  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Observasi)?.DetailKeperluan ?? "-";
+    var detailObs = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Observasi)?.DetailKeperluan ?? "-";
     var detailData = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.PermintaanData)?.DetailKeperluan ?? "-";
-    var detailWaw  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara)?.DetailKeperluan ?? "-";
+    var detailWaw = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara)?.DetailKeperluan ?? "-";
 
     var alamatLengkap = string.Join(", ", new[] {
         pr?.Alamat,
@@ -28,374 +28,551 @@
 }
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Formulir Identifikasi Awal — @Model.NoPermohonan</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+          rel="stylesheet" />
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
 
-        body {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 11pt;
-            background: #eef2f7;
-            color: #000;
-        }
+                body {
+                    font-family: 'Times New Roman', Times, serif;
+                    font-size: 11pt;
+                    background: #eef2f7;
+                    color: #000;
+                }
 
-        /* ── Toolbar ── */
-        .toolbar {
-            background: linear-gradient(135deg, #001e55 0%, #002d7a 100%);
-            color: white;
-            padding: 0 24px;
-            height: 56px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 12px rgba(0,0,0,.25);
-        }
-        .toolbar-brand {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 13px;
-            font-weight: 700;
-            color: white;
-            flex: 1;
-        }
-        .toolbar-brand span {
-            font-family: monospace;
-            font-size: 12px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15);
-            padding: 2px 8px;
-            border-radius: 6px;
-            margin-left: 8px;
-        }
-        .btn {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            padding: 7px 18px;
-            border-radius: 9px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all .15s;
-        }
-        .btn-print { background: #f59e0b; color: #1c1917; }
-        .btn-print:hover { background: #fbbf24; }
-        .btn-next  { background: #059669; color: white; }
-        .btn-next:hover { background: #047857; }
-        .btn-back  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.15); }
-        .btn-back:hover { background: rgba(255,255,255,0.15); color: white; }
+                /* ── Toolbar ── */
+                .toolbar {
+                    background: linear-gradient(135deg, #001e55 0%, #002d7a 100%);
+                    color: white;
+                    padding: 0 24px;
+                    height: 56px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
+                    box-shadow: 0 2px 12px rgba(0, 0, 0, .25);
+                }
 
-        /* ── Page wrapper ── */
-        .page-wrapper {
-            padding: 28px;
-            display: flex;
-            justify-content: center;
-        }
+                .toolbar-brand {
+                    font-family: 'Plus Jakarta Sans', sans-serif;
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: white;
+                    flex: 1;
+                }
+                .toolbar-brand span {
+                    font-family: monospace;
+                    font-size: 12px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    padding: 2px 8px;
+                    border-radius: 6px;
+                    margin-left: 8px;
+                }
+                .btn {
+                    font-family: 'Plus Jakarta Sans', sans-serif;
+                    padding: 7px 18px;
+                    border-radius: 9px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    border: none;
+                    text-decoration: none;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all .15s;
+                }
+                .btn-print {
+                    background: #f59e0b;
+                    color: #1c1917;
+                }
+                .btn-print:hover {
+                    background: #fbbf24;
+                }
+                .btn-next {
+                    background: #059669;
+                    color: white;
+                }
+                .btn-next:hover {
+                    background: #047857;
+                }
 
-        /* ── A4 paper ── */
-        .paper {
-            background: white;
-            width: 210mm;
-            min-height: 297mm;
-            padding: 20mm 20mm 15mm 25mm;
-            box-shadow: 0 8px 32px rgba(0,0,0,.12);
-            border-radius: 4px;
-        }
+                .btn-back {
+                    background: rgba(255, 255, 255, 0.08);
+                    color: rgba(255, 255, 255, 0.7);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                }
+                .btn-back:hover {
+                    background: rgba(255, 255, 255, 0.15);
+                    color: white;
+                }
 
-        /* ── Typography ── */
-        h1.form-title {
-            font-size: 13pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
-            margin-bottom: 4px;
-        }
-        .subtitle {
-            font-size: 9pt;
-            text-align: center;
-            color: #444;
-            margin-bottom: 8px;
-        }
-        hr.thick { border: none; border-top: 2px solid #000; margin-bottom: 12px; }
+                /* ── Page wrapper ── */
+                .page-wrapper {
+                    padding: 28px;
+                    display: flex;
+                    justify-content: center;
+                }
 
-        /* ── Data rows ── */
-        table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-        table.data-table td { vertical-align: top; padding: 3px 0; }
-        table.data-table td.label { width: 185px; font-weight: bold; white-space: nowrap; }
-        table.data-table td.sep   { width: 12px; }
-        table.data-table td.value .underline {
-            display: block;
-            border-bottom: 1px solid #000;
-            min-height: 20px;
-            padding-bottom: 1px;
-        }
-        table.data-table td.value .multiline {
-            display: block;
-            border-bottom: 1px solid #000;
-            min-height: 48px;
-            padding-bottom: 2px;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
+                /* ── A4 paper ── */
+                .paper {
+                    background: white;
+                    width: 210mm;
+                    min-height: 297mm;
+                    padding: 20mm 20mm 15mm 25mm;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, .12);
+                    border-radius: 4px;
+                }
 
-        /* ── Checkboxes ── */
-        .cb-row { margin: 8px 0 4px; }
-        .cb {
-            display: inline-block;
-            width: 13px; height: 13px;
-            border: 1.5px solid #000;
-            margin-right: 4px;
-            vertical-align: middle;
-            text-align: center;
-            font-size: 10pt;
-            line-height: 12px;
-        }
-        .cb.checked::after { content: '✓'; font-weight: bold; }
-        .cb-label { margin-right: 24px; vertical-align: middle; }
+                /* ── Typography ── */
+                h1.form-title {
+                    font-size: 13pt;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    text-align: center;
+                    margin-bottom: 4px;
+                }
+                .subtitle {
+                    font-size: 9pt;
+                    text-align: center;
+                    color: #444;
+                    margin-bottom: 8px;
+                }
 
-        /* ── Section title ── */
-        .section-title { font-weight: bold; margin: 10px 0 4px; }
+                hr.thick {
+                    border: none;
+                    border-top: 2px solid #000;
+                    margin-bottom: 12px;
+                }
 
-        /* ── Detail table ── */
-        table.detail-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-        table.detail-table td { vertical-align: top; padding: 3px 0; }
-        table.detail-table td.dlabel { width: 230px; font-style: italic; font-size: 10pt; }
-        table.detail-table td.dsep   { width: 12px; }
-        table.detail-table td.dvalue .underline {
-            display: block;
-            border-bottom: 1px solid #000;
-            min-height: 44px;
-            padding-bottom: 2px;
-            white-space: pre-wrap;
-            font-style: normal;
-        }
-        .hint { font-size: 8pt; color: #555; display: block; }
+                /* ── TOKEN BOX — bagian paling penting untuk pemohon ── */
+                .token-box {
+                    margin-bottom: 14px;
+                    border: 2.5px solid #1B3B6F;
+                    border-radius: 6px;
+                    padding: 10px 14px;
+                    background: #f0f4ff;
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                }
 
-        /* ── Signature ── */
-        table.sign-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table.sign-table td {
-            border: 1px solid #000;
-            padding: 8px 10px;
-            vertical-align: top;
-            width: 50%;
-            text-align: center;
-        }
-        .sign-space { height: 72px; }
-        .sign-name {
-            font-weight: bold;
-            border-top: 1px solid #000;
-            display: inline-block;
-            padding-top: 3px;
-            min-width: 150px;
-            margin-top: 4px;
-        }
-        .sign-nik { font-size: 9pt; margin-top: 2px; }
+                .token-box .token-label {
+                    font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
+                    font-size: 9pt;
+                    color: #1B3B6F;
+                    font-weight: 700;
+                    white-space: nowrap;
+                    flex-shrink: 0;
+                }
 
-        /* ── NB ── */
-        .nb { font-size: 8.5pt; color: #333; margin-top: 14px; }
+                .token-box .token-value {
+                    font-family: 'Courier New', Courier, monospace;
+                    font-size: 22pt;
+                    font-weight: 900;
+                    letter-spacing: 0.25em;
+                    color: #1B3B6F;
+                    flex: 1;
+                    text-align: center;
+                }
 
-        /* ── Print ── */
-        @@media print {
-            body        { background: white; }
-            .toolbar    { display: none !important; }
-            .page-wrapper { padding: 0; }
-            .paper {
-                box-shadow: none;
-                width: 100%;
-                min-height: unset;
-                padding: 12mm 15mm 10mm 20mm;
-                border-radius: 0;
-            }
-            @@page { size: A4; margin: 0; }
-        }
+                .token-box .token-note {
+                    font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
+                    font-size: 8pt;
+                    color: #374151;
+                    flex-shrink: 0;
+                    max-width: 140px;
+                    line-height: 1.4;
+                }
+
+                /* ── Data rows ── */
+                table.data-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 4px;
+                }
+
+                table.data-table td {
+                    vertical-align: top;
+                    padding: 3px 0;
+                }
+
+                table.data-table td.label {
+                    width: 185px;
+                    font-weight: bold;
+                    white-space: nowrap;
+                }
+
+                table.data-table td.sep {
+                    width: 12px;
+                }
+
+                table.data-table td.value .underline {
+                    display: block;
+                    border-bottom: 1px solid #000;
+                    min-height: 20px;
+                    padding-bottom: 1px;
+                }
+
+                table.data-table td.value .multiline {
+                    display: block;
+                    border-bottom: 1px solid #000;
+                    min-height: 48px;
+                    padding-bottom: 2px;
+                    white-space: pre-wrap;
+                    line-height: 1.5;
+                }
+
+                /* ── Checkboxes ── */
+                .cb-row {
+                    margin: 8px 0 4px;
+                }
+
+                .cb {
+                    display: inline-block;
+                    width: 13px;
+                    height: 13px;
+                    border: 1.5px solid #000;
+                    margin-right: 4px;
+                    vertical-align: middle;
+                    text-align: center;
+                    font-size: 10pt;
+                    line-height: 12px;
+                }
+
+                .cb.checked::after {
+                    content: '✓';
+                    font-weight: bold;
+                }
+
+                .cb-label {
+                    margin-right: 24px;
+                    vertical-align: middle;
+                }
+
+                /* ── Section title ── */
+                .section-title {
+                    font-weight: bold;
+                    margin: 10px 0 4px;
+                }
+
+                /* ── Detail table ── */
+                table.detail-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 4px;
+                }
+
+                table.detail-table td {
+                    vertical-align: top;
+                    padding: 3px 0;
+                }
+
+                table.detail-table td.dlabel {
+                    width: 230px;
+                    font-style: italic;
+                    font-size: 10pt;
+                }
+
+                table.detail-table td.dsep {
+                    width: 12px;
+                }
+
+                table.detail-table td.dvalue .underline {
+                    display: block;
+                    border-bottom: 1px solid #000;
+                    min-height: 44px;
+                    padding-bottom: 2px;
+                    white-space: pre-wrap;
+                    font-style: normal;
+                }
+
+                .hint {
+                    font-size: 8pt;
+                    color: #555;
+                    display: block;
+                }
+
+                /* ── Signature ── */
+                table.sign-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                table.sign-table td {
+                    border: 1px solid #000;
+                    padding: 8px 10px;
+                    vertical-align: top;
+                    width: 50%;
+                    text-align: center;
+                }
+
+                .sign-space {
+                    height: 72px;
+                }
+
+                .sign-name {
+                    font-weight: bold;
+                    border-top: 1px solid #000;
+                    display: inline-block;
+                    padding-top: 3px;
+                    min-width: 150px;
+                    margin-top: 4px;
+                }
+
+                .sign-nik {
+                    font-size: 9pt;
+                    margin-top: 2px;
+                }
+
+                /* ── NB ── */
+                .nb {
+                    font-size: 8.5pt;
+                    color: #333;
+                    margin-top: 14px;
+                }
+
+                /* ── Print ── */
+                @@media print {
+                    body {
+                        background: white;
+                    }
+
+                    .toolbar {
+                        display: none !important;
+                    }
+
+                    .page-wrapper {
+                        padding: 0;
+                    }
+
+                    .paper {
+                        box-shadow: none;
+                        width: 100%;
+                        min-height: unset;
+                        padding: 12mm 15mm 10mm 20mm;
+                        border-radius: 0;
+                    }
+                    @@page {
+                        size: A4;
+                        margin: 0;
+                    }
+                }
     </style>
 </head>
 <body>
 
-<!-- Toolbar -->
-<div class="toolbar">
-    <p class="toolbar-brand">
-        🖨️ Formulir Identifikasi Awal
-        <span>@Model.NoPermohonan</span>
-    </p>
-    <button class="btn btn-print" onclick="window.print()">🖨️ Cetak</button>
-    <a class="btn btn-next" href="/petugas-loket/upload-ttd/@Model.PermohonanPPIDID">✍️ Lanjut → Upload TTD</a>
-    <a class="btn btn-back" href="/petugas-loket">← Kembali</a>
-</div>
-
-<!-- Paper -->
-<div class="page-wrapper">
-<div class="paper">
-
-    <h1 class="form-title">Formulir Identifikasi Awal Permohonan Data/Wawancara</h1>
-    <p class="subtitle">
-        No. Permohonan: <strong>@Model.NoPermohonan</strong>
-        &nbsp;|&nbsp; No. Surat: <strong>@(Model.NoSuratPermohonan ?? "-")</strong>
-        &nbsp;|&nbsp; Tanggal: <strong>@(Model.TanggalPermohonan?.ToString("dd MMMM yyyy") ?? "-")</strong>
-    </p>
-    <hr class="thick" />
-
-    <!-- Data Pribadi -->
-    <table class="data-table">
-        <tr>
-            <td class="label">Nama</td>
-            <td class="sep">:</td>
-            <td class="value"><span class="underline">@(pr?.Nama ?? "")</span></td>
-        </tr>
-        <tr>
-            <td class="label">NIK</td>
-            <td class="sep">:</td>
-            <td class="value"><span class="underline" style="font-family:monospace;">@(pr?.NIK ?? "")</span></td>
-        </tr>
-        <tr>
-            <td class="label">No. Telepon</td>
-            <td class="sep">:</td>
-            <td class="value"><span class="underline">@(pr?.Telepon ?? "")</span></td>
-        </tr>
-        <tr>
-            <td class="label">Alamat</td>
-            <td class="sep">:</td>
-            <td class="value"><span class="underline">@alamatLengkap</span></td>
-        </tr>
-
-        @if (Model.KategoriPemohon == "Mahasiswa") {
-            <tr>
-                <td class="label">Lembaga Pendidikan</td>
-                <td class="sep">:</td>
-                <td class="value"><span class="underline">@(ppid?.Lembaga ?? "")</span></td>
-            </tr>
-            <tr>
-                <td class="label">Fakultas</td>
-                <td class="sep">:</td>
-                <td class="value"><span class="underline">@(ppid?.Fakultas ?? "")</span></td>
-            </tr>
-            <tr>
-                <td class="label">Program Studi</td>
-                <td class="sep">:</td>
-                <td class="value"><span class="underline">@(ppid?.Jurusan ?? "")</span></td>
-            </tr>
-        } else {
-            <tr>
-                <td class="label">Lembaga / Organisasi</td>
-                <td class="sep">:</td>
-                <td class="value"><span class="underline">@(ppid?.Lembaga ?? "")</span></td>
-            </tr>
-            <tr>
-                <td class="label">Pekerjaan / Jabatan</td>
-                <td class="sep">:</td>
-                <td class="value"><span class="underline">@(ppid?.Pekerjaan ?? "")</span></td>
-            </tr>
-        }
-
-        <tr>
-            <td class="label">Judul Penelitian</td>
-            <td class="sep">:</td>
-            <td class="value"><span class="underline">@(Model.JudulPenelitian ?? "")</span></td>
-        </tr>
-        <tr>
-            <td class="label">Latar Belakang Penelitian</td>
-            <td class="sep">:</td>
-            <td class="value"><span class="multiline">@(Model.LatarBelakang ?? "")</span></td>
-        </tr>
-    </table>
-
-    <!-- Tujuan -->
-    <div class="cb-row">
-        <span class="cb @(isTugasMK  ? "checked" : "")"></span><span class="cb-label">Tugas Mata Kuliah</span>
-        <span class="cb @(isTugasAkh ? "checked" : "")"></span><span class="cb-label">Pembuatan Tugas Akhir</span>
-        <span class="cb @(isSkripsi  ? "checked" : "")"></span><span class="cb-label">Pembuatan Skripsi</span>
-    </div>
-    <div class="cb-row" style="margin-bottom:10px;">
-        <span class="cb @(isLainnya ? "checked" : "")"></span><span class="cb-label">Lainnya, sebutkan :</span>
-        <span style="display:inline-block;border-bottom:1px solid #000;min-width:260px;padding-bottom:1px;">@(isLainnya ? tujuan : "")</span>
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <p class="toolbar-brand">
+            🖨️ Formulir Identifikasi Awal
+            <span>@Model.NoPermohonan</span>
+        </p>
+        <button class="btn btn-print" onclick="window.print()">🖨️ Cetak</button>
+        <a class="btn btn-next" href="/petugas-loket/upload-ttd/@Model.PermohonanPPIDID">✍️ Lanjut → Upload TTD</a>
+        <a class="btn btn-back" href="/petugas-loket">← Kembali</a>
     </div>
 
-    <!-- Keperluan -->
-    <div class="section-title">Keperluan <span style="font-weight:normal;font-style:italic;">(pilihan bisa lebih dari 1)</span></div>
-    <div class="cb-row" style="margin-bottom:10px;">
-        <span class="cb @(Model.IsObservasi      ? "checked" : "")"></span><span class="cb-label">Observasi</span>
-        <span class="cb @(Model.IsPermintaanData ? "checked" : "")"></span><span class="cb-label">Permintaan Data</span>
-        <span class="cb @(Model.IsWawancara      ? "checked" : "")"></span><span class="cb-label">Wawancara</span>
-    </div>
+    <!-- Paper -->
+    <div class="page-wrapper">
+        <div class="paper">
 
-    <!-- Detail Keperluan -->
-    <table class="detail-table">
-        <tr>
-            <td class="dlabel">
-                Deskripsi observasi yang akan dilakukan
-                <span class="hint">(berikan tanda "-" jika tidak dibutuhkan)</span>
-            </td>
-            <td class="dsep">:</td>
-            <td class="dvalue"><span class="underline">@detailObs</span></td>
-        </tr>
-        <tr>
-            <td class="dlabel">
-                Data yang diperlukan
-                <span class="hint">(berikan tanda "-" jika tidak dibutuhkan)</span>
-            </td>
-            <td class="dsep">:</td>
-            <td class="dvalue"><span class="underline">@detailData</span></td>
-        </tr>
-        <tr>
-            <td class="dlabel">
-                Materi Wawancara
-                <span class="hint">(berikan tanda "-" jika tidak dibutuhkan)</span>
-            </td>
-            <td class="dsep">:</td>
-            <td class="dvalue"><span class="underline">@detailWaw</span></td>
-        </tr>
-        <tr>
-            <td class="dlabel">
-                Unit Kerja yang berkaitan dengan Penelitian
-                <span class="hint">(Diisi Subkelompok Kepegawaian)</span>
-            </td>
-            <td class="dsep">:</td>
-            <td class="dvalue"><span class="underline">@(Model.NamaBidang ?? "")</span></td>
-        </tr>
-    </table>
+            <h1 class="form-title">Formulir Identifikasi Awal Permohonan Data/Wawancara</h1>
+            <p class="subtitle">
+                No. Permohonan: <strong>@Model.NoPermohonan</strong>
+                &nbsp;|&nbsp; No. Surat: <strong>@(Model.NoSuratPermohonan ?? "-")</strong>
+                &nbsp;|&nbsp; Tanggal: <strong>@(Model.TanggalPermohonan?.ToString("dd MMMM yyyy") ?? "-")</strong>
+            </p>
+            <hr class="thick" />
 
-    <!-- Tanda Tangan -->
-    <table class="sign-table">
-        <tr>
-            <td>
-                <div>Mengetahui,</div>
-                <div><strong>Ketua Subkelompok Kepegawaian</strong></div>
-                <div class="sign-space"></div>
-                <div><span class="sign-name">Mathew Musa H</span></div>
-                <div class="sign-nik">NIP 198411182010011019</div>
-            </td>
-            <td>
-                <div>Jakarta, @tanggalCetak</div>
-                <div>Pemohon,</div>
-                <div class="sign-space"></div>
-                <div><span class="sign-name">(@(pr?.Nama ?? "................................"))</span></div>
-                <div class="sign-nik">NIK @(pr?.NIK ?? "................................")</div>
-            </td>
-        </tr>
-    </table>
+            <!-- ══ TOKEN BOX — Kode Verifikasi untuk Lacak Online ══ -->
+            <div class="token-box">
+                <div class="token-label">
+                    🔑 KODE<br />VERIFIKASI
+                </div>
+                <div class="token-value">
+                    @(Model.TokenLacak ?? "------")
+                </div>
+                <div class="token-note">
+                    Simpan kode ini. Diperlukan bersama Nomor Permohonan untuk melacak status di portal online.
+                </div>
+            </div>
 
-    <!-- NB -->
-    <p class="nb">
-        <strong>NB:</strong> Formulir ini dibuat untuk mengetahui kebutuhan mahasiswa yang berhubungan penelitian
-        yang akan dilakukan untuk pendukung pembuatan surat pemberian izin penelitian.
-    </p>
+            <!-- Data Pribadi -->
+            <table class="data-table">
+                <tr>
+                    <td class="label">Nama</td>
+                    <td class="sep">:</td>
+                    <td class="value"><span class="underline">@(pr?.Nama ?? "")</span></td>
+                </tr>
+                <tr>
+                    <td class="label">NIK</td>
+                    <td class="sep">:</td>
+                    <td class="value"><span class="underline" style="font-family:monospace;">@(pr?.NIK ?? "")</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">No. Telepon</td>
+                    <td class="sep">:</td>
+                    <td class="value"><span class="underline">@(pr?.Telepon ?? "")</span></td>
+                </tr>
+                <tr>
+                    <td class="label">Alamat</td>
+                    <td class="sep">:</td>
+                    <td class="value"><span class="underline">@alamatLengkap</span></td>
+                </tr>
 
-</div>
-</div>
+                @if (Model.KategoriPemohon == "Mahasiswa")
+                {
+                    <tr>
+                        <td class="label">Lembaga Pendidikan</td>
+                        <td class="sep">:</td>
+                        <td class="value"><span class="underline">@(ppid?.Lembaga ?? "")</span></td>
+                    </tr>
+                    <tr>
+                        <td class="label">Fakultas</td>
+                        <td class="sep">:</td>
+                        <td class="value"><span class="underline">@(ppid?.Fakultas ?? "")</span></td>
+                    </tr>
+                    <tr>
+                        <td class="label">Program Studi</td>
+                        <td class="sep">:</td>
+                        <td class="value"><span class="underline">@(ppid?.Jurusan ?? "")</span></td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td class="label">Lembaga / Organisasi</td>
+                        <td class="sep">:</td>
+                        <td class="value"><span class="underline">@(ppid?.Lembaga ?? "")</span></td>
+                    </tr>
+                    <tr>
+                        <td class="label">Pekerjaan / Jabatan</td>
+                        <td class="sep">:</td>
+                        <td class="value"><span class="underline">@(ppid?.Pekerjaan ?? "")</span></td>
+                    </tr>
+                }
 
-</body>
-</html>
+                <tr>
+                    <td class="label">Judul Penelitian</td>
+                    <td class="sep">:</td>
+                    <td class="value"><span class="underline">@(Model.JudulPenelitian ?? "")</span></td>
+                </tr>
+                <tr>
+                    <td class="label">Latar Belakang Penelitian</td>
+                    <td class="sep">:</td>
+                    <td class="value"><span class="multiline">@(Model.LatarBelakang ?? "")</span></td>
+                </tr>
+            </table>
+
+            <!-- Tujuan -->
+            <div class="cb-row">
+                <span class="cb @(isTugasMK  ? "checked" : "")"></span><span class="cb-label">Tugas Mata Kuliah</span>
+                <span class="cb @(isTugasAkh ? "checked" : "")"></span><span class="cb-label">Pembuatan Tugas
+                Akhir</span>
+                <span class="cb @(isSkripsi  ? "checked" : "")"></span><span class="cb-label">Pembuatan Skripsi</span>
+            </div>
+            <div class="cb-row" style="margin-bottom:10px;">
+                <span class="cb @(isLainnya ? "checked" : "")"></span><span class="cb-label">Lainnya, sebutkan :</span>
+                <span
+                    style="display:inline-block;border-bottom:1px solid #000;min-width:260px;padding-bottom:1px;">@(isLainnya
+                                                            ? tujuan : "")</span>
+                </div>
+
+                <!-- Keperluan -->
+                <div class="section-title">Keperluan <span style="font-weight:normal;font-style:italic;">(pilihan bisa lebih
+                    dari 1)</span></div>
+                    <div class="cb-row" style="margin-bottom:10px;">
+                        <span class="cb @(Model.IsObservasi      ? "checked" : "")"></span><span
+                        class="cb-label">Observasi</span>
+                        <span class="cb @(Model.IsPermintaanData ? "checked" : "")"></span><span class="cb-label">Permintaan
+                        Data</span>
+                        <span class="cb @(Model.IsWawancara      ? "checked" : "")"></span><span
+                        class="cb-label">Wawancara</span>
+                    </div>
+
+                    <!-- Detail Keperluan -->
+                    <table class="detail-table">
+                        <tr>
+                            <td class="dlabel">
+                                Deskripsi observasi yang akan dilakukan
+                                <span class="hint">(berikan tanda "-" jika tidak dibutuhkan)</span>
+                            </td>
+                            <td class="dsep">:</td>
+                            <td class="dvalue"><span class="underline">@detailObs</span></td>
+                        </tr>
+                        <tr>
+                            <td class="dlabel">
+                                Data yang diperlukan
+                                <span class="hint">(berikan tanda "-" jika tidak dibutuhkan)</span>
+                            </td>
+                            <td class="dsep">:</td>
+                            <td class="dvalue"><span class="underline">@detailData</span></td>
+                        </tr>
+                        <tr>
+                            <td class="dlabel">
+                                Materi Wawancara
+                                <span class="hint">(berikan tanda "-" jika tidak dibutuhkan)</span>
+                            </td>
+                            <td class="dsep">:</td>
+                            <td class="dvalue"><span class="underline">@detailWaw</span></td>
+                        </tr>
+                        <tr>
+                            <td class="dlabel">
+                                Unit Kerja yang berkaitan dengan Penelitian
+                                <span class="hint">(Diisi Subkelompok Kepegawaian)</span>
+                            </td>
+                            <td class="dsep">:</td>
+                            <td class="dvalue"><span class="underline">@(Model.NamaBidang ?? "")</span></td>
+                        </tr>
+                    </table>
+
+                    <!-- Tanda Tangan -->
+                    <table class="sign-table">
+                        <tr>
+                            <td>
+                                <div>Mengetahui,</div>
+                                <div><strong>Ketua Subkelompok Kepegawaian</strong></div>
+                                <div class="sign-space"></div>
+                                <div><span class="sign-name">Mathew Musa H</span></div>
+                                <div class="sign-nik">NIP 198411182010011019</div>
+                            </td>
+                            <td>
+                                <div>Jakarta, @tanggalCetak</div>
+                                <div>Pemohon,</div>
+                                <div class="sign-space"></div>
+                                <div><span class="sign-name">(@(pr?.Nama ?? "................................"))</span></div>
+                                <div class="sign-nik">NIK @(pr?.NIK ?? "................................")</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- NB -->
+                    <p class="nb">
+                        <strong>NB:</strong> Formulir ini dibuat untuk mengetahui kebutuhan mahasiswa yang berhubungan
+                        penelitian
+                        yang akan dilakukan untuk pendukung pembuatan surat pemberian izin penelitian.
+                        <strong>Simpan Kode Verifikasi yang tertera di atas untuk melacak status permohonan secara
+                            online.</strong>
+                        </p>
+
+                    </div>
+                </div>
+
+            </body>
+
+        </html>

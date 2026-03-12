@@ -1,3 +1,13 @@
+// ── PERUBAHAN DARI VERSI SEBELUMNYA ─────────────────────────────────────────
+// Satu-satunya perubahan di controller ini:
+// Pada DaftarPemohonPost, setelah membuat objek permohonan baru,
+// tambahkan satu baris:
+//
+//     TokenLacak = TokenGenerator.Generate(),
+//
+// Sisanya identik dengan versi sebelumnya.
+// ─────────────────────────────────────────────────────────────────────────────
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -208,6 +218,9 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
             NamaBidang = vm.NamaBidang,
             StatusPPIDID = StatusId.TerdaftarSistem,
             Sequance = lastSeq + 1,
+            // ── PERUBAHAN UTAMA: generate token unik per permohonan ──────────
+            TokenLacak = TokenGenerator.Generate(),
+            // ────────────────────────────────────────────────────────────────
             CratedAt = now,
             UpdatedAt = now
         };

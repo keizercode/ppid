@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Security.Cryptography;
 
 namespace PermintaanData.Models;
 
@@ -70,6 +71,14 @@ public class PermohonanPPID
     [Column("NamaProdusenData")] public string? NamaProdusenData { get; set; }
     [Column("LoketJenis")] public string? LoketJenis { get; set; }
 
+    /// <summary>
+    /// Token 6-karakter acak untuk verifikasi publik.
+    /// Pemohon harus memasukkan NoPermohonan + TokenLacak agar bisa melihat detail.
+    /// Mencegah enumerasi nomor permohonan yang sequential.
+    /// Contoh: "A3KX9P"
+    /// </summary>
+    [Column("TokenLacak")] public string? TokenLacak { get; set; }
+
     [ForeignKey("PribadiID")] public Pribadi? Pribadi { get; set; }
     [ForeignKey("StatusPPIDID")] public StatusPPID? Status { get; set; }
     public ICollection<PermohonanPPIDDetail> Detail { get; set; } = new List<PermohonanPPIDDetail>();
@@ -77,6 +86,27 @@ public class PermohonanPPID
     public ICollection<JadwalPPID> Jadwal { get; set; } = new List<JadwalPPID>();
     public ICollection<AuditLogPPID> AuditLog { get; set; } = new List<AuditLogPPID>();
 }
+
+// ── Token Generator ───────────────────────────────────────────────────────────
+
+/// <summary>
+/// Menghasilkan token acak kriptografis 6-karakter untuk TokenLacak.
+/// Karakter yang mudah dibaca: tidak ada O/0, I/1, dll.
+/// </summary>
+public static class TokenGenerator
+{
+    // Alfabet 32 karakter — menghindari karakter ambigu (0, O, 1, I, S, Z, dll.)
+    private const string Alphabet = "23456789ABCDEFGHJKLMNPQRTUVWXY";
+
+    public static string Generate(int length = 6)
+    {
+        var buffer = new byte[length];
+        RandomNumberGenerator.Fill(buffer);
+        return new string(buffer.Select(b => Alphabet[b % Alphabet.Length]).ToArray());
+    }
+}
+
+// ── (sisa models tidak berubah) ───────────────────────────────────────────────
 
 [Table("PermohonanPPIDDetail", Schema = "public")]
 public class PermohonanPPIDDetail
@@ -151,12 +181,6 @@ public class JadwalPPID
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 }
 
-// ── BARU: Audit Log ───────────────────────────────────────────────────────────
-
-/// <summary>
-/// Mencatat setiap perubahan status pada permohonan PPID.
-/// Diisi otomatis oleh setiap controller yang mengubah StatusPPIDID.
-/// </summary>
 [Table("AuditLogPPID", Schema = "public")]
 public class AuditLogPPID
 {
@@ -213,8 +237,6 @@ public static class LoketJenis
     public const string Kepegawaian = "Kepegawaian";
     public const string Umum = "Umum";
 }
-
-// ── Role constants ────────────────────────────────────────────────────────────
 
 public static class AppRoles
 {

@@ -11,11 +11,12 @@ public class HomeController(AppDbContext db) : Controller
     public IActionResult Index() => View(new LacakViewModel());
 
     [HttpGet]
-    public async Task<IActionResult> Lacak(string? noPermohonan)
+    public async Task<IActionResult> Lacak(string? noPermohonan, string? tokenLacak)
     {
         if (string.IsNullOrEmpty(noPermohonan))
             return View("Index", new LacakViewModel());
 
+        // ── Cari berdasarkan NoPermohonan saja dulu ───────────────────────────
         var permohonan = await db.PermohonanPPID
             .Include(p => p.Status)
             .Include(p => p.Detail).ThenInclude(d => d.Keperluan)
@@ -23,12 +24,30 @@ public class HomeController(AppDbContext db) : Controller
             .Include(p => p.Jadwal)
             .FirstOrDefaultAsync(p => p.NoPermohonan == noPermohonan);
 
+        // ── Nomor tidak ditemukan sama sekali ─────────────────────────────────
         if (permohonan == null)
         {
             TempData["Error"] = $"Nomor permohonan <strong>{noPermohonan}</strong> tidak ditemukan.";
             return View("Index", new LacakViewModel { NoPermohonan = noPermohonan });
         }
 
+        // ── Token salah → pesan generik (tidak bocorkan apakah nomor valid) ──
+        // Bandingkan case-insensitive; token disimpan uppercase di DB.
+        bool tokenValid = string.Equals(
+            permohonan.TokenLacak,
+            tokenLacak?.Trim().ToUpperInvariant(),
+            StringComparison.OrdinalIgnoreCase);
+
+        if (!tokenValid)
+        {
+            // Pesan yang sama apakah nomor tidak ada ATAU token salah,
+            // sehingga penyerang tidak tahu mana yang benar.
+            TempData["Error"] = "Nomor permohonan atau kode verifikasi tidak valid. "
+                              + "Pastikan kode verifikasi sesuai dengan yang tercetak di formulir Anda.";
+            return View("Index", new LacakViewModel { NoPermohonan = noPermohonan });
+        }
+
+        // ── Token valid → tampilkan detail ───────────────────────────────────
         var pribadi = await db.Pribadi
             .Include(p => p.PribadiPPID)
             .FirstOrDefaultAsync(p => p.PribadiID == permohonan.PribadiID);
@@ -51,7 +70,12 @@ public class HomeController(AppDbContext db) : Controller
     public IActionResult LacakPost(LacakViewModel model)
     {
         if (!ModelState.IsValid) return View("Index", model);
-        return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan.Trim() });
+
+        return RedirectToAction("Lacak", new
+        {
+            noPermohonan = model.NoPermohonan.Trim().ToUpperInvariant(),
+            tokenLacak = model.TokenLacak.Trim().ToUpperInvariant()
+        });
     }
 
     [HttpGet]
@@ -74,7 +98,6 @@ public class HomeController(AppDbContext db) : Controller
             p.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            // Audit log
             db.AuditLog.Add(new AuditLogPPID
             {
                 PermohonanPPIDID = model.PermohonanPPIDID,
@@ -88,28 +111,23 @@ public class HomeController(AppDbContext db) : Controller
         }
 
         TempData["Success"] = "Terima kasih! Kuesioner berhasil dikirim.";
-        return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan });
+        return RedirectToAction("Lacak", new
+        {
+            noPermohonan = model.NoPermohonan,
+            tokenLacak = p?.TokenLacak   // tetap kirim token agar redirect berhasil
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // TIMELINE BUILDER
-    // Menggunakan posisi index (bukan perbandingan nilai integer StatusId)
-    // sehingga status wawancara (12,13) tidak bentrok dengan Selesai (11).
+    // TIMELINE BUILDER (tidak berubah)
     // ════════════════════════════════════════════════════════════════════════
 
     private static List<RiwayatStatusVm> BuildRiwayat(PermohonanPPID p)
     {
         var current = p.StatusPPIDID ?? StatusId.TerdaftarSistem;
-
-        // Tentukan urutan langkah berdasarkan keperluan
         var steps = GetSteps(p);
-
-        // Cari posisi current di dalam steps
         int currentIdx = steps.FindIndex(s => s.StatusId == current);
-
-        // Jika status tidak ada di urutan (misal status transisi), cari posisi terdekat
-        if (currentIdx < 0)
-            currentIdx = FindNearestIdx(steps, current);
+        if (currentIdx < 0) currentIdx = FindNearestIdx(steps, current);
 
         return steps.Select((s, i) => new RiwayatStatusVm
         {
@@ -137,7 +155,6 @@ public class HomeController(AppDbContext db) : Controller
             };
         }
 
-        // Jalur KDI (Data / Observasi ± Wawancara)
         var steps = new List<(int, string)>
         {
             (StatusId.TerdaftarSistem,  "Permohonan Terdaftar"),
@@ -149,7 +166,6 @@ public class HomeController(AppDbContext db) : Controller
             (StatusId.Selesai,          "Selesai"),
         };
 
-        // Sisipkan langkah Observasi hanya jika pemohon butuh observasi
         if (p.IsObservasi)
         {
             var idx = steps.FindIndex(s => s.Item1 == StatusId.Didisposisi);
@@ -157,10 +173,8 @@ public class HomeController(AppDbContext db) : Controller
             steps.Insert(idx + 2, (StatusId.ObservasiSelesai, "Observasi Selesai"));
         }
 
-        // Sisipkan langkah Wawancara (kombinasi) jika ada wawancara di jalur KDI
         if (p.IsWawancara)
         {
-            // Wawancara di jalur KDI ditampilkan setelah DiProses
             var idx = steps.FindIndex(s => s.Item1 == StatusId.DiProses);
             if (idx >= 0)
                 steps.Insert(idx + 1, (StatusId.WawancaraDijadwalkan, "Wawancara Dijadwalkan"));
@@ -169,19 +183,11 @@ public class HomeController(AppDbContext db) : Controller
         return steps;
     }
 
-    /// <summary>
-    /// Jika status tidak ada persis di daftar step (status transisi internal),
-    /// cari posisi berdasarkan urutan numerik terdekat yang lebih kecil.
-    /// </summary>
     private static int FindNearestIdx(List<(int StatusId, string Label)> steps, int current)
     {
-        // Cari step dengan StatusId terbesar yang masih <= current
         int best = -1;
         for (int i = 0; i < steps.Count; i++)
-        {
-            if (steps[i].StatusId <= current)
-                best = i;
-        }
+            if (steps[i].StatusId <= current) best = i;
         return best >= 0 ? best : steps.Count - 1;
     }
 }
