@@ -35,12 +35,12 @@ public class HomeController(AppDbContext db) : Controller
 
         var vm = new DetailLacakViewModel
         {
-            Permohonan  = permohonan,
-            Pribadi     = pribadi!,
+            Permohonan = permohonan,
+            Pribadi = pribadi!,
             PribadiPPID = pribadi?.PribadiPPID,
-            Detail      = permohonan.Detail.ToList(),
-            Jadwal      = permohonan.Jadwal.OrderBy(j => j.Tanggal).ToList(),
-            Riwayat     = BuildRiwayat(permohonan.StatusPPIDID ?? 1)
+            Detail = permohonan.Detail.ToList(),
+            Jadwal = permohonan.Jadwal.OrderBy(j => j.Tanggal).ToList(),
+            Riwayat = BuildRiwayat(permohonan)
         };
 
         return View("Detail", vm);
@@ -71,7 +71,7 @@ public class HomeController(AppDbContext db) : Controller
         if (p != null)
         {
             p.StatusPPIDID = StatusId.Selesai;
-            p.UpdatedAt    = DateTime.UtcNow;
+            p.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
         }
 
@@ -79,7 +79,50 @@ public class HomeController(AppDbContext db) : Controller
         return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan });
     }
 
-    private static List<RiwayatStatusVm> BuildRiwayat(int current)
+    // ── BuildRiwayat ──────────────────────────────────────────────────────────
+    /// <summary>
+    /// Membangun timeline status berdasarkan keperluan permohonan.
+    /// Jalur berbeda tergantung kombinasi keperluan yang dipilih.
+    /// </summary>
+    private static List<RiwayatStatusVm> BuildRiwayat(PermohonanPPID p)
+    {
+        var current = p.StatusPPIDID ?? 1;
+
+        // Jalur Wawancara-only
+        if (p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi)
+            return BuildRiwayatWawancaraOnly(current);
+
+        // Jalur normal (data / observasi ± wawancara)
+        return BuildRiwayatKdi(p, current);
+    }
+
+    /// <summary>Timeline untuk permohonan Wawancara-only (langsung ke Produsen Data).</summary>
+    private static List<RiwayatStatusVm> BuildRiwayatWawancaraOnly(int current)
+    {
+        var steps = new[]
+        {
+            (StatusId.TerdaftarSistem,      "Permohonan Terdaftar"),
+            (StatusId.IdentifikasiAwal,     "Identifikasi Awal"),
+            (StatusId.SuratIzinTerbit,      "Surat Izin Diterbitkan"),
+            (StatusId.WawancaraDijadwalkan, "Wawancara Dijadwalkan"),
+            (StatusId.WawancaraSelesai,     "Wawancara Selesai"),
+            (StatusId.Selesai,              "Selesai"),
+        };
+
+        return steps.Select(s => new RiwayatStatusVm
+        {
+            StatusId = s.Item1,
+            Label = s.Item2,
+            Selesai = current > s.Item1,
+            AktifSekarang = current == s.Item1
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Timeline untuk permohonan yang melalui KDI
+    /// (Permintaan Data, Observasi, atau kombinasi dengan Wawancara).
+    /// </summary>
+    private static List<RiwayatStatusVm> BuildRiwayatKdi(PermohonanPPID p, int current)
     {
         var steps = new[]
         {
@@ -92,26 +135,25 @@ public class HomeController(AppDbContext db) : Controller
             (StatusId.Selesai,          "Selesai"),
         };
 
-        var result = new List<RiwayatStatusVm>();
-        foreach (var (id, label) in steps)
+        var result = steps.Select(s => new RiwayatStatusVm
         {
-            result.Add(new RiwayatStatusVm
-            {
-                StatusId      = id,
-                Label         = label,
-                Selesai       = current > id,
-                AktifSekarang = current == id
-            });
-        }
+            StatusId = s.Item1,
+            Label = s.Item2,
+            Selesai = current > s.Item1,
+            AktifSekarang = current == s.Item1
+        }).ToList();
 
-        if (current is StatusId.ObservasiDijadwalkan or StatusId.ObservasiSelesai)
+        // Sisipkan langkah Observasi jika diperlukan
+        if (p.IsObservasi &&
+            current is StatusId.ObservasiDijadwalkan or StatusId.ObservasiSelesai
+                     or StatusId.DiProses or StatusId.DataSiap or StatusId.Selesai)
         {
             var idx = result.FindIndex(r => r.StatusId == StatusId.Didisposisi);
             result.Insert(idx + 1, new RiwayatStatusVm
             {
-                StatusId      = StatusId.ObservasiDijadwalkan,
-                Label         = "Observasi / Wawancara",
-                Selesai       = current == StatusId.ObservasiSelesai,
+                StatusId = StatusId.ObservasiDijadwalkan,
+                Label = "Observasi / Wawancara",
+                Selesai = current > StatusId.ObservasiDijadwalkan,
                 AktifSekarang = current == StatusId.ObservasiDijadwalkan
             });
         }

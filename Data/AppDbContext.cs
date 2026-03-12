@@ -5,15 +5,15 @@ namespace PermintaanData.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<Pribadi>              Pribadi              { get; set; }
-    public DbSet<PribadiPPID>          PribadiPPID          { get; set; }
-    public DbSet<PermohonanPPID>       PermohonanPPID       { get; set; }
+    public DbSet<Pribadi> Pribadi { get; set; }
+    public DbSet<PribadiPPID> PribadiPPID { get; set; }
+    public DbSet<PermohonanPPID> PermohonanPPID { get; set; }
     public DbSet<PermohonanPPIDDetail> PermohonanPPIDDetail { get; set; }
-    public DbSet<Keperluan>            Keperluan            { get; set; }
-    public DbSet<StatusPPID>           StatusPPID           { get; set; }
-    public DbSet<DokumenPPID>          DokumenPPID          { get; set; }
-    public DbSet<JenisDokumenPPID>     JenisDokumenPPID     { get; set; }
-    public DbSet<JadwalPPID>           JadwalPPID           { get; set; }
+    public DbSet<Keperluan> Keperluan { get; set; }
+    public DbSet<StatusPPID> StatusPPID { get; set; }
+    public DbSet<DokumenPPID> DokumenPPID { get; set; }
+    public DbSet<JenisDokumenPPID> JenisDokumenPPID { get; set; }
+    public DbSet<JadwalPPID> JadwalPPID { get; set; }
 
     protected override void OnModelCreating(ModelBuilder m)
     {
@@ -45,17 +45,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         // ── Seed: StatusPPID ──────────────────────────────────────────────────
         m.Entity<StatusPPID>().HasData(
-            new StatusPPID { StatusPPIDID =  1, NamaStatusPPID = "Baru" },
-            new StatusPPID { StatusPPIDID =  2, NamaStatusPPID = "Terdaftar" },
-            new StatusPPID { StatusPPIDID =  3, NamaStatusPPID = "Identifikasi Awal" },
-            new StatusPPID { StatusPPIDID =  4, NamaStatusPPID = "Menunggu Surat Izin" },
-            new StatusPPID { StatusPPIDID =  5, NamaStatusPPID = "Surat Izin Terbit" },
-            new StatusPPID { StatusPPIDID =  6, NamaStatusPPID = "Didisposisi" },
-            new StatusPPID { StatusPPIDID =  7, NamaStatusPPID = "Sedang Diproses" },
-            new StatusPPID { StatusPPIDID =  8, NamaStatusPPID = "Observasi Dijadwalkan" },
-            new StatusPPID { StatusPPIDID =  9, NamaStatusPPID = "Observasi Selesai" },
+            new StatusPPID { StatusPPIDID = 1, NamaStatusPPID = "Baru" },
+            new StatusPPID { StatusPPIDID = 2, NamaStatusPPID = "Terdaftar" },
+            new StatusPPID { StatusPPIDID = 3, NamaStatusPPID = "Identifikasi Awal" },
+            new StatusPPID { StatusPPIDID = 4, NamaStatusPPID = "Menunggu Surat Izin" },
+            new StatusPPID { StatusPPIDID = 5, NamaStatusPPID = "Surat Izin Terbit" },
+            new StatusPPID { StatusPPIDID = 6, NamaStatusPPID = "Didisposisi" },
+            new StatusPPID { StatusPPIDID = 7, NamaStatusPPID = "Sedang Diproses" },
+            new StatusPPID { StatusPPIDID = 8, NamaStatusPPID = "Observasi Dijadwalkan" },
+            new StatusPPID { StatusPPIDID = 9, NamaStatusPPID = "Observasi Selesai" },
             new StatusPPID { StatusPPIDID = 10, NamaStatusPPID = "Data Siap" },
-            new StatusPPID { StatusPPIDID = 11, NamaStatusPPID = "Selesai" }
+            new StatusPPID { StatusPPIDID = 11, NamaStatusPPID = "Selesai" },
+            // Jalur Wawancara langsung ke Produsen Data
+            new StatusPPID { StatusPPIDID = 12, NamaStatusPPID = "Wawancara Dijadwalkan" },
+            new StatusPPID { StatusPPIDID = 13, NamaStatusPPID = "Wawancara Selesai" }
         );
 
         m.Entity<Keperluan>().HasData(
@@ -65,19 +68,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         );
 
         m.Entity<JenisDokumenPPID>().HasData(
-            new JenisDokumenPPID { JenisDokumenPPIDID = 1, NamaJenisDokumenPPID = "KTP",                        IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 2, NamaJenisDokumenPPID = "Surat Permohonan",           IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 3, NamaJenisDokumenPPID = "Proposal Penelitian",        IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 4, NamaJenisDokumenPPID = "Akta Notaris",               IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 1, NamaJenisDokumenPPID = "KTP", IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 2, NamaJenisDokumenPPID = "Surat Permohonan", IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 3, NamaJenisDokumenPPID = "Proposal Penelitian", IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 4, NamaJenisDokumenPPID = "Akta Notaris", IsActive = true },
             new JenisDokumenPPID { JenisDokumenPPIDID = 5, NamaJenisDokumenPPID = "Dokumen Identifikasi (TTD)", IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 6, NamaJenisDokumenPPID = "Surat Izin",                 IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 7, NamaJenisDokumenPPID = "Data Hasil",                 IsActive = true }
+            new JenisDokumenPPID { JenisDokumenPPIDID = 6, NamaJenisDokumenPPID = "Surat Izin", IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 7, NamaJenisDokumenPPID = "Data Hasil", IsActive = true }
         );
     }
 
     public async Task<string> GenerateNoPermohonan()
     {
-        var year  = DateTime.UtcNow.Year;
+        var year = DateTime.UtcNow.Year;
         var count = await PermohonanPPID
             .CountAsync(p => p.CratedAt != null && p.CratedAt.Value.Year == year);
         return $"PPD/{year}/{(count + 1):D4}";

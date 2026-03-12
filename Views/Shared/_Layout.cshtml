@@ -1,160 +1,162 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>@ViewData["Title"] — PPID DLH Jakarta</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — PPID DLH Jakarta</title>
 
-<script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
+    rel="stylesheet" />
 
-<style>
-* { font-family: 'Plus Jakarta Sans', sans-serif; }
-body { background-color: #F5F7FA; color: #111827; }
+    <style>
+        * {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        body {
+        background-color: #F5F7FA;
+        color: #111827;
+        }
 
-.alert-slide { animation: alertSlide .25s ease both; }
+        .alert-slide {
+        animation: alertSlide .25s ease both;
+        }
 
-@@keyframes alertSlide{
-from{opacity:0;transform:translateY(-6px);}
-to{opacity:1;transform:translateY(0);}
-}
-</style>
+        @@keyframes alertSlide {
+        from {
+        opacity: 0;
+        transform: translateY(-6px);
+        }
+        to {
+        opacity: 1;
+        transform: translateY(0);
+        }
+        }
+    </style>
 </head>
 
 <body class="min-h-screen flex flex-col antialiased">
 
-<!-- NAV -->
-<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
-<div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+    <!-- NAV -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
 
-<a href="/" class="flex items-center gap-2.5">
+            <a href="/" class="flex items-center gap-2.5">
 
-<div class="w-8 h-8 bg-[#1B3B6F] rounded-lg flex items-center justify-center">
+                <div class="w-8 h-8 bg-[#1B3B6F] rounded-lg flex items-center justify-center">
 
-<!-- building icon -->
-<svg xmlns="http://www.w3.org/2000/svg"
-     fill="none"
-     viewBox="0 0 24 24"
-     stroke="currentColor"
-     stroke-width="2"
-     class="w-5 h-5 text-white">
+                    <!-- building icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg"     fill="none"     viewBox="0 0 24 24"     stroke="currentColor"
+                         stroke-width="2"     class="w-5 h-5 text-white">
 
-  <path stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                        <path stroke-linecap="round"        stroke-linejoin="round"
+                              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
 
-</svg>
+                    </svg>
 
-</div>
+                </div>
 
-<div>
-<p class="text-[10px] text-gray-400 uppercase tracking-widest leading-none font-medium">
-Dinas Lingkungan Hidup
-</p>
+                <div>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest leading-none font-medium">
+                        Dinas Lingkungan Hidup
+                    </p>
 
-<p class="text-gray-800 font-semibold text-[13px] leading-tight">
-Sistem Permohonan Data
-</p>
-</div>
+                    <p class="text-gray-800 font-semibold text-[13px] leading-tight">
+                        Sistem Permohonan Data
+                    </p>
+                </div>
 
-</a>
+            </a>
 
-<nav class="flex items-center gap-1">
+            <nav class="flex items-center gap-1">
 
-<a href="/"
-class="text-gray-500 hover:text-gray-900 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-Beranda
-</a>
+                <a href="/"
+                       class="text-gray-500 hover:text-gray-900 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    Beranda
+                </a>
 
-</nav>
+            </nav>
 
-</div>
-</header>
+        </div>
+    </header>
 
 
-<!-- SUCCESS ALERT -->
-@if (TempData["Success"] != null)
-{
-<div class="alert-slide bg-emerald-50 border-b border-emerald-200">
+    <!-- SUCCESS ALERT -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert-slide bg-emerald-50 border-b border-emerald-200">
 
-<div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2.5">
+            <div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2.5">
 
-<div class="w-5 h-5 text-emerald-600 flex-shrink-0">
+                <div class="w-5 h-5 text-emerald-600 flex-shrink-0">
 
-<svg xmlns="http://www.w3.org/2000/svg"
-fill="none"
-viewBox="0 0 24 24"
-stroke="currentColor"
-stroke-width="2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                         stroke-width="2">
 
-<path stroke-linecap="round" stroke-linejoin="round"
-d="M5 13l4 4L19 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 
-</svg>
+                    </svg>
 
-</div>
+                </div>
 
-<p class="text-emerald-800 text-sm font-medium">
-@Html.Raw(TempData["Success"])
-</p>
+                <p class="text-emerald-800 text-sm font-medium">
+                    @Html.Raw(TempData["Success"])
+                </p>
 
-</div>
+            </div>
 
-</div>
-}
+        </div>
+    }
 
 
-<!-- ERROR ALERT -->
-@if (TempData["Error"] != null)
-{
-<div class="alert-slide bg-red-50 border-b border-red-200">
+    <!-- ERROR ALERT -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert-slide bg-red-50 border-b border-red-200">
 
-<div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2.5">
+            <div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2.5">
 
-<div class="w-5 h-5 text-red-600 flex-shrink-0">
+                <div class="w-5 h-5 text-red-600 flex-shrink-0">
 
-<svg xmlns="http://www.w3.org/2000/svg"
-fill="none"
-viewBox="0 0 24 24"
-stroke="currentColor"
-stroke-width="2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                         stroke-width="2">
 
-<path stroke-linecap="round" stroke-linejoin="round"
-d="M6 18L18 6M6 6l12 12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 
-</svg>
+                    </svg>
 
-</div>
+                </div>
 
-<p class="text-red-800 text-sm font-medium">
-@Html.Raw(TempData["Error"])
-</p>
+                <p class="text-red-800 text-sm font-medium">
+                    @Html.Raw(TempData["Error"])
+                </p>
 
-</div>
+            </div>
 
-</div>
-}
+        </div>
+    }
 
-<main class="flex-1">
-@RenderBody()
-</main>
+    <main class="flex-1">
+        @RenderBody()
+    </main>
 
 
-<footer class="bg-white border-t border-gray-200 mt-auto">
+    <footer class="bg-white border-t border-gray-200 mt-auto">
 
-<div class="max-w-6xl mx-auto px-6 py-6">
-
-
-<p class="text-gray-400 text-xs text-center">
-&copy; @DateTime.Now.Year · Sistem Informasi PPID DLH
-</p>
-
-</div>
+        <div class="max-w-6xl mx-auto px-6 py-6">
 
 
-</div>
+            <p class="text-gray-400 text-xs text-center">
+                &copy; @DateTime.Now.Year · Sistem Informasi PPID DLH
+            </p>
+
+        </div>
+
+
+    </div>
 
 </div>
 
@@ -163,4 +165,5 @@ d="M6 18L18 6M6 6l12 12"/>
 @await RenderSectionAsync("Scripts", required: false)
 
 </body>
+
 </html>
