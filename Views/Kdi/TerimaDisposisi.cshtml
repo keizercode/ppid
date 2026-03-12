@@ -1,81 +1,101 @@
 @model TerimaDisposisiVm
 @{
     ViewData["Title"] = "Terima Disposisi";
-    ViewData["Role"]  = "KDI";
+    ViewData["Role"] = "KDI";
     Layout = "_LayoutAdmin";
 }
 
 <div class="max-w-xl mx-auto">
-<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-    <!-- Header -->
-    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
-        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📥</div>
-        <div>
-            <h3 class="font-bold text-gray-800">Terima Disposisi Permintaan Data</h3>
-            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        <!-- Header -->
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📥</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Terima Disposisi Permintaan Data</h3>
+                <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+            </div>
         </div>
-    </div>
 
-    <div class="p-6">
-        <!-- Info permohonan -->
-        <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5 space-y-3">
-            <div>
-                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-0.5">Judul Penelitian</span>
-                <p class="font-semibold text-gray-800 text-sm">@Model.JudulPenelitian</p>
-            </div>
-            <div>
-                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-0.5">Latar Belakang</span>
-                <p class="text-gray-600 text-xs leading-relaxed line-clamp-3">@Model.LatarBelakang</p>
-            </div>
-            @if (!string.IsNullOrEmpty(Model.CatatanDisposisi)) {
+        <div class="p-6">
+            <!-- Info permohonan -->
+            <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5 space-y-3">
                 <div>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-0.5">Catatan Kepegawaian</span>
-                    <p class="text-gray-600 text-xs">@Model.CatatanDisposisi</p>
+                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-0.5">Judul
+                        Penelitian</span>
+                        <p class="font-semibold text-gray-800 text-sm">@Model.JudulPenelitian</p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-0.5">Latar
+                            Belakang</span>
+                            <p class="text-gray-600 text-xs leading-relaxed line-clamp-3">@Model.LatarBelakang</p>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.CatatanDisposisi))
+                        {
+                            <div>
+                                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-0.5">Catatan
+                                    Kepegawaian</span>
+                                    <p class="text-gray-600 text-xs">@Model.CatatanDisposisi</p>
+                                </div>
+                            }
+                            <div>
+                                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-1">Perlu
+                                    Observasi</span>
+                                    @if (Model.PerluObservasi)
+                                    {
+                                        <span
+                                            class="inline-flex items-center gap-1.5 text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full font-semibold">
+                                            ⚠️ Ya — perlu jadwal observasi
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span
+                                            class="inline-flex items-center gap-1.5 text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium">
+                                            Tidak
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+
+                            <form asp-action="TerimaDisposisiPost" asp-controller="Kdi" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" asp-for="PermohonanPPIDID" />
+                                <input type="hidden" asp-for="NoPermohonan" />
+                                <input type="hidden" asp-for="NamaPemohon" />
+                                <input type="hidden" asp-for="JudulPenelitian" />
+                                <input type="hidden" asp-for="LatarBelakang" />
+                                <input type="hidden" asp-for="PerluObservasi" />
+                                <input type="hidden" asp-for="PerluWawancara" />
+
+                                <div class="mb-5">
+                                    <label class="lbl">Catatan Penerimaan</label>
+                                    <textarea asp-for="Catatan" rows="3"
+                                              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none bg-gray-50 focus:bg-white transition-colors"
+                                              placeholder="Catatan internal penerimaan disposisi..."></textarea>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <a href="/kdi"
+                                       class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">Batal</a>
+                                    <button type="submit"
+                                            class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                                        ✓ Terima Disposisi
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-            }
-            <div>
-                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wide block mb-1">Perlu Observasi</span>
-                @if (Model.PerluObservasi) {
-                    <span class="inline-flex items-center gap-1.5 text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full font-semibold">
-                        ⚠️ Ya — perlu jadwal observasi
-                    </span>
-                } else {
-                    <span class="inline-flex items-center gap-1.5 text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium">
-                        Tidak
-                    </span>
-                }
-            </div>
-        </div>
 
-        <form asp-action="TerimaDisposisiPost" asp-controller="Kdi" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="PermohonanPPIDID" />
-            <input type="hidden" asp-for="NoPermohonan" />
-            <input type="hidden" asp-for="NamaPemohon" />
-            <input type="hidden" asp-for="JudulPenelitian" />
-            <input type="hidden" asp-for="LatarBelakang" />
-            <input type="hidden" asp-for="PerluObservasi" />
-
-            <div class="mb-5">
-                <label class="lbl">Catatan Penerimaan</label>
-                <textarea asp-for="Catatan" rows="3"
-                          class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none bg-gray-50 focus:bg-white transition-colors"
-                          placeholder="Catatan internal penerimaan disposisi..."></textarea>
-            </div>
-
-            <div class="flex gap-3">
-                <a href="/kdi" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">Batal</a>
-                <button type="submit"
-                        class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
-                    ✓ Terima Disposisi
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-</div>
-
-<style>
-    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
-</style>
+                <style>
+                    .lbl {
+                        display: block;
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: #6b7280;
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                        margin-bottom: 4px;
+                    }
+                </style>

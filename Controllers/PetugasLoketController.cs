@@ -29,15 +29,24 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
 
     /// <summary>Dashboard utama — semua permohonan.</summary>
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    // PetugasLoketController - Index
+    public async Task<IActionResult> Index(string? q, int? status)
     {
-        var list = await db.PermohonanPPID
+        var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .OrderByDescending(p => p.CratedAt)
-            .ToListAsync();
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                p.NoPermohonan!.Contains(q) ||
+                p.Pribadi!.Nama!.Contains(q));
+
+        if (status.HasValue)
+            query = query.Where(p => p.StatusPPIDID == status);
+
         ViewData["LoketTitle"] = "Semua Permohonan";
-        return View(list);
+        return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
     /// <summary>

@@ -81,8 +81,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public async Task<string> GenerateNoPermohonan()
     {
         var year = DateTime.UtcNow.Year;
-        var count = await PermohonanPPID
-            .CountAsync(p => p.CratedAt != null && p.CratedAt.Value.Year == year);
-        return $"PPD/{year}/{(count + 1):D4}";
+
+        // Pakai eksekusi SQL dengan locking untuk menghindari race condition
+        var result = await Database.SqlQueryRaw<int>(
+            @"SELECT COALESCE(MAX(""Sequance""), 0) + 1 AS ""Value""
+          FROM public.""PermohonanPPID""
+          WHERE EXTRACT(YEAR FROM ""CratedAt"") = {0}
+          FOR UPDATE", year)
+            .FirstOrDefaultAsync();
+
+        return $"PPD/{year}/{result:D4}";
     }
 }

@@ -88,44 +88,18 @@ public class HomeController(AppDbContext db) : Controller
     {
         var current = p.StatusPPIDID ?? 1;
 
-        // Jalur Wawancara-only
-        if (p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi)
-            return BuildRiwayatWawancaraOnly(current);
-
-        // Jalur normal (data / observasi ± wawancara)
-        return BuildRiwayatKdi(p, current);
-    }
-
-    /// <summary>Timeline untuk permohonan Wawancara-only (langsung ke Produsen Data).</summary>
-    private static List<RiwayatStatusVm> BuildRiwayatWawancaraOnly(int current)
-    {
-        var steps = new[]
-        {
+        (int, string)[] steps = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi
+            ? new[]
+            {
             (StatusId.TerdaftarSistem,      "Permohonan Terdaftar"),
             (StatusId.IdentifikasiAwal,     "Identifikasi Awal"),
             (StatusId.SuratIzinTerbit,      "Surat Izin Diterbitkan"),
             (StatusId.WawancaraDijadwalkan, "Wawancara Dijadwalkan"),
             (StatusId.WawancaraSelesai,     "Wawancara Selesai"),
             (StatusId.Selesai,              "Selesai"),
-        };
-
-        return steps.Select(s => new RiwayatStatusVm
-        {
-            StatusId = s.Item1,
-            Label = s.Item2,
-            Selesai = current > s.Item1,
-            AktifSekarang = current == s.Item1
-        }).ToList();
-    }
-
-    /// <summary>
-    /// Timeline untuk permohonan yang melalui KDI
-    /// (Permintaan Data, Observasi, atau kombinasi dengan Wawancara).
-    /// </summary>
-    private static List<RiwayatStatusVm> BuildRiwayatKdi(PermohonanPPID p, int current)
-    {
-        var steps = new[]
-        {
+            }
+            : new[]
+            {
             (StatusId.TerdaftarSistem,  "Permohonan Terdaftar"),
             (StatusId.IdentifikasiAwal, "Identifikasi Awal"),
             (StatusId.SuratIzinTerbit,  "Surat Izin Diterbitkan"),
@@ -133,31 +107,32 @@ public class HomeController(AppDbContext db) : Controller
             (StatusId.DiProses,         "Data Sedang Diproses"),
             (StatusId.DataSiap,         "Data Siap Diunduh"),
             (StatusId.Selesai,          "Selesai"),
-        };
+            };
 
-        var result = steps.Select(s => new RiwayatStatusVm
+        var list = steps.ToList();
+
+        // Sisipkan observasi jika perlu
+        if (!p.IsWawancara || p.IsPermintaanData || p.IsObservasi)
+        {
+            if (p.IsObservasi && (
+                current == StatusId.ObservasiDijadwalkan ||
+                current == StatusId.ObservasiSelesai ||
+                current >= StatusId.DiProses))
+            {
+                var idx = list.FindIndex(s => s.Item1 == StatusId.Didisposisi);
+                list.Insert(idx + 1, (StatusId.ObservasiDijadwalkan, "Observasi / Wawancara"));
+            }
+        }
+
+        int currentIdx = list.FindIndex(s => s.Item1 == current);
+        if (currentIdx < 0) currentIdx = list.Count - 1;
+
+        return list.Select((s, i) => new RiwayatStatusVm
         {
             StatusId = s.Item1,
             Label = s.Item2,
-            Selesai = current > s.Item1,
-            AktifSekarang = current == s.Item1
+            Selesai = i < currentIdx,
+            AktifSekarang = i == currentIdx
         }).ToList();
-
-        // Sisipkan langkah Observasi jika diperlukan
-        if (p.IsObservasi &&
-            current is StatusId.ObservasiDijadwalkan or StatusId.ObservasiSelesai
-                     or StatusId.DiProses or StatusId.DataSiap or StatusId.Selesai)
-        {
-            var idx = result.FindIndex(r => r.StatusId == StatusId.Didisposisi);
-            result.Insert(idx + 1, new RiwayatStatusVm
-            {
-                StatusId = StatusId.ObservasiDijadwalkan,
-                Label = "Observasi / Wawancara",
-                Selesai = current > StatusId.ObservasiDijadwalkan,
-                AktifSekarang = current == StatusId.ObservasiDijadwalkan
-            });
-        }
-
-        return result;
     }
 }

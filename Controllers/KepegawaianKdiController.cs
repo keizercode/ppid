@@ -85,6 +85,9 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
 
         p.NoSuratPermohonan = vm.NoSuratIzin;
         p.UpdatedAt = now;
+        p.IsObservasi = vm.IsObservasi;
+        p.IsPermintaanData = vm.IsPermintaanData;
+        p.IsWawancara = vm.IsWawancara;
 
         // ── ROUTING LOGIC ───────────────────────────────────────────────────
         //
@@ -271,6 +274,35 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         await db.SaveChangesAsync();
         TempData["Success"] = $"Jadwal observasi: <strong>{vm.TanggalObservasi:dd MMM yyyy}</strong> pukul {vm.WaktuObservasi:HH:mm}";
         return RedirectToAction("Index");
+    }
+
+    // ── Selesai Observasi ──────────────────────────────────────────────────────
+
+    [HttpGet("selesai-observasi/{id}")]
+    public async Task<IActionResult> SelesaiObservasi(Guid id)
+    {
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p == null) return NotFound();
+        return View(new UploadDataVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan = p.NoPermohonan!,
+            NamaPemohon = p.Pribadi?.Nama ?? "",
+            JudulPenelitian = p.JudulPenelitian ?? ""
+        });
+    }
+
+    [HttpPost("selesai-observasi"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SelesaiObservasiPost(UploadDataVm vm)
+    {
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p == null) return NotFound();
+        p.StatusPPIDID = StatusId.ObservasiSelesai;
+        p.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        TempData["Success"] = "Observasi selesai. Lanjutkan ke upload data.";
+        return RedirectToAction("UploadData", new { id = vm.PermohonanPPIDID });
     }
 
     // ── Jadwal Wawancara (kombinasi dengan data) ──────────────────────────────
