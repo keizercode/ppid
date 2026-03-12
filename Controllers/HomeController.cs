@@ -94,6 +94,7 @@ public class HomeController(AppDbContext db) : Controller
         var p = await db.PermohonanPPID.FindAsync(model.PermohonanPPIDID);
         if (p != null)
         {
+            var statusLama = p.StatusPPIDID;           // ← tangkap dulu
             p.StatusPPIDID = StatusId.Selesai;
             p.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
@@ -101,7 +102,7 @@ public class HomeController(AppDbContext db) : Controller
             db.AuditLog.Add(new AuditLogPPID
             {
                 PermohonanPPIDID = model.PermohonanPPIDID,
-                StatusLama = p.StatusPPIDID,
+                StatusLama = statusLama,               // ← pakai yang sudah ditangkap
                 StatusBaru = StatusId.Selesai,
                 Keterangan = "Kuesioner kepuasan diisi pemohon",
                 Operator = "Pemohon",

@@ -16,6 +16,7 @@
         * {
         font-family: 'Plus Jakarta Sans', sans-serif;
         }
+
         body {
         background-color: #F5F7FA;
         color: #111827;
@@ -30,6 +31,7 @@
         opacity: 0;
         transform: translateY(-6px);
         }
+
         to {
         opacity: 1;
         transform: translateY(0);
@@ -49,10 +51,10 @@
                 <div class="w-8 h-8 bg-[#1B3B6F] rounded-lg flex items-center justify-center">
 
                     <!-- building icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg"     fill="none"     viewBox="0 0 24 24"     stroke="currentColor"
-                         stroke-width="2"     class="w-5 h-5 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                         stroke-width="2" class="w-5 h-5 text-white">
 
-                        <path stroke-linecap="round"        stroke-linejoin="round"
+                        <path stroke-linecap="round" stroke-linejoin="round"
                               d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
 
                     </svg>
@@ -145,24 +147,14 @@
 
 
     <footer class="bg-white border-t border-gray-200 mt-auto">
-
         <div class="max-w-6xl mx-auto px-6 py-6">
-
-
             <p class="text-gray-400 text-xs text-center">
                 &copy; @DateTime.Now.Year · Sistem Informasi PPID DLH
             </p>
-
         </div>
+    </footer>
 
-
-    </div>
-
-</div>
-
-</footer>
-
-@await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync("Scripts", required: false)
 
 </body>
 
