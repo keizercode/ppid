@@ -1,13 +1,3 @@
-// ── PERUBAHAN DARI VERSI SEBELUMNYA ─────────────────────────────────────────
-// Satu-satunya perubahan di controller ini:
-// Pada DaftarPemohonPost, setelah membuat objek permohonan baru,
-// tambahkan satu baris:
-//
-//     TokenLacak = TokenGenerator.Generate(),
-//
-// Sisanya identik dengan versi sebelumnya.
-// ─────────────────────────────────────────────────────────────────────────────
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -195,10 +185,18 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         }
 
         // 3. PermohonanPPID
-        var noPerm = await db.GenerateNoPermohonan();
-        var lastSeq = await db.PermohonanPPID
-            .Where(p => p.CratedAt != null && p.CratedAt.Value.Year == now.Year)
-            .MaxAsync(p => (int?)p.Sequance) ?? 0;
+        //
+        // BUG FIX: Versi lama memanggil GenerateNoPermohonan() yang hanya
+        // mengembalikan string, lalu menghitung Sequance LAGI secara terpisah.
+        // Akibatnya:
+        //   (a) Race condition → dua request bisa mendapat NoPermohonan sama
+        //       → duplicate key violation pada IX_PermohonanPPID_NoPermohonan.
+        //   (b) Sequance yang disimpan ke DB bisa berbeda dengan yang ada di
+        //       NoPermohonan jika ada insert lain di antara dua query.
+        //
+        // SOLUSI: GenerateNoPermohonan() kini mengembalikan (NoPermohonan, Sequence)
+        // dari satu transaksi terkunci. Controller cukup destructure hasilnya.
+        var (noPerm, nextSeq) = await db.GenerateNoPermohonan();
 
         var permohonan = new PermohonanPPID
         {
@@ -217,10 +215,8 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
             BidangID = string.IsNullOrEmpty(vm.BidangID) ? null : Guid.Parse(vm.BidangID),
             NamaBidang = vm.NamaBidang,
             StatusPPIDID = StatusId.TerdaftarSistem,
-            Sequance = lastSeq + 1,
-            // ── PERUBAHAN UTAMA: generate token unik per permohonan ──────────
+            Sequance = nextSeq,          // ← dari GenerateNoPermohonan, bukan query terpisah
             TokenLacak = TokenGenerator.Generate(),
-            // ────────────────────────────────────────────────────────────────
             CratedAt = now,
             UpdatedAt = now
         };

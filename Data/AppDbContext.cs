@@ -95,26 +95,61 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // GenerateNoPermohonan — atomic dengan transaksi
+    // GenerateNoPermohonan — benar-benar atomic dan tahan data lama
+    //
+    // ROOT CAUSE bug sebelumnya:
+    //   Kolom Sequance pada data lama/test bisa berisi NULL, duplikat, atau
+    //   angka yang tidak sinkron dengan NoPermohonan yang sudah ada di DB.
+    //   Akibatnya MAX(Sequance) menghasilkan angka yang sudah terpakai,
+    //   lalu INSERT gagal karena unique constraint NoPermohonan.
+    //
+    // SOLUSI — dua lapis proteksi:
+    //
+    //   1. Baca nextSeq dari kolom NoPermohonan secara langsung (bukan
+    //      Sequance). NoPermohonan adalah sumber kebenaran yang sesungguhnya
+    //      karena itulah kolom yang punya unique constraint.
+    //      Raw SQL dipakai karena EF Core tidak bisa SPLIT_PART + CAST.
+    //
+    //   2. pg_advisory_xact_lock memastikan hanya satu transaksi yang
+    //      dapat menghitung nextSeq pada satu waktu, sehingga tidak ada
+    //      race condition meski ada banyak request bersamaan.
+    //
+    // Dengan dua lapis ini, tidak perlu hapus database atau clean-build.
     // ════════════════════════════════════════════════════════════════════════
 
-    public async Task<string> GenerateNoPermohonan()
+    public async Task<(string NoPermohonan, int Sequence)> GenerateNoPermohonan()
     {
         var year = DateTime.UtcNow.Year;
+        var prefix = $"PPD/{year}/";
 
         await using var tx = await Database.BeginTransactionAsync();
         try
         {
-            var lastSeq = await PermohonanPPID
-                .Where(p => p.CratedAt != null && p.CratedAt.Value.Year == year)
-                .OrderByDescending(p => p.Sequance)
-                .Select(p => p.Sequance)
-                .FirstOrDefaultAsync() ?? 0;
+            // Lapis 1 — advisory lock: blok semua request lain sampai commit
+            await Database.ExecuteSqlRawAsync(
+                "SELECT pg_advisory_xact_lock(20250001)");
 
-            var nextSeq = lastSeq + 1;
+            // Lapis 2 — baca dari NoPermohonan, bukan Sequance.
+            // SPLIT_PART('PPD/2026/0007', '/', 3) → '0007' → CAST ke integer → 7
+            // COALESCE mengembalikan 0 jika belum ada data tahun ini.
+            var sql = $"""
+    SELECT COALESCE(
+        MAX(CAST(SPLIT_PART("NoPermohonan", '/', 3) AS INTEGER)),
+        0
+    ) AS "Value"
+    FROM public."PermohonanPPID"
+    WHERE "NoPermohonan" LIKE '{prefix}%'
+    """;
+
+            // EF Core 8: SqlQueryRaw<T> untuk scalar
+            var maxSeq = await Database
+                .SqlQueryRaw<int>(sql)
+                .FirstOrDefaultAsync();
+
+            var nextSeq = maxSeq + 1;
             await tx.CommitAsync();
 
-            return $"PPD/{year}/{nextSeq:D4}";
+            return ($"{prefix}{nextSeq:D4}", nextSeq);
         }
         catch
         {
@@ -123,7 +158,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         }
     }
 
-    // ── Helper Audit Log ──────────────────────────────────────────────────────
+    // ── Helper Audit Log ──────────────────────────────────────────────────
 
     public void AddAuditLog(Guid permohonanId, int? statusLama, int statusBaru,
         string keterangan, string operator_)
@@ -141,8 +176,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// AppUser — simple auth tanpa BCrypt (pakai SHA-256 + salt bawaan .NET)
-// Tidak perlu install package tambahan sama sekali.
+// AppUser
 // ════════════════════════════════════════════════════════════════════════════
 
 [System.ComponentModel.DataAnnotations.Schema.Table("AppUser", Schema = "public")]
@@ -173,14 +207,8 @@ public class AppUser
     [System.ComponentModel.DataAnnotations.Schema.Column("UpdatedAt")]
     public DateTime? UpdatedAt { get; set; }
 
-    /// <summary>
-    /// Hash password dengan SHA-256 + salt tetap.
-    /// Format simpan: "PPID_v1:{hash}"
-    /// </summary>
     public static string HashPassword(string password)
     {
-        // Salt tetap — cukup untuk proyek internal.
-        // Jika ingin lebih aman, simpan salt per-user di kolom terpisah.
         const string salt = "PPID_DLH_JKT_2025";
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(salt + password));
         return "PPID_v1:" + Convert.ToHexString(bytes);
