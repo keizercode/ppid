@@ -7,205 +7,331 @@
     var status = ViewData["Status"] as int?;
 }
 
+@{
+    int statTotal = Model.Count;
+    int statTerdaftar = Model.Count(m => m.StatusPPIDID <= StatusId.IdentifikasiAwal);
+    int statDiproses = Model.Count(m => m.StatusPPIDID > StatusId.SuratIzinTerbit && m.StatusPPIDID < StatusId.DataSiap);
+    int statSelesai = Model.Count(m => m.StatusPPIDID >= StatusId.DataSiap);
+
+    int pctTerdaftar = statTotal > 0 ? (int)Math.Round(statTerdaftar * 100.0 / statTotal) : 0;
+    int pctDiproses = statTotal > 0 ? (int)Math.Round(statDiproses * 100.0 / statTotal) : 0;
+    int pctSelesai = statTotal > 0 ? (int)Math.Round(statSelesai * 100.0 / statTotal) : 0;
+}
+
 <!-- Stats -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-    @foreach (var stat in new[]{
-        ("📄", "Total", Model.Count.ToString(), "from-slate-400 to-slate-600"),
-        ("👤", "Terdaftar", Model.Count(m => m.StatusPPIDID <= StatusId.IdentifikasiAwal).ToString(), "from-blue-400    to-blue-600"),
-        ("⏳", "Diproses", Model.Count(m => m.StatusPPIDID > StatusId.SuratIzinTerbit && m.StatusPPIDID <
-    StatusId.DataSiap).ToString(), "from-amber-400 to-orange-500"),
-        ("✅", "Selesai", Model.Count(m => m.StatusPPIDID >= StatusId.DataSiap).ToString(), "from-emerald-400    to-emerald-600"),
-    })
-    {
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
-            <div
-                class="w-11 h-11 rounded-xl bg-gradient-to-br @stat.Item4 flex items-center justify-center text-xl shadow-sm">
-                @stat.Item1</div>
-                <div>
-                    <p class="text-3xl font-bold text-gray-800">@stat.Item3</p>
-                    <p class="text-xs text-gray-400 font-medium">@stat.Item2</p>
-                </div>
-            </div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+    <!-- Total — dark anchor card -->
+    <div class="stat-card bg-[#0f1f4a] rounded-2xl p-5 relative overflow-hidden shadow-md">
+        <div class="stat-bg-circle"></div>
+        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-300/70 mb-3">Total Permohonan</p>
+        <p class="stat-number text-white text-4xl font-black leading-none tracking-tight mb-3">@statTotal</p>
+        <div class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></span>
+            <span class="text-[10px] text-blue-300/60 font-medium">Seluruh periode</span>
+        </div>
+        <div
+            class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-400 via-blue-300 to-transparent">
+        </div>
+    </div>
+
+    <!-- Terdaftar -->
+    <div class="stat-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden">
+        <div class="absolute top-4 right-4">
+            <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#EFF6FF" stroke-width="3.5" />
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#3B82F6" stroke-width="3.5"
+                        stroke-dasharray="@(Math.Round(87.96 * pctTerdaftar / 100.0, 1)) 87.96"                        stroke-linecap="round"
+                        class="ring-fill" />
+            </svg>
+            <span
+            class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-blue-500 rotate-90">@pctTerdaftar%</span>
+        </div>
+        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-3">Terdaftar</p>
+        <p class="stat-number text-gray-800 text-4xl font-black leading-none tracking-tight mb-3">@statTerdaftar</p>
+        <div class="w-full bg-blue-50 rounded-full h-1 overflow-hidden">
+            <div class="stat-bar bg-blue-500 h-full rounded-full" style="width:@pctTerdaftar%"></div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 to-transparent opacity-30">
+        </div>
+    </div>
+
+    <!-- Diproses -->
+    <div class="stat-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden">
+        <div class="absolute top-4 right-4">
+            <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#FFFBEB" stroke-width="3.5" />
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#F59E0B" stroke-width="3.5"
+                        stroke-dasharray="@(Math.Round(87.96 * pctDiproses / 100.0, 1)) 87.96"                        stroke-linecap="round"
+                        class="ring-fill" />
+            </svg>
+            <span
+            class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-amber-500 rotate-90">@pctDiproses%</span>
+        </div>
+        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-3">Diproses</p>
+        <p class="stat-number text-gray-800 text-4xl font-black leading-none tracking-tight mb-3">@statDiproses</p>
+        <div class="w-full bg-amber-50 rounded-full h-1 overflow-hidden">
+            <div class="stat-bar bg-amber-400 h-full rounded-full" style="width:@pctDiproses%"></div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-400 to-transparent opacity-30">
+        </div>
+    </div>
+
+    <!-- Selesai -->
+    <div class="stat-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden">
+        <div class="absolute top-4 right-4">
+            <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#ECFDF5" stroke-width="3.5" />
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#10B981" stroke-width="3.5"
+                        stroke-dasharray="@(Math.Round(87.96 * pctSelesai / 100.0, 1)) 87.96"                        stroke-linecap="round"
+                        class="ring-fill" />
+            </svg>
+            <span
+            class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-emerald-500 rotate-90">@pctSelesai%</span>
+        </div>
+        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-3">Selesai</p>
+        <p class="stat-number text-gray-800 text-4xl font-black leading-none tracking-tight mb-3">@statSelesai</p>
+        <div class="w-full bg-emerald-50 rounded-full h-1 overflow-hidden">
+            <div class="stat-bar bg-emerald-500 h-full rounded-full" style="width:@pctSelesai%"></div>
+        </div>
+        <div
+            class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 to-transparent opacity-30">
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .stat-card {
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, .09);
+    }
+
+    .stat-bg-circle {
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .05);
+        pointer-events: none;
+    }
+
+    .stat-number {
+        animation: fadeUp .5s ease both;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .stat-bar {
+        animation: barGrow .8s cubic-bezier(.4, 0, .2, 1) .2s both;
+        transform-origin: left;
+    }
+
+    @@keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
         }
-    </div>
 
-    <!-- Search + Filter + Action -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
-        <form method="get" class="flex gap-2 flex-1">
-            <input type="text" name="q" value="@q" placeholder="Cari nama, NIK, atau nomor permohonan..."
-                   class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes barGrow {
+        from {
+            transform: scaleX(0);
+        }
+
+        to {
+            transform: scaleX(1);
+        }
+    }
+</style>
+
+<!-- Search + Filter + Action -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+    <form method="get" class="flex gap-2 flex-1">
+        <input type="text" name="q" value="@q" placeholder="Cari nama, NIK, atau nomor permohonan..."
+               class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
 
 
-            <select name="status"
-                    class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
-                <option value="">Semua Status</option>
-                <option value="2" selected="@(status == 2)">Terdaftar</option>
-                <option value="3" selected="@(status == 3)">Identifikasi Awal</option>
-                <option value="4" selected="@(status == 4)">Menunggu Surat Izin</option>
-                <option value="7" selected="@(status == 7)">Sedang Diproses</option>
-                <option value="10" selected="@(status == 10)">Data Siap</option>
-                <option value="11" selected="@(status == 11)">Selesai</option>
-            </select>
+        <select name="status"
+                class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
+            <option value="">Semua Status</option>
+            <option value="2" selected="@(status == 2)">Terdaftar</option>
+            <option value="3" selected="@(status == 3)">Identifikasi Awal</option>
+            <option value="4" selected="@(status == 4)">Menunggu Surat Izin</option>
+            <option value="7" selected="@(status == 7)">Sedang Diproses</option>
+            <option value="10" selected="@(status == 10)">Data Siap</option>
+            <option value="11" selected="@(status == 11)">Selesai</option>
+        </select>
 
-            <button type="submit"
-                    class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
-            @if (!string.IsNullOrEmpty(q) || status.HasValue)
-            {
-                <a href="/petugas-loket"
-                   class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
-            }
-        </form>
-        <a href="/petugas-loket/identifikasi"
-               class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap">
-            + Permohonan Baru
-        </a>
-    </div>
+        <button type="submit"
+                class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
+        @if (!string.IsNullOrEmpty(q) || status.HasValue)
+        {
+            <a href="/petugas-loket"
+               class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+        }
+    </form>
+    <a href="/petugas-loket/identifikasi"
+           class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap">
+        + Permohonan Baru
+    </a>
+</div>
 
-    <!-- Table -->
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-gray-100">
-                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">No.
-                            Permohonan</th>
+<!-- Table -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-100">
+                    <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">No.
+                        Permohonan</th>
+                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            Pemohon</th>
                             <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                Pemohon</th>
-                                <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                    Kategori</th>
-                                    <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tgl
-                                        Masuk</th>
-                                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                            Status</th>
-                                            <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aksi
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                                        <div class="overflow-x-auto">
-                                            <table class="w-full text-sm">
-                                                <thead>
-                                                    <tr class="border-b border-gray-100">
+                                Kategori</th>
+                                <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tgl
+                                    Masuk</th>
+                                    <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                        Status</th>
+                                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-sm">
+                                            <thead>
+                                                <tr class="border-b border-gray-100">
+                                                    <th
+                                                        class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                        No. Permohonan</th>
                                                         <th
                                                             class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                            No. Permohonan</th>
+                                                            Pemohon</th>
                                                             <th
                                                                 class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                Pemohon</th>
+                                                                Kategori</th>
                                                                 <th
                                                                     class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                    Kategori</th>
+                                                                    Tgl Masuk</th>
                                                                     <th
                                                                         class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                        Tgl Masuk</th>
+                                                                        Status</th>
                                                                         <th
                                                                             class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                            Status</th>
-                                                                            <th
-                                                                                class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                                Aksi</th>
-                                                                            </tr>
-                                                                        </thead>
+                                                                            Aksi</th>
+                                                                        </tr>
+                                                                    </thead>
 
-                                                                        @if (Model.Any())
-                                                                        {
-                                                                            <tbody class="divide-y divide-gray-50">
-                                                                                @foreach (var item in Model)
-                                                                                {
-                                                                                    <tr class="hover:bg-blue-50/40 transition-colors group">
-                                                                                        <td class="px-5 py-3.5 font-mono text-xs text-blue-600 font-semibold">
-                                                                                            @item.NoPermohonan
-                                                                                        </td>
+                                                                    @if (Model.Any())
+                                                                    {
+                                                                        <tbody class="divide-y divide-gray-50">
+                                                                            @foreach (var item in Model)
+                                                                            {
+                                                                                <tr class="hover:bg-blue-50/40 transition-colors group">
+                                                                                    <td class="px-5 py-3.5 font-mono text-xs text-blue-600 font-semibold">
+                                                                                        @item.NoPermohonan
+                                                                                    </td>
 
-                                                                                        <td class="px-5 py-3.5 font-semibold text-gray-800 text-sm">
-                                                                                            @item.Pribadi?.Nama
-                                                                                        </td>
+                                                                                    <td class="px-5 py-3.5 font-semibold text-gray-800 text-sm">
+                                                                                        @item.Pribadi?.Nama
+                                                                                    </td>
 
-                                                                                        <td class="px-5 py-3.5">
-                                                                                            <span
-                                                                                                class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
-                                                                                                @(item.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa" : "🏢 LSM")
-                                                                                            </span>
-                                                                                        </td>
+                                                                                    <td class="px-5 py-3.5">
+                                                                                        <span
+                                                                                            class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
+                                                                                            @(item.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa" : "🏢 LSM")
+                                                                                        </span>
+                                                                                    </td>
 
-                                                                                        <td class="px-5 py-3.5 text-xs text-gray-400">
-                                                                                            @item.CratedAt?.ToString("dd MMM yyyy")
-                                                                                        </td>
+                                                                                    <td class="px-5 py-3.5 text-xs text-gray-400">
+                                                                                        @item.CratedAt?.ToString("dd MMM yyyy")
+                                                                                    </td>
 
-                                                                                        <td class="px-5 py-3.5">
-                                                                                            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold
+                                                                                    <td class="px-5 py-3.5">
+                                                                                        <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold
+                                                                                            @(item.StatusPPIDID >= StatusId.DataSiap
+                                                                                                                                                                                                                                        ? "bg-emerald-50 text-emerald-700"
+                                                                                                                                                                                                                                        : item.StatusPPIDID == StatusId.TerdaftarSistem
+                                                                                                                                                                                                                                            ? "bg-gray-100 text-gray-500"
+                                                                                                                                                                                                                                            : "bg-amber-50 text-amber-700")">
+
+                                                                                            <span class="w-1.5 h-1.5 rounded-full
                                                                                                 @(item.StatusPPIDID >= StatusId.DataSiap
-                                                                                                                                          ? "bg-emerald-50 text-emerald-700"
-                                                                                                                                          : item.StatusPPIDID == StatusId.TerdaftarSistem
-                                                                                                                                              ? "bg-gray-100 text-gray-500"
-                                                                                                                                              : "bg-amber-50 text-amber-700")">
-
-                                                                                                <span class="w-1.5 h-1.5 rounded-full
-                                                                                                    @(item.StatusPPIDID >= StatusId.DataSiap
-                                                                                                                                                  ? "bg-emerald-400"
-                                                                                                                                                  : item.StatusPPIDID == StatusId.TerdaftarSistem
-                                                                                                                                                      ? "bg-gray-400"
-                                                                                                                                                      : "bg-amber-400")">
-                                                                                                </span>
-
-                                                                                                @item.Status?.NamaStatusPPID
+                                                                                                                                                                                                                                                    ? "bg-emerald-400"
+                                                                                                                                                                                                                                                    : item.StatusPPIDID == StatusId.TerdaftarSistem
+                                                                                                                                                                                                                                                        ? "bg-gray-400"
+                                                                                                                                                                                                                                                        : "bg-amber-400")">
                                                                                             </span>
-                                                                                        </td>
 
-                                                                                        <td class="px-5 py-3.5">
-                                                                                            <div class="flex gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                                                                                            @item.Status?.NamaStatusPPID
+                                                                                        </span>
+                                                                                    </td>
 
-                                                                                                <a href="/petugas-loket/detail/@item.PermohonanPPIDID"
-                                                                                                       class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">
-                                                                                                    Detail
-                                                                                                </a>
+                                                                                    <td class="px-5 py-3.5">
+                                                                                        <div class="flex gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
 
-                                                                                                @if (item.StatusPPIDID == StatusId.TerdaftarSistem)
-                                                                                                {
-                                                                                                    <a href="/petugas-loket/input-identifikasi/@item.PermohonanPPIDID"
-                                                                                                           class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2.5 py-1 rounded-lg font-medium">
-                                                                                                        Input ID
-                                                                                                    </a>
-                                                                                                }
-
-                                                                                                @if (item.StatusPPIDID == StatusId.IdentifikasiAwal)
-                                                                                                {
-                                                                                                    <a href="/petugas-loket/upload-ttd/@item.PermohonanPPIDID"
-                                                                                                           class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-2.5 py-1 rounded-lg font-medium">
-                                                                                                        Upload TTD
-                                                                                                    </a>
-                                                                                                }
-
-                                                                                            </div>
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                }
-                                                                            </tbody>
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            <tbody>
-                                                                                <tr>
-                                                                                    <td colspan="6" class="text-center py-16">
-                                                                                        <partial name="_EmptyTable" />
-
-                                                                                        <p class="text-gray-500 font-semibold text-sm">
-                                                                                            @(string.IsNullOrEmpty(q) && !status.HasValue
-                                                                                                ? "Belum ada permohonan"
-                                                                                                : "Tidak ada hasil yang cocok")
-                                                                                        </p>
-
-                                                                                        @if (!string.IsNullOrEmpty(q) || status.HasValue)
-                                                                                        {
-                                                                                            <a href="/petugas-loket" class="text-blue-500 text-xs mt-1 hover:underline">
-                                                                                                Reset filter
+                                                                                            <a href="/petugas-loket/detail/@item.PermohonanPPIDID"
+                                                                                                   class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">
+                                                                                                Detail
                                                                                             </a>
-                                                                                        }
+
+                                                                                            @if (item.StatusPPIDID == StatusId.TerdaftarSistem)
+                                                                                            {
+                                                                                                <a href="/petugas-loket/input-identifikasi/@item.PermohonanPPIDID"
+                                                                                                       class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2.5 py-1 rounded-lg font-medium">
+                                                                                                    Input ID
+                                                                                                </a>
+                                                                                            }
+
+                                                                                            @if (item.StatusPPIDID == StatusId.IdentifikasiAwal)
+                                                                                            {
+                                                                                                <a href="/petugas-loket/upload-ttd/@item.PermohonanPPIDID"
+                                                                                                       class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-2.5 py-1 rounded-lg font-medium">
+                                                                                                    Upload TTD
+                                                                                                </a>
+                                                                                            }
+
+                                                                                        </div>
                                                                                     </td>
                                                                                 </tr>
-                                                                            </tbody>
-                                                                        }
+                                                                            }
+                                                                        </tbody>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <tbody>
+                                                                            <tr>
+                                                                                <td colspan="6" class="text-center py-16">
+                                                                                    <partial name="_EmptyTable" />
 
-                                                                    </table>
-                                                                </div>
+                                                                                    <p class="text-gray-500 font-semibold text-sm">
+                                                                                        @(string.IsNullOrEmpty(q) && !status.HasValue
+                                                                                            ? "Belum ada permohonan"
+                                                                                            : "Tidak ada hasil yang cocok")
+                                                                                    </p>
+
+                                                                                    @if (!string.IsNullOrEmpty(q) || status.HasValue)
+                                                                                    {
+                                                                                        <a href="/petugas-loket" class="text-blue-500 text-xs mt-1 hover:underline">
+                                                                                            Reset filter
+                                                                                        </a>
+                                                                                    }
+                                                                                </td>
+                                                                            </tr>
+                                                                        </tbody>
+                                                                    }
+
+                                                                </table>
                                                             </div>
+                                                        </div>
