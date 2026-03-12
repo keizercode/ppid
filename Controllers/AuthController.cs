@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
+using PermintaanData.Models;
 using PermintaanData.Models.ViewModels;
 
 namespace PermintaanData.Controllers;
@@ -14,8 +15,9 @@ public class AuthController(AppDbContext db) : Controller
     [HttpGet("login")]
     public IActionResult Login(string? returnUrl)
     {
+        // Jika sudah login, langsung redirect — tidak boleh return null
         if (User.Identity?.IsAuthenticated == true)
-            return RedirectToLocal(returnUrl);
+            return RedirectToLocal(returnUrl) ?? RedirectToRoleHome(User.FindFirstValue(ClaimTypes.Role) ?? "");
 
         ViewData["ReturnUrl"] = returnUrl;
         return View(new LoginVm());
@@ -38,7 +40,6 @@ public class AuthController(AppDbContext db) : Controller
             return View("Login", vm);
         }
 
-        // Buat claims
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.AppUserID.ToString()),
@@ -61,6 +62,7 @@ public class AuthController(AppDbContext db) : Controller
                     : DateTimeOffset.UtcNow.AddHours(8)
             });
 
+        // RedirectToLocal bisa null jika returnUrl kosong → fallback ke role home
         return RedirectToLocal(returnUrl) ?? RedirectToRoleHome(user.Role);
     }
 
@@ -74,8 +76,12 @@ public class AuthController(AppDbContext db) : Controller
     [HttpGet("akses-ditolak")]
     public IActionResult AksesDitolak() => View();
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Redirect ke returnUrl hanya jika URL tersebut local (aman dari open-redirect).
+    /// Mengembalikan null jika returnUrl kosong atau bukan local — caller wajib sediakan fallback.
+    /// </summary>
     private IActionResult? RedirectToLocal(string? returnUrl)
     {
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -85,10 +91,11 @@ public class AuthController(AppDbContext db) : Controller
 
     private IActionResult RedirectToRoleHome(string role) => role switch
     {
-        "Loket" => Redirect("/petugas-loket"),
-        "Kepegawaian" => Redirect("/kepegawaian"),
-        "KDI" => Redirect("/kdi"),
-        "ProdusenData" => Redirect("/produsen-data"),
-        _ => Redirect("/petugas-loket")
+        AppRoles.Loket => Redirect("/petugas-loket"),
+        AppRoles.Kepegawaian => Redirect("/kepegawaian"),
+        AppRoles.KDI => Redirect("/kdi"),
+        AppRoles.ProdusenData => Redirect("/produsen-data"),
+        AppRoles.Admin => Redirect("/petugas-loket"),
+        _ => Redirect("/petugas-loket"),
     };
 }
