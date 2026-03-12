@@ -163,6 +163,7 @@
         text-decoration: none;
         position: relative;
         }
+
         .nav-item:hover {
         background: var(--nav-bg-hover);
         color: var(--nav-text-hover);
@@ -198,10 +199,12 @@
         border: 1px solid var(--nav-icon-border);
         transition: all 0.12s ease;
         }
+
         .nav-item:hover .nav-icon {
         background: var(--nav-icon-bg-hover);
         border-color: var(--nav-icon-bd-hover);
         }
+
         .nav-item.active .nav-icon {
         background: var(--nav-icon-bg-active);
         border-color: var(--nav-icon-bd-active);
@@ -210,12 +213,15 @@
         color: var(--nav-icon-color);
         transition: color 0.12s;
         }
+
         .nav-item:hover .nav-icon svg {
         color: var(--nav-icon-hover);
         }
+
         .nav-item.active .nav-icon svg {
         color: var(--nav-icon-active);
         }
+
         .nav-group-label {
         font-size: 9px;
         text-transform: uppercase;
@@ -231,6 +237,7 @@
         border-bottom: 1px solid var(--border-topbar);
         transition: background .25s ease, border-color .25s ease;
         }
+
         .topbar-title {
         color: var(--topbar-title);
         transition: color .25s;
@@ -278,12 +285,15 @@
         [data-theme="light"] .icon-moon {
         display: block;
         }
+
         [data-theme="light"] .icon-sun {
         display: none;
         }
+
         [data-theme="dark"] .icon-moon {
         display: none;
         }
+
         [data-theme="dark"] .icon-sun {
         display: block;
         }
@@ -299,11 +309,13 @@
         .alert-slide {
         animation: alertSlide .25s ease both;
         }
+
         @@keyframes alertSlide {
         from {
         opacity: 0;
         transform: translateY(-6px);
         }
+
         to {
         opacity: 1;
         transform: translateY(0);
@@ -316,6 +328,7 @@
         }
     </style>
 </head>
+
 <body class="min-h-screen antialiased">
     <div class="flex min-h-screen">
 
@@ -469,7 +482,7 @@
 
                     <!-- Sidebar footer + theme toggle -->
                     <div class="px-4 py-3 flex items-center justify-between" style="border-top:1px solid var(--border-sidebar)">
-                        <span style="color:var(--footer-ver)" class="text-[10px] font-medium">v1.1.0 · Sistem PPID</span>
+                        <span style="color:var(--footer-ver)" class="text-[10px] font-medium">· Sistem PPID - DLH</span>
 
                         <!-- Theme toggle -->
                         <button class="theme-toggle" onclick="toggleTheme()" title="Ganti tema">
@@ -553,7 +566,7 @@
                     <footer class="admin-footer px-6 py-3 flex items-center justify-between">
                         <p style="color:var(--footer-text)" class="text-[11px]">&copy; @DateTime.Now.Year Dinas Lingkungan Hidup
                             DKI Jakarta</p>
-                            <p style="color:var(--footer-ver)" class="text-[11px]">PPID Admin v1.1</p>
+                            <p style="color:var(--footer-ver)" class="text-[11px]">PPID Admin</p>
                         </footer>
                     </div>
                 </div>

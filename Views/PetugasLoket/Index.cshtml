@@ -27,8 +27,9 @@
         <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-300/70 mb-3">Total Permohonan</p>
         <p class="stat-number text-white text-4xl font-black leading-none tracking-tight mb-3">@statTotal</p>
         <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></span>
-            <span class="text-[10px] text-blue-300/60 font-medium">Seluruh periode</span>
+            @* dibawah ini belum dipake *@
+            @* <span class="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></span> *@
+            @* <span class="text-[10px] text-blue-300/60 font-medium">Seluruh periode</span> *@
         </div>
         <div
             class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-400 via-blue-300 to-transparent">
@@ -41,7 +42,7 @@
             <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#EFF6FF" stroke-width="3.5" />
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#3B82F6" stroke-width="3.5"
-                        stroke-dasharray="@(Math.Round(87.96 * pctTerdaftar / 100.0, 1)) 87.96"                        stroke-linecap="round"
+                        stroke-dasharray="@(Math.Round(87.96 * pctTerdaftar / 100.0, 1)) 87.96" stroke-linecap="round"
                         class="ring-fill" />
             </svg>
             <span
@@ -62,7 +63,7 @@
             <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#FFFBEB" stroke-width="3.5" />
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#F59E0B" stroke-width="3.5"
-                        stroke-dasharray="@(Math.Round(87.96 * pctDiproses / 100.0, 1)) 87.96"                        stroke-linecap="round"
+                        stroke-dasharray="@(Math.Round(87.96 * pctDiproses / 100.0, 1)) 87.96" stroke-linecap="round"
                         class="ring-fill" />
             </svg>
             <span
@@ -83,7 +84,7 @@
             <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#ECFDF5" stroke-width="3.5" />
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#10B981" stroke-width="3.5"
-                        stroke-dasharray="@(Math.Round(87.96 * pctSelesai / 100.0, 1)) 87.96"                        stroke-linecap="round"
+                        stroke-dasharray="@(Math.Round(87.96 * pctSelesai / 100.0, 1)) 87.96" stroke-linecap="round"
                         class="ring-fill" />
             </svg>
             <span
@@ -261,17 +262,17 @@
                                                                                     <td class="px-5 py-3.5">
                                                                                         <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold
                                                                                             @(item.StatusPPIDID >= StatusId.DataSiap
-                                                                                                                                                                                                                                        ? "bg-emerald-50 text-emerald-700"
-                                                                                                                                                                                                                                        : item.StatusPPIDID == StatusId.TerdaftarSistem
-                                                                                                                                                                                                                                            ? "bg-gray-100 text-gray-500"
-                                                                                                                                                                                                                                            : "bg-amber-50 text-amber-700")">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ? "bg-emerald-50 text-emerald-700"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  : item.StatusPPIDID == StatusId.TerdaftarSistem
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ? "bg-gray-100 text-gray-500"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      : "bg-amber-50 text-amber-700")">
 
                                                                                             <span class="w-1.5 h-1.5 rounded-full
                                                                                                 @(item.StatusPPIDID >= StatusId.DataSiap
-                                                                                                                                                                                                                                                    ? "bg-emerald-400"
-                                                                                                                                                                                                                                                    : item.StatusPPIDID == StatusId.TerdaftarSistem
-                                                                                                                                                                                                                                                        ? "bg-gray-400"
-                                                                                                                                                                                                                                                        : "bg-amber-400")">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ? "bg-emerald-400"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          : item.StatusPPIDID == StatusId.TerdaftarSistem
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ? "bg-gray-400"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              : "bg-amber-400")">
                                                                                             </span>
 
                                                                                             @item.Status?.NamaStatusPPID
