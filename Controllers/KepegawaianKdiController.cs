@@ -412,7 +412,26 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     {
         if (!ModelState.IsValid) return View("JadwalWawancara", vm);
 
+        // ── BUG 1 FIX: fetch permohonan ───────────────────────────────────
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p == null) return NotFound();
+
+        // ── Guard: hanya boleh dijadwal dari status yang relevan ──────────
+        //    DiProses      → wawancara saja (tanpa observasi), atau
+        //    ObservasiSelesai → wawancara setelah observasi selesai.
+        bool statusValid = p.StatusPPIDID == StatusId.DiProses
+                        || p.StatusPPIDID == StatusId.ObservasiSelesai;
+        if (!statusValid)
+        {
+            TempData["Error"] =
+                "Permohonan ini tidak dalam status yang memungkinkan penjadwalan wawancara.";
+            return RedirectToAction("Index");
+        }
+
         var now = DateTime.UtcNow;
+        var statusLama = p.StatusPPIDID;   // ← BUG 2 FIX: tangkap SEBELUM mutasi
+
+        // ── 1. Simpan jadwal wawancara ────────────────────────────────────
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
@@ -423,13 +442,31 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             CreatedAt = now
         });
 
-        db.AddAuditLog(vm.PermohonanPPIDID, null, StatusId.DiProses,
-            $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} pukul {vm.WaktuWawancara:HH:mm}",
+        // ── 2. Update status (inilah yang selama ini hilang — BUG 1) ─────
+        p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
+        p.UpdatedAt = now;
+
+        // ── 3. Audit log dengan nilai yang benar (BUG 2 FIX) ─────────────
+        db.AddAuditLog(
+            vm.PermohonanPPIDID,
+            statusLama,                          // nilai nyata, bukan null
+            StatusId.WawancaraDijadwalkan,        // bukan DiProses
+            $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} " +
+            $"pukul {vm.WaktuWawancara:HH:mm}, PIC: {vm.NamaPIC}",
             CurrentUser);
 
         await db.SaveChangesAsync();
-        TempData["Success"] = $"Jadwal wawancara: <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> pukul {vm.WaktuWawancara:HH:mm}";
-        return RedirectToAction("UploadData", new { id = vm.PermohonanPPIDID });
+
+        TempData["Success"] =
+            $"Jadwal wawancara <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> " +
+            $"pukul {vm.WaktuWawancara:HH:mm} berhasil dibuat. " +
+            $"Pemohon dapat melihat jadwal ini di halaman lacak permohonan.";
+
+        // ── BUG 3 FIX: redirect ke Index, bukan UploadData ───────────────
+        //    Wawancara belum terjadi → upload data belum relevan.
+        //    Upload dilakukan setelah SelesaiWawancara (ProdusenData) atau
+        //    route wawancara-only di KDI ditangani oleh SelesaiObservasiPost.
+        return RedirectToAction("Index");
     }
 
     // ── Upload Data ───────────────────────────────────────────────────────
