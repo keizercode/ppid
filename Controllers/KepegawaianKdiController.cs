@@ -341,17 +341,46 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
+        // Guard: hanya boleh diselesaikan dari status ObservasiDijadwalkan
+        if (p.StatusPPIDID != StatusId.ObservasiDijadwalkan)
+        {
+            TempData["Error"] = "Permohonan ini tidak dalam status Observasi Dijadwalkan.";
+            return RedirectToAction("Index");
+        }
+
         var now = DateTime.UtcNow;
         var statusLama = p.StatusPPIDID;
+
+        // ── Tentukan routing pascaselesai ─────────────────────────────────────
+        // Cek via JadwalPPID (bukan hanya flag IsWawancara) agar idempoten:
+        // jika entah bagaimana jadwal wawancara sudah terbuat, jangan redirect
+        // ke halaman jadwal lagi — langsung ke upload data.
+        bool wawancaraPerlu = p.IsWawancara;
+        bool wawancaraSudahDijadwal = wawancaraPerlu &&
+            await db.JadwalPPID.AnyAsync(j =>
+                j.PermohonanPPIDID == vm.PermohonanPPIDID &&
+                j.JenisJadwal == "Wawancara");
+
+        bool perluJadwalWawancara = wawancaraPerlu && !wawancaraSudahDijadwal;
 
         p.StatusPPIDID = StatusId.ObservasiSelesai;
         p.UpdatedAt = now;
 
         db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.ObservasiSelesai,
-            $"Observasi selesai. Catatan: {vm.Catatan}", CurrentUser);
+            perluJadwalWawancara
+                ? $"Observasi selesai. Catatan: {vm.Catatan}. Diarahkan ke penjadwalan wawancara."
+                : $"Observasi selesai. Catatan: {vm.Catatan}. Diarahkan ke upload data.",
+            CurrentUser);
 
         await db.SaveChangesAsync();
-        TempData["Success"] = "Observasi selesai. Lanjutkan ke upload data.";
+
+        if (perluJadwalWawancara)
+        {
+            TempData["Success"] = "Observasi selesai. Silakan jadwalkan sesi wawancara.";
+            return RedirectToAction("JadwalWawancara", new { id = vm.PermohonanPPIDID });
+        }
+
+        TempData["Success"] = "Observasi selesai. Silakan upload data hasil.";
         return RedirectToAction("UploadData", new { id = vm.PermohonanPPIDID });
     }
 

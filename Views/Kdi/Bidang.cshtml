@@ -84,10 +84,28 @@
                                         <a href="/kdi/selesai-observasi/@item.PermohonanPPIDID"
                                            class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2.5 py-1 rounded-lg font-semibold transition-colors">✅ Selesai Obs</a>
                                     }
-                                    @if (item.StatusPPIDID == StatusId.DiProses || item.StatusPPIDID == StatusId.ObservasiSelesai) {
-                                        <a href="/kdi/upload-data/@item.PermohonanPPIDID"
-                                           class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-semibold transition-colors">Upload Data</a>
-                                    }
+                                    @* Upload Data: hanya tampil jika wawancara tidak diperlukan,
+   atau wawancara sudah selesai *@
+@{
+    bool siapUpload =
+        (item.StatusPPIDID == StatusId.DiProses && !item.IsWawancara) ||
+        (item.StatusPPIDID == StatusId.ObservasiSelesai && !item.IsWawancara) ||
+        item.StatusPPIDID == StatusId.WawancaraSelesai;
+}
+@if (siapUpload) {
+    <a href="/kdi/upload-data/@item.PermohonanPPIDID"
+       class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-semibold transition-colors">
+        Upload Data
+    </a>
+}
+
+@* Tombol jadwal wawancara: jika observasi selesai tapi wawancara belum *@
+@if (item.StatusPPIDID == StatusId.ObservasiSelesai && item.IsWawancara) {
+    <a href="/kdi/jadwal-wawancara/@item.PermohonanPPIDID"
+       class="text-xs bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-semibold transition-colors">
+        🎤 Jadwal Wawancara
+    </a>
+}
                                 </div>
                             </td>
                         </tr>
