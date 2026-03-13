@@ -283,6 +283,8 @@ public class JadwalWawancaraVm
 
     [Display(Name = "Lokasi / Platform")]
     public string? Lokasi { get; set; }
+    /// <summary>True jika jadwal sudah dibuat oleh KDI — form tampil read-only.</summary>
+    public bool JadwalSudahAda { get; set; }
 }
 
 // ── KDI / Produsen Data: Upload Data ─────────────────────────────────────────

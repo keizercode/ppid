@@ -572,6 +572,12 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
 
+        // ── Cek apakah jadwal wawancara sudah dibuat (oleh KDI) ──────────────
+        var jadwalExisting = await db.JadwalPPID
+            .Where(j => j.PermohonanPPIDID == id && j.JenisJadwal == "Wawancara")
+            .OrderByDescending(j => j.CreatedAt)
+            .FirstOrDefaultAsync();
+
         var detailWaw = p.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara);
         return View(new JadwalWawancaraVm
         {
@@ -581,6 +587,12 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             JudulPenelitian = p.JudulPenelitian ?? "",
             DetailWawancara = detailWaw?.DetailKeperluan ?? "",
             NamaProdusenData = p.NamaProdusenData,
+
+            // Pre-fill dari jadwal KDI jika sudah ada
+            TanggalWawancara = jadwalExisting?.Tanggal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
+            WaktuWawancara = jadwalExisting?.Waktu ?? new TimeOnly(9, 0),
+            NamaPIC = jadwalExisting?.NamaPIC ?? "",
+            JadwalSudahAda = jadwalExisting != null,
         });
     }
 
@@ -590,6 +602,13 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
         if (!ModelState.IsValid) return View("JadwalWawancara", vm);
 
         var now = DateTime.UtcNow;
+
+        // ── Fetch untuk dapat statusLama yang akurat ──────────────────────────
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p == null) return NotFound();
+
+        var statusLama = p.StatusPPIDID;
+
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
@@ -600,12 +619,18 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             CreatedAt = now
         });
 
-        db.AddAuditLog(vm.PermohonanPPIDID, null, StatusId.WawancaraDijadwalkan,
-            $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} pukul {vm.WaktuWawancara:HH:mm}, narasumber: {vm.NamaPIC}",
+        db.AddAuditLog(
+            vm.PermohonanPPIDID,
+            statusLama,                        // ← bukan null lagi
+            StatusId.WawancaraDijadwalkan,
+            $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} " +
+            $"pukul {vm.WaktuWawancara:HH:mm}, narasumber: {vm.NamaPIC}",
             CurrentUser);
 
         await db.SaveChangesAsync();
-        TempData["Success"] = $"Jadwal wawancara <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> pukul {vm.WaktuWawancara:HH:mm} berhasil dibuat.";
+        TempData["Success"] =
+            $"Jadwal wawancara <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> " +
+            $"pukul {vm.WaktuWawancara:HH:mm} berhasil dibuat.";
         return RedirectToAction("Index");
     }
 
