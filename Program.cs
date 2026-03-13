@@ -47,7 +47,15 @@ builder.Services.AddHttpClient("BidangApi", c =>
 
 var app = builder.Build();
 
-app.UseDeveloperExceptionPage();
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
 
 // Pastikan folder wwwroot & uploads selalu ada
 var wwwroot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");

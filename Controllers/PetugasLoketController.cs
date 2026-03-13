@@ -25,6 +25,16 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q, int? status)
     {
+        // Stats: SELALU dari keseluruhan data — tidak terpengaruh filter apapun.
+        // Satu query ringan, hanya tarik kolom StatusPPIDID.
+        var allStatuses = await db.PermohonanPPID
+            .AsNoTracking()
+            .Select(p => p.StatusPPIDID)
+            .ToListAsync();
+
+        SetStatsViewData(allStatuses);
+
+        // Data tabel — boleh difilter
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
@@ -49,6 +59,12 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     [HttpGet("kepegawaian")]
     public async Task<IActionResult> LoketKepegawaian(string? q)
     {
+        var allStatuses = await db.PermohonanPPID
+            .AsNoTracking()
+            .Select(p => p.StatusPPIDID)
+            .ToListAsync();
+        SetStatsViewData(allStatuses);
+
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
@@ -69,6 +85,12 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     [HttpGet("umum")]
     public async Task<IActionResult> LoketUmum(string? q)
     {
+        var allStatuses = await db.PermohonanPPID
+            .AsNoTracking()
+            .Select(p => p.StatusPPIDID)
+            .ToListAsync();
+        SetStatsViewData(allStatuses);
+
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
@@ -84,6 +106,18 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         ViewData["LoketJenisAktif"] = LoketJenis.Umum;
         ViewData["Q"] = q;
         return View("Index", await query.OrderByDescending(p => p.CratedAt).ToListAsync());
+    }
+
+    /// <summary>
+    /// Hitung 4 stat cards dari list status yang sudah di-fetch.
+    /// Dipisah ke helper agar tidak duplikat kode di setiap action.
+    /// </summary>
+    private void SetStatsViewData(List<int?> statuses)
+    {
+        ViewData["StatTotal"] = statuses.Count;
+        ViewData["StatTerdaftar"] = statuses.Count(s => s <= StatusId.IdentifikasiAwal);
+        ViewData["StatDiproses"] = statuses.Count(s => s > StatusId.SuratIzinTerbit && s < StatusId.DataSiap);
+        ViewData["StatSelesai"] = statuses.Count(s => s >= StatusId.DataSiap);
     }
 
     // ── IDENTIFIKASI ──────────────────────────────────────────────────────
