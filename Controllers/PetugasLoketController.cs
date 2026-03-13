@@ -25,8 +25,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q, int? status)
     {
-        // Stats: SELALU dari keseluruhan data — tidak terpengaruh filter apapun.
-        // Satu query ringan, hanya tarik kolom StatusPPIDID.
         var allStatuses = await db.PermohonanPPID
             .AsNoTracking()
             .Select(p => p.StatusPPIDID)
@@ -34,7 +32,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
 
         SetStatsViewData(allStatuses);
 
-        // Data tabel — boleh difilter
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
@@ -108,10 +105,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         return View("Index", await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
-    /// <summary>
-    /// Hitung 4 stat cards dari list status yang sudah di-fetch.
-    /// Dipisah ke helper agar tidak duplikat kode di setiap action.
-    /// </summary>
     private void SetStatsViewData(List<int?> statuses)
     {
         ViewData["StatTotal"] = statuses.Count;
@@ -152,155 +145,223 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     [HttpPost("daftar"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DaftarPemohonPost(DaftarPemohonVm vm)
     {
-        if (!ModelState.IsValid) return View("DaftarPemohon", vm);
-
-        var now = DateTime.UtcNow;
-
-        // 1. Pribadi
-        var pribadi = await db.Pribadi.FirstOrDefaultAsync(p => p.NIK == vm.NIK);
-        if (pribadi == null)
+        // ── VALIDASI BidangID ────────────────────────────────────────────────
+        // Guid.Parse() crash FormatException jika value bukan GUID valid.
+        // Input berasal dari <select> yang bisa dimanipulasi client-side.
+        // Lakukan TryParse dulu dan kumpulkan error ke ModelState.
+        Guid? bidangGuid = null;
+        if (!string.IsNullOrEmpty(vm.BidangID))
         {
-            pribadi = new Pribadi
+            if (!Guid.TryParse(vm.BidangID, out var parsed))
+                ModelState.AddModelError(nameof(vm.BidangID),
+                    "Unit kerja yang dipilih tidak valid. Silakan pilih ulang dari daftar.");
+            else
+                bidangGuid = parsed;
+        }
+
+        // ── SATU TITIK VALIDASI — tidak ada DB operation sebelum baris ini ──
+        if (!ModelState.IsValid)
+            return View("DaftarPemohon", vm);
+
+        // ── CAPTURED VARIABLES untuk redirect setelah transaksi selesai ─────
+        // Lebih bersih dari TempData side-channel: C# closure capture langsung.
+        Guid lastId = Guid.Empty;
+        string noPerm = string.Empty;
+
+        // ── SATU TRANSAKSI EKSPLISIT — all-or-nothing ─────────────────────
+        // Tanpa ini: Pribadi tersimpan → Permohonan gagal → orphan data di DB.
+        // ExecutionStrategy wajib untuk EF Core + Npgsql agar retry-safe.
+        var strategy = db.Database.CreateExecutionStrategy();
+
+        // tempDir: file ditulis ke folder sementara dulu selama transaksi.
+        // Jika DB rollback, file temp dihapus → tidak ada file orphan di disk.
+        // File baru dipindah ke lokasi final hanya setelah CommitAsync berhasil.
+        var tempDir = Path.Combine(Path.GetTempPath(), "ppid_upload_" + Guid.NewGuid());
+        var movers = new List<(string Temp, string Final)>();
+
+        try
+        {
+            await strategy.ExecuteAsync(async () =>
             {
-                NIK = vm.NIK,
-                Nama = vm.Nama,
-                Email = vm.Email,
-                Telepon = vm.Telepon,
-                Alamat = vm.Alamat,
-                RT = vm.RT,
-                RW = vm.RW,
-                KelurahanID = vm.KelurahanID,
-                KecamatanID = vm.KecamatanID,
-                KabupatenID = vm.KabupatenID,
-                NamaKelurahan = vm.NamaKelurahan,
-                NamaKecamatan = vm.NamaKecamatan,
-                NamaKabupaten = vm.NamaKabupaten,
-                CreatedAt = now,
-                UpdatedAt = now
-            };
-            db.Pribadi.Add(pribadi);
-        }
-        else
-        {
-            pribadi.Nama = vm.Nama;
-            pribadi.Email = vm.Email;
-            pribadi.Telepon = vm.Telepon;
-            pribadi.UpdatedAt = now;
-        }
-        await db.SaveChangesAsync();
+                // Reset state antar retry (ExecutionStrategy bisa retry otomatis)
+                movers.Clear();
 
-        // 2. PribadiPPID
-        var pribadiPPID = await db.PribadiPPID.FirstOrDefaultAsync(p => p.PribadiID == pribadi.PribadiID);
-        if (pribadiPPID == null)
-        {
-            pribadiPPID = new PribadiPPID
-            {
-                PribadiID = pribadi.PribadiID,
-                ProvinsiID = vm.ProvinsiID,
-                NamaProvinsi = vm.NamaProvinsi,
-                Lembaga = vm.Lembaga,
-                Fakultas = vm.Fakultas,
-                Jurusan = vm.Jurusan,
-                Pekerjaan = vm.Pekerjaan,
-                CreatedAt = now,
-                UpdatedAt = now
-            };
-            db.PribadiPPID.Add(pribadiPPID);
-        }
-        else
-        {
-            pribadiPPID.Lembaga = vm.Lembaga;
-            pribadiPPID.Fakultas = vm.Fakultas;
-            pribadiPPID.Jurusan = vm.Jurusan;
-            pribadiPPID.Pekerjaan = vm.Pekerjaan;
-            pribadiPPID.ProvinsiID = vm.ProvinsiID;
-            pribadiPPID.NamaProvinsi = vm.NamaProvinsi;
-            pribadiPPID.UpdatedAt = now;
-        }
+                await using var tx = await db.Database.BeginTransactionAsync();
+                try
+                {
+                    var now = DateTime.UtcNow;
 
-        // 3. PermohonanPPID
-        //
-        // BUG FIX: Versi lama memanggil GenerateNoPermohonan() yang hanya
-        // mengembalikan string, lalu menghitung Sequance LAGI secara terpisah.
-        // Akibatnya:
-        //   (a) Race condition → dua request bisa mendapat NoPermohonan sama
-        //       → duplicate key violation pada IX_PermohonanPPID_NoPermohonan.
-        //   (b) Sequance yang disimpan ke DB bisa berbeda dengan yang ada di
-        //       NoPermohonan jika ada insert lain di antara dua query.
-        //
-        // SOLUSI: GenerateNoPermohonan() kini mengembalikan (NoPermohonan, Sequence)
-        // dari satu transaksi terkunci. Controller cukup destructure hasilnya.
-        var (noPerm, nextSeq) = await db.GenerateNoPermohonan();
+                    // ── 1. Pribadi ────────────────────────────────────────
+                    var pribadi = await db.Pribadi.FirstOrDefaultAsync(p => p.NIK == vm.NIK);
+                    if (pribadi == null)
+                    {
+                        pribadi = new Pribadi
+                        {
+                            NIK = vm.NIK,
+                            Nama = vm.Nama,
+                            Email = vm.Email,
+                            Telepon = vm.Telepon,
+                            Alamat = vm.Alamat,
+                            RT = vm.RT,
+                            RW = vm.RW,
+                            KelurahanID = vm.KelurahanID,
+                            KecamatanID = vm.KecamatanID,
+                            KabupatenID = vm.KabupatenID,
+                            NamaKelurahan = vm.NamaKelurahan,
+                            NamaKecamatan = vm.NamaKecamatan,
+                            NamaKabupaten = vm.NamaKabupaten,
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        };
+                        db.Pribadi.Add(pribadi);
+                    }
+                    else
+                    {
+                        pribadi.Nama = vm.Nama;
+                        pribadi.Email = vm.Email;
+                        pribadi.Telepon = vm.Telepon;
+                        pribadi.UpdatedAt = now;
+                    }
 
-        var permohonan = new PermohonanPPID
-        {
-            PribadiID = pribadi.PribadiID,
-            NoPermohonan = noPerm,
-            KategoriPemohon = vm.Kategori,
-            LoketJenis = vm.LoketJenis,
-            NoSuratPermohonan = vm.NoSuratPermohonan,
-            TanggalPermohonan = vm.TanggalPermohonan,
-            JudulPenelitian = vm.JudulPenelitian,
-            LatarBelakang = vm.LatarBelakang,
-            TujuanPermohonan = vm.TujuanPermohonan,
-            IsObservasi = vm.IsObservasi,
-            IsWawancara = vm.IsWawancara,
-            IsPermintaanData = vm.IsPermintaanData,
-            BidangID = string.IsNullOrEmpty(vm.BidangID) ? null : Guid.Parse(vm.BidangID),
-            NamaBidang = vm.NamaBidang,
-            StatusPPIDID = StatusId.TerdaftarSistem,
-            Sequance = nextSeq,          // ← dari GenerateNoPermohonan, bukan query terpisah
-            TokenLacak = TokenGenerator.Generate(),
-            CratedAt = now,
-            UpdatedAt = now
-        };
-        db.PermohonanPPID.Add(permohonan);
-        await db.SaveChangesAsync();
+                    // Flush agar PribadiID tersedia sebagai FK — masih dalam tx
+                    await db.SaveChangesAsync();
 
-        // 4. Detail keperluan
-        if (vm.IsObservasi)
-            db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
-            {
-                PermohonanPPIDID = permohonan.PermohonanPPIDID,
-                KeperluanID = KeperluanId.Observasi,
-                DetailKeperluan = vm.DetailObservasi ?? "-",
-                CreatedAt = now
+                    // ── 2. PribadiPPID ────────────────────────────────────
+                    var pribadiPPID = await db.PribadiPPID
+                        .FirstOrDefaultAsync(p => p.PribadiID == pribadi.PribadiID);
+
+                    if (pribadiPPID == null)
+                    {
+                        db.PribadiPPID.Add(new PribadiPPID
+                        {
+                            PribadiID = pribadi.PribadiID,
+                            ProvinsiID = vm.ProvinsiID,
+                            NamaProvinsi = vm.NamaProvinsi,
+                            Lembaga = vm.Lembaga,
+                            Fakultas = vm.Fakultas,
+                            Jurusan = vm.Jurusan,
+                            Pekerjaan = vm.Pekerjaan,
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        });
+                    }
+                    else
+                    {
+                        pribadiPPID.Lembaga = vm.Lembaga;
+                        pribadiPPID.Fakultas = vm.Fakultas;
+                        pribadiPPID.Jurusan = vm.Jurusan;
+                        pribadiPPID.Pekerjaan = vm.Pekerjaan;
+                        pribadiPPID.ProvinsiID = vm.ProvinsiID;
+                        pribadiPPID.NamaProvinsi = vm.NamaProvinsi;
+                        pribadiPPID.UpdatedAt = now;
+                    }
+
+                    // ── 3. PermohonanPPID ─────────────────────────────────
+                    var (generatedNoPerm, nextSeq) = await db.GenerateNoPermohonan();
+
+                    var permohonan = new PermohonanPPID
+                    {
+                        PribadiID = pribadi.PribadiID,
+                        NoPermohonan = generatedNoPerm,
+                        KategoriPemohon = vm.Kategori,
+                        LoketJenis = vm.LoketJenis,
+                        NoSuratPermohonan = vm.NoSuratPermohonan,
+                        TanggalPermohonan = vm.TanggalPermohonan,
+                        JudulPenelitian = vm.JudulPenelitian,
+                        LatarBelakang = vm.LatarBelakang,
+                        TujuanPermohonan = vm.TujuanPermohonan,
+                        IsObservasi = vm.IsObservasi,
+                        IsWawancara = vm.IsWawancara,
+                        IsPermintaanData = vm.IsPermintaanData,
+                        BidangID = bidangGuid,   // ← hasil TryParse, bukan Guid.Parse
+                        NamaBidang = vm.NamaBidang,
+                        StatusPPIDID = StatusId.TerdaftarSistem,
+                        Sequance = nextSeq,
+                        TokenLacak = TokenGenerator.Generate(),
+                        CratedAt = now,
+                        UpdatedAt = now
+                    };
+                    db.PermohonanPPID.Add(permohonan);
+
+                    // Flush agar PermohonanPPIDID tersedia untuk Detail & Dokumen
+                    await db.SaveChangesAsync();
+
+                    // ── 4. Detail keperluan ───────────────────────────────
+                    if (vm.IsObservasi)
+                        db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
+                        {
+                            PermohonanPPIDID = permohonan.PermohonanPPIDID,
+                            KeperluanID = KeperluanId.Observasi,
+                            DetailKeperluan = vm.DetailObservasi ?? "-",
+                            CreatedAt = now
+                        });
+
+                    if (vm.IsPermintaanData)
+                        db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
+                        {
+                            PermohonanPPIDID = permohonan.PermohonanPPIDID,
+                            KeperluanID = KeperluanId.PermintaanData,
+                            DetailKeperluan = vm.DetailPermintaanData ?? "-",
+                            CreatedAt = now
+                        });
+
+                    if (vm.IsWawancara)
+                        db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
+                        {
+                            PermohonanPPIDID = permohonan.PermohonanPPIDID,
+                            KeperluanID = KeperluanId.Wawancara,
+                            DetailKeperluan = vm.DetailWawancara ?? "-",
+                            CreatedAt = now
+                        });
+
+                    // ── 5. Dokumen — tulis ke temp dulu ──────────────────
+                    // File belum dipindah ke lokasi final sebelum commit.
+                    Directory.CreateDirectory(tempDir);
+                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileKTP, JenisDokumenId.KTP, "KTP", now, tempDir, movers);
+                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now, tempDir, movers);
+                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileProposal, JenisDokumenId.Proposal, "Proposal", now, tempDir, movers);
+                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris, JenisDokumenId.AktaNotaris, "Akta Notaris", now, tempDir, movers);
+
+                    // ── 6. Audit log ──────────────────────────────────────
+                    db.AddAuditLog(permohonan.PermohonanPPIDID, null, StatusId.TerdaftarSistem,
+                        "Permohonan didaftarkan oleh petugas loket. Keperluan: " +
+                        $"{(vm.IsObservasi ? "Observasi " : "")}" +
+                        $"{(vm.IsPermintaanData ? "Data " : "")}" +
+                        $"{(vm.IsWawancara ? "Wawancara" : "")}",
+                        CurrentUser);
+
+                    // ── 7. Commit — semua atau tidak ada ─────────────────
+                    await db.SaveChangesAsync();
+                    await tx.CommitAsync();
+
+                    // Capture untuk redirect di luar lambda
+                    lastId = permohonan.PermohonanPPIDID;
+                    noPerm = generatedNoPerm;
+                }
+                catch
+                {
+                    await tx.RollbackAsync();
+                    throw; // biarkan ExecutionStrategy handle retry / surface
+                }
             });
 
-        if (vm.IsPermintaanData)
-            db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
+            // ── DB commit berhasil → pindah file dari temp ke final ──────────
+            // File.Move atomic di filesystem yang sama; tidak ada window orphan.
+            foreach (var (temp, final) in movers)
             {
-                PermohonanPPIDID = permohonan.PermohonanPPIDID,
-                KeperluanID = KeperluanId.PermintaanData,
-                DetailKeperluan = vm.DetailPermintaanData ?? "-",
-                CreatedAt = now
-            });
-
-        if (vm.IsWawancara)
-            db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
-            {
-                PermohonanPPIDID = permohonan.PermohonanPPIDID,
-                KeperluanID = KeperluanId.Wawancara,
-                DetailKeperluan = vm.DetailWawancara ?? "-",
-                CreatedAt = now
-            });
-
-        // 5. Upload dokumen
-        await UploadDokumen(permohonan.PermohonanPPIDID, vm.FileKTP, JenisDokumenId.KTP, "KTP", now);
-        await UploadDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now);
-        await UploadDokumen(permohonan.PermohonanPPIDID, vm.FileProposal, JenisDokumenId.Proposal, "Proposal", now);
-        await UploadDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris, JenisDokumenId.AktaNotaris, "Akta Notaris", now);
-
-        // 6. Audit log
-        db.AddAuditLog(permohonan.PermohonanPPIDID, null, StatusId.TerdaftarSistem,
-            $"Permohonan didaftarkan oleh petugas loket. Keperluan: " +
-            $"{(vm.IsObservasi ? "Observasi " : "")}{(vm.IsPermintaanData ? "Data " : "")}{(vm.IsWawancara ? "Wawancara" : "")}",
-            CurrentUser);
-
-        await db.SaveChangesAsync();
+                Directory.CreateDirectory(Path.GetDirectoryName(final)!);
+                System.IO.File.Move(temp, final, overwrite: true);
+            }
+        }
+        finally
+        {
+            // Bersihkan folder temp apapun hasilnya (sukses maupun gagal)
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
 
         TempData["Success"] = $"Permohonan berhasil didaftarkan dengan nomor <strong>{noPerm}</strong>";
-        return RedirectToAction("InputIdentifikasi", new { id = permohonan.PermohonanPPIDID });
+        return RedirectToAction("InputIdentifikasi", new { id = lastId });
     }
 
     // ── INPUT IDENTIFIKASI ────────────────────────────────────────────────
@@ -405,7 +466,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         return View(p);
     }
 
-    // ── HELPER UPLOAD ─────────────────────────────────────────────────────
+    // ── HELPER: Upload langsung (dipakai action lain di luar DaftarPemohon) ──
 
     private async Task UploadDokumen(Guid permohonanId, IFormFile? file,
         int jenisDokId, string nama, DateTime now)
@@ -420,6 +481,37 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
 
         await using var stream = new FileStream(filePath, FileMode.Create);
         await file.CopyToAsync(stream);
+
+        db.DokumenPPID.Add(new DokumenPPID
+        {
+            PermohonanPPIDID = permohonanId,
+            NamaDokumenPPID = nama,
+            UploadDokumenPPID = $"/uploads/{permohonanId}/{fileName}",
+            JenisDokumenPPIDID = jenisDokId,
+            NamaJenisDokumenPPID = nama,
+            CreatedAt = now
+        });
+    }
+
+    // ── HELPER: Stage upload ke temp (dipakai DaftarPemohonPost) ─────────────
+    // Tulis ke folder sementara dan catat pasangan (temp → final) di movers.
+    // File baru dipindah ke lokasi final setelah DB CommitAsync berhasil,
+    // sehingga tidak ada file orphan di disk jika transaksi DB gagal.
+
+    private async Task StageUploadDokumen(Guid permohonanId, IFormFile? file,
+        int jenisDokId, string nama, DateTime now,
+        string tempDir, List<(string Temp, string Final)> movers)
+    {
+        if (file == null || file.Length == 0) return;
+
+        var fileName = $"{jenisDokId}_{Path.GetFileName(file.FileName)}";
+        var tempPath = Path.Combine(tempDir, fileName);
+        var finalPath = Path.Combine(UploadsRoot, permohonanId.ToString(), fileName);
+
+        await using var stream = new FileStream(tempPath, FileMode.Create);
+        await file.CopyToAsync(stream);
+
+        movers.Add((tempPath, finalPath));
 
         db.DokumenPPID.Add(new DokumenPPID
         {
