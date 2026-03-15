@@ -1,90 +1,239 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PermintaanData.Data;
+using System.Text.Json;
 
 namespace PermintaanData.Controllers;
 
 /// <summary>
-/// Proxy ke semua API eksternal sehingga frontend tidak terkena CORS.
+/// Proxy ke semua API eksternal — fully self-contained.
+/// Membaca URL langsung dari IConfiguration, tidak bergantung pada
+/// named HttpClient di Program.cs sehingga tidak perlu AddHttpClient("WilayahApi").
+///
+/// appsettings.json yang dibutuhkan:
+/// "ExternalApi": {
+///   "WilayahBase": "https://api-wilayah.dinaslhdki.id",
+///   "NikCheck":    "https://banksampah.jakarta.go.id/api/web/cek-nik",
+///   "Bidang":      "https://ekinerjapjlp.jakarta.go.id/api/master/bidang/search"
+/// }
 /// </summary>
 [Route("api")]
-public class ApiProxyController(IHttpClientFactory http, IConfiguration cfg) : Controller
+public class ApiProxyController(
+    IHttpClientFactory httpFactory,
+    IConfiguration cfg,
+    AppDbContext db) : Controller
 {
-    // GET /api/provinsi
+    // HttpClient stateless — aman dibuat per-request lewat factory
+    private HttpClient Http() => httpFactory.CreateClient();
+
+    private string WilayahBase => (cfg["ExternalApi:WilayahBase"] ?? "").TrimEnd('/');
+    private string NikUrl => cfg["ExternalApi:NikCheck"] ?? "";
+    private string BidangUrl => cfg["ExternalApi:Bidang"] ?? "";
+
+    // ── GET /api/provinsi ─────────────────────────────────────────────────
     [HttpGet("provinsi")]
     public async Task<IActionResult> Provinsi()
     {
+        if (string.IsNullOrEmpty(WilayahBase)) return Ok("[]");
         try
         {
-            var client = http.CreateClient("WilayahApi");
-            var res    = await client.GetStringAsync("/api/provinsi/search");
+            var res = await Http().GetStringAsync($"{WilayahBase}/api/provinsi/search");
             return Content(res, "application/json");
         }
         catch { return Ok("[]"); }
     }
 
-    // GET /api/kabupaten  (DKJ — Jakarta)
+    // ── GET /api/kabupaten ────────────────────────────────────────────────
+    // API wilayah DLH hanya menyediakan kabupaten DKJ — param prov diabaikan.
     [HttpGet("kabupaten")]
-    public async Task<IActionResult> Kabupaten()
+    public async Task<IActionResult> Kabupaten([FromQuery] string? prov)
     {
+        if (string.IsNullOrEmpty(WilayahBase)) return Ok("[]");
         try
         {
-            var client = http.CreateClient("WilayahApi");
-            var res    = await client.GetStringAsync("/api/kabupaten/dkj/search");
+            var res = await Http().GetStringAsync($"{WilayahBase}/api/kabupaten/dkj/search");
             return Content(res, "application/json");
         }
         catch { return Ok("[]"); }
     }
 
-    // GET /api/kecamatan?kab=31XX
+    // ── GET /api/kecamatan?kab=31XX ───────────────────────────────────────
     [HttpGet("kecamatan")]
-    public async Task<IActionResult> Kecamatan([FromQuery] string kab)
+    public async Task<IActionResult> Kecamatan([FromQuery] string? kab)
     {
+        if (string.IsNullOrEmpty(kab) || string.IsNullOrEmpty(WilayahBase))
+            return Ok("[]");
         try
         {
-            var client = http.CreateClient("WilayahApi");
-            var res    = await client.GetStringAsync($"/api/kecamatan/search?kab={kab}");
+            var res = await Http().GetStringAsync($"{WilayahBase}/api/kecamatan/search?kab={kab}");
             return Content(res, "application/json");
         }
         catch { return Ok("[]"); }
     }
 
-    // GET /api/kelurahan?kec=31XX01
+    // ── GET /api/kelurahan?kec=31XX01 ─────────────────────────────────────
     [HttpGet("kelurahan")]
-    public async Task<IActionResult> Kelurahan([FromQuery] string kec)
+    public async Task<IActionResult> Kelurahan([FromQuery] string? kec)
     {
+        if (string.IsNullOrEmpty(kec) || string.IsNullOrEmpty(WilayahBase))
+            return Ok("[]");
         try
         {
-            var client = http.CreateClient("WilayahApi");
-            var res    = await client.GetStringAsync($"/api/kelurahan/search?kec={kec}");
+            var res = await Http().GetStringAsync($"{WilayahBase}/api/kelurahan/search?kec={kec}");
             return Content(res, "application/json");
         }
         catch { return Ok("[]"); }
     }
 
-    // GET /api/cek-nik?nik=3174XXXXXX
+    // ── GET /api/cek-nik?nik=3174XXXXXX ──────────────────────────────────
+    //
+    // Response banksampah:
+    // { noKTP, nik, nama, jenisKelamin, kota, kecamatan, kelurahan,
+    //   rw, rt, kelurahanID, kecamatanID, kabupatenID, provinsiID, kelurahanVal }
+    // Semua field null jika NIK tidak terdaftar → return null ke JS.
+    //
+    // Prioritas: DB lokal dulu → banksampah API.
+
     [HttpGet("cek-nik")]
-    public async Task<IActionResult> CekNik([FromQuery] string nik)
+    public async Task<IActionResult> CekNik([FromQuery] string? nik)
     {
         if (string.IsNullOrWhiteSpace(nik) || nik.Length != 16)
-            return BadRequest(new { error = "NIK harus 16 digit" });
+            return Json(null);
+
+        // ── 1. DB lokal — pemohon yang pernah daftar ──────────────────────
+        var pribadi = await db.Pribadi
+            .Include(p => p.PribadiPPID)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.NIK == nik);
+
+        if (pribadi != null)
+        {
+            return Json(new
+            {
+                nama = pribadi.Nama,
+                telepon = pribadi.Telepon,
+                email = pribadi.Email,
+                alamat = pribadi.Alamat,
+                rt = pribadi.RT,
+                rw = pribadi.RW,
+                kelurahanID = pribadi.KelurahanID,
+                kelurahan = pribadi.NamaKelurahan,
+                kecamatanID = pribadi.KecamatanID,
+                kecamatan = pribadi.NamaKecamatan,
+                kabupatenID = pribadi.KabupatenID,
+                kota = pribadi.NamaKabupaten,
+                lembaga = pribadi.PribadiPPID?.Lembaga,
+                fakultas = pribadi.PribadiPPID?.Fakultas,
+                jurusan = pribadi.PribadiPPID?.Jurusan,
+                pekerjaan = pribadi.PribadiPPID?.Pekerjaan,
+                provinsiID = pribadi.PribadiPPID?.ProvinsiID,
+                namaProvinsi = pribadi.PribadiPPID?.NamaProvinsi,
+                source = "db"
+            });
+        }
+
+        // ── 2. banksampah API ─────────────────────────────────────────────
+        if (string.IsNullOrEmpty(NikUrl))
+            return Json(null);
+
         try
         {
-            var client = http.CreateClient("NikApi");
-            var res    = await client.GetStringAsync($"/api/web/cek-nik/?nik={nik}");
-            return Content(res, "application/json");
+            var raw = await Http().GetStringAsync($"{NikUrl}/?nik={nik}");
+
+            using var doc = JsonDocument.Parse(raw);
+            var root = doc.RootElement;
+
+            var nama = Str(root, "nama");
+            if (string.IsNullOrEmpty(nama))
+                return Json(null);   // NIK tidak terdaftar di banksampah
+
+            return Json(new
+            {
+                nama,
+                rt = Str(root, "rt"),
+                rw = Str(root, "rw"),
+                kelurahanID = Str(root, "kelurahanID"),
+                kelurahan = Str(root, "kelurahan"),
+                kecamatanID = Str(root, "kecamatanID"),
+                kecamatan = Str(root, "kecamatan"),
+                kabupatenID = Str(root, "kabupatenID"),
+                kota = Str(root, "kota"),
+                provinsiID = Str(root, "provinsiID"),
+                telepon = (string?)null,
+                email = (string?)null,
+                alamat = (string?)null,
+                lembaga = (string?)null,
+                fakultas = (string?)null,
+                jurusan = (string?)null,
+                pekerjaan = (string?)null,
+                namaProvinsi = (string?)null,
+                source = "api"
+            });
         }
-        catch { return Ok("{}"); }
+        catch { return Json(null); }
     }
 
-    // GET /api/bidang
+    // ── GET /api/bidang ───────────────────────────────────────────────────
+    // Prioritas: ekinerjapjlp API → DB lokal → hardcode DLH Jakarta.
+
     [HttpGet("bidang")]
     public async Task<IActionResult> Bidang()
     {
-        try
+        // ── 1. API eksternal ──────────────────────────────────────────────
+        if (!string.IsNullOrEmpty(BidangUrl))
         {
-            var client = http.CreateClient("BidangApi");
-            var res    = await client.GetStringAsync("/api/master/bidang/search");
-            return Content(res, "application/json");
+            try
+            {
+                var raw = await Http().GetStringAsync(BidangUrl);
+                using var doc = JsonDocument.Parse(raw);
+                var arr = doc.RootElement;
+                if (arr.ValueKind == JsonValueKind.Array && arr.GetArrayLength() > 0)
+                    return Content(raw, "application/json");
+            }
+            catch { /* lanjut fallback */ }
         }
-        catch { return Ok("[]"); }
+
+        // ── 2. DB lokal — distinct NamaBidang dari permohonan sebelumnya ──
+        var fromDb = await db.PermohonanPPID
+            .Where(p => p.NamaBidang != null && p.NamaBidang != "")
+            .Select(p => new { p.BidangID, p.NamaBidang })
+            .Distinct()
+            .ToListAsync();
+
+        var dbList = fromDb
+            .GroupBy(x => x.NamaBidang)
+            .Select(g => new
+            {
+                id = (g.FirstOrDefault()?.BidangID ?? Guid.NewGuid()).ToString(),
+                namaBidang = g.Key!
+            })
+            .OrderBy(x => x.namaBidang)
+            .ToList();
+
+        if (dbList.Count > 0)
+            return Json(dbList);
+
+        // ── 3. Hardcode DLH Jakarta ───────────────────────────────────────
+        return Json(new[]
+        {
+            new { id = "d0601901-7f57-455f-b9ac-f4b794396030", namaBidang = "Laboratorium Lingkungan Hidup Daerah" },
+            new { id = "c89321db-b4e5-4638-ba59-f4280030f9fe", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Barat" },
+            new { id = "77136212-8ad7-48de-8270-69ae949ed895", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Pusat" },
+            new { id = "d47b8252-a7ac-46a1-8d9f-b0e5a8e4ba67", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Timur" },
+            new { id = "fcc59e08-cf7f-40e0-b6e3-2ef748b8c218", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Utara" },
+            new { id = "0b6d56df-895c-47b5-8883-f373f513dc83", namaBidang = "Sekretariat Dinas Lingkungan Hidup" },
+            new { id = "529d9d7a-b365-47d5-9f4f-3f2b67326c79", namaBidang = "Suku Dinas Lingkungan Hidup Kab. Adm. Kepulauan Seribu" },
+            new { id = "1c74a891-afe4-40c8-aff6-7ca8afa2af95", namaBidang = "Unit Penanganan Sampah Badan Air" },
+            new { id = "2d9b3feb-8690-4198-9a9a-c65e78538a36", namaBidang = "Unit Pengelola Sampah Terpadu" },
+            new { id = "b4b04c3b-3f6f-4005-a79b-2b4daba5de1a", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Selatan" },
+        });
+    }
+
+    // ── Helper ────────────────────────────────────────────────────────────
+    private static string? Str(JsonElement el, string key)
+    {
+        if (el.TryGetProperty(key, out var p) && p.ValueKind == JsonValueKind.String)
+            return p.GetString();
+        return null;
     }
 }

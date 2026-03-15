@@ -89,7 +89,6 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
 
         p.NoSuratPermohonan = vm.NoSuratIzin;
         p.UpdatedAt = now;
-
         p.IsObservasi = vm.IsObservasi;
         p.IsPermintaanData = vm.IsPermintaanData;
         p.IsWawancara = vm.IsWawancara;
@@ -145,14 +144,28 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
 
     private string CurrentUser => User.Identity?.Name ?? "KDI";
 
+    // ════════════════════════════════════════════════════════════════════════
+    // CATATAN: IsKdiStatus() TIDAK boleh digunakan sebagai method call di
+    // dalam .Where() karena EF Core tidak dapat mentranslasi method C# biasa
+    // ke SQL. Akibatnya EF melempar InvalidOperationException yang muncul
+    // sebagai "Terjadi kesalahan pada sistem" di browser.
+    //
+    // Kondisi ditulis INLINE di setiap .Where() agar EF Core menghasilkan
+    // SQL yang valid. Status yang relevan bagi KDI:
+    //   Didisposisi (6) s.d. ObservasiSelesai (9)  → range aman pakai >=/<=
+    //   WawancaraDijadwalkan (12) dan WawancaraSelesai (13) → == eksplisit
+    // ════════════════════════════════════════════════════════════════════════
+
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q, int? status)
     {
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .Where(p => p.StatusPPIDID >= StatusId.Didisposisi
-                     && p.StatusPPIDID <= StatusId.ObservasiSelesai)
+            .Where(p =>
+                (p.StatusPPIDID >= StatusId.Didisposisi && p.StatusPPIDID <= StatusId.ObservasiSelesai) ||
+                p.StatusPPIDID == StatusId.WawancaraDijadwalkan ||
+                p.StatusPPIDID == StatusId.WawancaraSelesai)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
@@ -174,9 +187,11 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .Where(p => p.StatusPPIDID >= StatusId.Didisposisi
-                     && p.StatusPPIDID <= StatusId.ObservasiSelesai
-                     && p.NamaBidang == null)
+            .Where(p =>
+                ((p.StatusPPIDID >= StatusId.Didisposisi && p.StatusPPIDID <= StatusId.ObservasiSelesai) ||
+                  p.StatusPPIDID == StatusId.WawancaraDijadwalkan ||
+                  p.StatusPPIDID == StatusId.WawancaraSelesai)
+                && p.NamaBidang == null)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
@@ -194,9 +209,11 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .Where(p => p.StatusPPIDID >= StatusId.Didisposisi
-                     && p.StatusPPIDID <= StatusId.ObservasiSelesai
-                     && p.NamaBidang != null)
+            .Where(p =>
+                ((p.StatusPPIDID >= StatusId.Didisposisi && p.StatusPPIDID <= StatusId.ObservasiSelesai) ||
+                  p.StatusPPIDID == StatusId.WawancaraDijadwalkan ||
+                  p.StatusPPIDID == StatusId.WawancaraSelesai)
+                && p.NamaBidang != null)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
@@ -407,8 +424,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
                         || p.StatusPPIDID == StatusId.ObservasiSelesai;
         if (!statusValid)
         {
-            TempData["Error"] =
-                "Permohonan ini tidak dalam status yang memungkinkan penjadwalan wawancara.";
+            TempData["Error"] = "Permohonan ini tidak dalam status yang memungkinkan penjadwalan wawancara.";
             return RedirectToAction("Index");
         }
 
@@ -576,15 +592,10 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
         if (!ModelState.IsValid) return View("JadwalWawancara", vm);
 
         var now = DateTime.UtcNow;
-
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
         var statusLama = p.StatusPPIDID;
-
-        // ══ BUG FIX: status wajib di-set, sebelumnya terlewat ══
-        // Audit log mencatat WawancaraDijadwalkan tapi entity tidak pernah
-        // di-update sehingga status permohonan tidak berubah di DB.
         p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
         p.UpdatedAt = now;
 
@@ -620,17 +631,26 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
 
-        return View(new UploadDataVm
+        // Ambil jadwal wawancara terakhir agar ditampilkan di view
+        var jadwal = await db.JadwalPPID
+            .Where(j => j.PermohonanPPIDID == id && j.JenisJadwal == "Wawancara")
+            .OrderByDescending(j => j.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        return View(new SelesaiWawancaraVm
         {
             PermohonanPPIDID = id,
             NoPermohonan = p.NoPermohonan!,
             NamaPemohon = p.Pribadi?.Nama ?? "",
-            JudulPenelitian = p.JudulPenelitian ?? ""
+            JudulPenelitian = p.JudulPenelitian ?? "",
+            TanggalWawancara = jadwal?.Tanggal,
+            WaktuWawancara = jadwal?.Waktu,
+            NamaPIC = jadwal?.NamaPIC,
         });
     }
 
     [HttpPost("selesai"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> SelesaiWawancaraPost(UploadDataVm vm)
+    public async Task<IActionResult> SelesaiWawancaraPost(SelesaiWawancaraVm vm)
     {
         var now = DateTime.UtcNow;
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
@@ -638,13 +658,13 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
 
         var statusLama = p.StatusPPIDID;
 
-        if (vm.FileData?.Length > 0)
+        if (vm.FileHasil?.Length > 0)
         {
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
-            var fn = $"data_{vm.FileData.FileName}";
+            var fn = $"data_{vm.FileHasil.FileName}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
-            await vm.FileData.CopyToAsync(s);
+            await vm.FileHasil.CopyToAsync(s);
             db.DokumenPPID.Add(new DokumenPPID
             {
                 PermohonanPPIDID = vm.PermohonanPPIDID,
@@ -663,7 +683,7 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
         }
 
         db.AddAuditLog(vm.PermohonanPPIDID, statusLama, p.StatusPPIDID!.Value,
-            "Wawancara selesai oleh Produsen Data.", CurrentUser);
+            $"Wawancara selesai. Catatan: {vm.Catatan}", CurrentUser);
 
         p.UpdatedAt = now;
         await db.SaveChangesAsync();

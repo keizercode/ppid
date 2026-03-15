@@ -300,6 +300,42 @@ public class UploadDataVm
     public string? Catatan { get; set; }
 }
 
+// ── TAMBAHAN di Models/ViewModels/ViewModels.cs ──────────────────────────────
+// Letakkan bagian ini SETELAH class UploadDataVm yang sudah ada.
+// Alasan: ProdusenDataController.SelesaiWawancara mengizinkan submit TANPA file
+// (wawancara selesai tapi dokumen belum tersedia), sedangkan KDI.UploadDataPost
+// WAJIB ada file. Menggunakan UploadDataVm yang sama dengan [Required] pada
+// FileData menyebabkan client-side validation memblokir submit tanpa file di
+// halaman SelesaiWawancara. ViewModel terpisah menghilangkan konflik ini.
+
+// ── PRODUSEN DATA: Selesai Wawancara ─────────────────────────────────────────
+
+public class SelesaiWawancaraVm
+{
+    public Guid PermohonanPPIDID { get; set; }
+    public string NoPermohonan { get; set; } = string.Empty;
+    public string NamaPemohon { get; set; } = string.Empty;
+    public string JudulPenelitian { get; set; } = string.Empty;
+
+    // Info jadwal (read-only, tampil di view untuk konfirmasi)
+    public DateOnly? TanggalWawancara { get; set; }
+    public TimeOnly? WaktuWawancara { get; set; }
+    public string? NamaPIC { get; set; }
+
+    /// <summary>
+    /// Upload dokumen hasil OPSIONAL.
+    /// - Jika diisi → status menjadi DataSiap, pemohon dapat mengunduh.
+    /// - Jika kosong → status menjadi WawancaraSelesai, pemohon mengisi kuesioner.
+    /// [Required] sengaja TIDAK dipasang di sini.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Display(Name = "Dokumen Hasil (Opsional)")]
+    public IFormFile? FileHasil { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Display(Name = "Catatan")]
+    public string? Catatan { get; set; }
+}
+
+
 // ── KUESIONER ─────────────────────────────────────────────────────────────────
 
 public class KuesionerVm

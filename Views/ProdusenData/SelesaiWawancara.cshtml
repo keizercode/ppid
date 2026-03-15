@@ -1,0 +1,128 @@
+@model SelesaiWawancaraVm
+@{
+    ViewData["Title"] = "Konfirmasi Selesai Wawancara";
+    ViewData["Role"]  = "Produsen Data";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-lg mx-auto">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center text-xl">✅</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Konfirmasi Selesai Wawancara</h3>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    @Model.NamaPemohon · <span class="font-mono">@Model.NoPermohonan</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="p-6">
+
+            <!-- Info permohonan -->
+            <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-5 space-y-2">
+                <div>
+                    <span class="text-[10px] text-gray-400 uppercase font-bold">Judul Penelitian</span>
+                    <p class="font-semibold text-gray-800 text-sm mt-0.5">@Model.JudulPenelitian</p>
+                </div>
+                @if (Model.TanggalWawancara.HasValue)
+                {
+                    <div class="flex gap-4 text-xs text-gray-600 pt-1 border-t border-gray-100">
+                        <div>
+                            <span class="text-[10px] text-gray-400 uppercase font-bold block">Tanggal</span>
+                            @Model.TanggalWawancara.Value.ToString("dd MMM yyyy")
+                        </div>
+                        @if (Model.WaktuWawancara.HasValue)
+                        {
+                            <div>
+                                <span class="text-[10px] text-gray-400 uppercase font-bold block">Jam</span>
+                                @Model.WaktuWawancara.Value.ToString("HH:mm")
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.NamaPIC))
+                        {
+                            <div>
+                                <span class="text-[10px] text-gray-400 uppercase font-bold block">Narasumber</span>
+                                @Model.NamaPIC
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Info dua skenario -->
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs text-emerald-700">
+                    <p class="font-bold mb-1">📁 Upload dokumen</p>
+                    <p>Status → <strong>Data Siap</strong><br/>Pemohon dapat mengunduh hasil</p>
+                </div>
+                <div class="bg-violet-50 border border-violet-100 rounded-xl p-3 text-xs text-violet-700">
+                    <p class="font-bold mb-1">📋 Tanpa dokumen</p>
+                    <p>Status → <strong>Wawancara Selesai</strong><br/>Pemohon mengisi kuesioner</p>
+                </div>
+            </div>
+
+            <form asp-action="SelesaiWawancaraPost" asp-controller="ProdusenData"
+                  method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="PermohonanPPIDID" />
+                <input type="hidden" asp-for="NoPermohonan" />
+                <input type="hidden" asp-for="NamaPemohon" />
+                <input type="hidden" asp-for="JudulPenelitian" />
+
+                <!-- Upload opsional -->
+                <div class="mb-4">
+                    <label class="lbl">
+                        Dokumen Hasil Wawancara
+                        <span class="text-gray-400 font-normal normal-case tracking-normal ml-1">(opsional)</span>
+                    </label>
+                    <div id="dropzone"
+                         class="border-2 border-dashed border-gray-200 hover:border-violet-400 rounded-xl p-6 text-center transition-all cursor-pointer bg-gray-50 hover:bg-violet-50 group">
+                        <div class="text-2xl mb-1">📁</div>
+                        <p class="text-sm font-semibold text-gray-600 group-hover:text-violet-700">Klik untuk pilih file</p>
+                        <p class="text-xs text-gray-400 mt-0.5">PDF, Excel, ZIP — maks. 50MB</p>
+                        <input asp-for="FileHasil" type="file" id="fileHasil" class="hidden" />
+                        <p id="fileName" class="text-xs text-violet-600 mt-2 font-semibold hidden"></p>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <label class="lbl">Catatan <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                    <textarea asp-for="Catatan" rows="2"
+                              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none bg-gray-50 focus:bg-white transition-colors"
+                              placeholder="Catatan hasil wawancara..."></textarea>
+                </div>
+
+                <div class="flex gap-3">
+                    <a href="/produsen-data"
+                       class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">Batal</a>
+                    <button type="submit"
+                            class="flex-grow bg-violet-600 hover:bg-violet-700 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                        ✅ Konfirmasi Selesai
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+</style>
+
+@section Scripts {
+<script>
+const dz  = document.getElementById('dropzone');
+const fi  = document.getElementById('fileHasil');
+const fn  = document.getElementById('fileName');
+dz.addEventListener('click', () => fi.click());
+fi.addEventListener('change', function () {
+    if (this.files[0]) {
+        fn.textContent = '✓ ' + this.files[0].name;
+        fn.classList.remove('hidden');
+        dz.classList.add('border-violet-400', 'bg-violet-50');
+    }
+});
+</script>
+}

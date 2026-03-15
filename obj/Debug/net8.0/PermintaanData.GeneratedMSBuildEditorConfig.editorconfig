@@ -54,6 +54,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbE9ic2VydmFzaS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/JadwalWawancara.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbFdhd2FuY2FyYS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Psmdi.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFBzbWRpLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -106,8 +110,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XFVwbG9hZFRURC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/ProdusenData/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVzZW5EYXRhXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/ProdusenData/JadwalWawancara.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVzZW5EYXRhXEphZHdhbFdhd2FuY2FyYS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/ProdusenData/SelesaiWawancara.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVzZW5EYXRhXFNlbGVzYWlXYXdhbmNhcmEuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/Shared/Partials/Empty.cshtml]

@@ -1,0 +1,129 @@
+@model List<PermohonanPPID>
+@{
+    ViewData["Title"] = "Dashboard Wawancara";
+    ViewData["Role"]  = "Produsen Data";
+    Layout = "_LayoutAdmin";
+    var q = ViewData["Q"] as string;
+}
+
+@{
+    int countDijadwal = Model.Count(p => p.StatusPPIDID == StatusId.WawancaraDijadwalkan);
+    int countSelesai  = Model.Count(p => p.StatusPPIDID == StatusId.WawancaraSelesai);
+}
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+    <div class="bg-[#0f1f4a] rounded-2xl p-5 relative overflow-hidden shadow-md flex flex-col justify-between min-h-[110px]">
+        <div class="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/5 -translate-y-8 translate-x-8"></div>
+        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-300/70 mb-1">Total Wawancara</p>
+        <p class="text-5xl font-black text-white leading-none" style="font-variant-numeric:tabular-nums">@Model.Count</p>
+        <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-400 to-transparent"></div>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1">Dijadwalkan</p>
+        <p class="text-4xl font-black text-violet-600 leading-none mb-2" style="font-variant-numeric:tabular-nums">@countDijadwal</p>
+        <div class="w-full bg-violet-50 rounded-full h-1 overflow-hidden">
+            <div class="bg-violet-500 h-full rounded-full" style="width:@(Model.Count > 0 ? countDijadwal * 100 / Model.Count : 0)%"></div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1">Menunggu Kuesioner</p>
+        <p class="text-4xl font-black text-emerald-600 leading-none mb-2" style="font-variant-numeric:tabular-nums">@countSelesai</p>
+        <div class="w-full bg-emerald-50 rounded-full h-1 overflow-hidden">
+            <div class="bg-emerald-500 h-full rounded-full" style="width:@(Model.Count > 0 ? countSelesai * 100 / Model.Count : 0)%"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Search -->
+<form method="get" class="mb-4">
+    <div class="flex gap-2">
+        <input type="text" name="q" value="@q" placeholder="Cari nama pemohon atau nomor permohonan..."
+               class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        <button type="submit"
+                class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
+        @if (!string.IsNullOrEmpty(q))
+        {
+            <a href="/produsen-data"
+               class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+        }
+    </div>
+</form>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    @if (!Model.Any())
+    {
+        <div class="text-center py-20">
+            <partial name="Partials/Empty" />
+            <p class="text-gray-400 text-sm font-medium">
+                @(string.IsNullOrEmpty(q) ? "Belum ada jadwal wawancara" : $"Tidak ada hasil untuk \"{q}\"")
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-50">
+                        <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nomor</th>
+                        <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pemohon</th>
+                        <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Judul</th>
+                        <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Narasumber</th>
+                        <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var item in Model)
+                    {
+                        <tr class="hover:bg-violet-50/30 transition-colors group">
+                            <td class="px-5 py-3.5 font-mono text-xs text-blue-600 font-semibold">@item.NoPermohonan</td>
+                            <td class="px-5 py-3.5 font-semibold text-gray-800 text-xs">@item.Pribadi?.Nama</td>
+                            <td class="px-5 py-3.5 text-xs text-gray-500 max-w-xs truncate">@item.JudulPenelitian</td>
+                            <td class="px-5 py-3.5 text-xs text-gray-600">
+                                @(string.IsNullOrEmpty(item.NamaProdusenData) ? "—" : item.NamaProdusenData)
+                            </td>
+                            <td class="px-5 py-3.5">
+                                @if (item.StatusPPIDID == StatusId.WawancaraDijadwalkan)
+                                {
+                                    <span class="text-xs bg-violet-50 text-violet-700 px-2.5 py-0.5 rounded-full font-medium">
+                                        🗓 Dijadwalkan
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-medium">
+                                        ✅ Selesai
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <div class="flex gap-1.5 flex-wrap opacity-80 group-hover:opacity-100 transition-opacity">
+                                    @if (item.StatusPPIDID == StatusId.WawancaraDijadwalkan)
+                                    {
+                                        <a href="/produsen-data/jadwal/@item.PermohonanPPIDID"
+                                           class="text-xs bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-semibold transition-colors">🎤 Detail Jadwal</a>
+                                        <a href="/produsen-data/selesai/@item.PermohonanPPIDID"
+                                           class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-semibold transition-colors">✅ Selesaikan</a>
+                                    }
+                                    @if (item.StatusPPIDID == StatusId.WawancaraSelesai)
+                                    {
+                                        <span class="text-xs text-gray-400 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                                            Menunggu kuesioner pemohon
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

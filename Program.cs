@@ -1,79 +1,59 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using PermintaanData.Data;
-
-// WAJIB: harus dipanggil sebelum builder dibuat
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ── 1. MVC ────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// ── 2. Database (PostgreSQL) ──────────────────────────────────────────────────
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ── Authentication ────────────────────────────────────────────────────────────
+// ── 3. HttpClient untuk ApiProxyController ────────────────────────────────────
+// Cukup satu baris — ApiProxyController membaca URL dari config sendiri
+// dan memanggil httpFactory.CreateClient() tanpa named client.
+builder.Services.AddHttpClient();
+
+// ── 4. Cookie Authentication ──────────────────────────────────────────────────
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(opt =>
+    .AddCookie(options =>
     {
-        opt.LoginPath = "/auth/login";
-        opt.AccessDeniedPath = "/auth/akses-ditolak";
-        opt.ExpireTimeSpan = TimeSpan.FromHours(8);
-        opt.SlidingExpiration = true;
-        opt.Cookie.HttpOnly = true;
-        opt.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+        options.LoginPath = "/auth/login";
+        options.LogoutPath = "/auth/logout";
+        options.AccessDeniedPath = "/auth/access-denied";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
-builder.Services.AddAuthorization();
-
-// ── HTTP Clients ──────────────────────────────────────────────────────────────
-builder.Services.AddHttpClient("WilayahApi", c =>
-{
-    c.BaseAddress = new Uri(builder.Configuration["ExternalApi:WilayahBase"]!);
-    c.DefaultRequestHeaders.Add("Accept", "application/json");
-    c.Timeout = TimeSpan.FromSeconds(10);
-});
-builder.Services.AddHttpClient("NikApi", c =>
-{
-    c.BaseAddress = new Uri("https://banksampah.jakarta.go.id");
-    c.Timeout = TimeSpan.FromSeconds(10);
-});
-builder.Services.AddHttpClient("BidangApi", c =>
-{
-    c.BaseAddress = new Uri("https://ekinerjapjlp.jakarta.go.id");
-    c.Timeout = TimeSpan.FromSeconds(10);
-});
-
+// ── 5. Build ──────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
+// ── 6. Exception Handler ──────────────────────────────────────────────────────
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
-
-// Pastikan folder wwwroot & uploads selalu ada
-var wwwroot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
-Directory.CreateDirectory(wwwroot);
-Directory.CreateDirectory(Path.Combine(wwwroot, "uploads"));
-
-app.UseStaticFiles(new StaticFileOptions
+else
 {
-    FileProvider = new PhysicalFileProvider(wwwroot),
-    RequestPath = ""
-});
+    app.UseDeveloperExceptionPage();
+}
 
+// ── 7. Static Files ───────────────────────────────────────────────────────────
+app.UseStaticFiles();
+
+// ── 8. Routing — WAJIB sebelum UseAuthentication / UseAuthorization ───────────
 app.UseRouting();
 
-// ── Auth middleware (urutan WAJIB: Authentication dulu, baru Authorization) ───
+// ── 9. Auth — urutan tidak boleh terbalik ────────────────────────────────────
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ── 10. Route Table ───────────────────────────────────────────────────────────
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
