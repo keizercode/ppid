@@ -11,8 +11,7 @@ public class HomeController(AppDbContext db) : Controller
     public IActionResult Index() => View(new LacakViewModel());
 
     // ════════════════════════════════════════════════════════════════════════
-    // LACAK — single-factor: NoPermohonan saja sudah cukup karena format
-    // PPD/YYYY/XXXXXXXX tidak dapat dienumerasi (32^8 ≈ 1,1 triliun).
+    // LACAK
     // ════════════════════════════════════════════════════════════════════════
 
     [HttpGet]
@@ -21,7 +20,6 @@ public class HomeController(AppDbContext db) : Controller
         if (string.IsNullOrEmpty(noPermohonan))
             return View("Index", new LacakViewModel());
 
-        // Normalize: uppercase, trim whitespace
         noPermohonan = noPermohonan.Trim().ToUpperInvariant();
 
         var permohonan = await db.PermohonanPPID
@@ -33,8 +31,6 @@ public class HomeController(AppDbContext db) : Controller
 
         if (permohonan == null)
         {
-            // Pesan generik — tidak mengkonfirmasi apakah nomor ada/tidak
-            // (mitigasi oracle attack meski nomor sudah non-sequential)
             TempData["Error"] = "Nomor permohonan tidak ditemukan. "
                               + "Pastikan nomor diketik persis seperti yang tertera di formulir Anda.";
             return View("Index", new LacakViewModel { NoPermohonan = noPermohonan });
@@ -107,9 +103,26 @@ public class HomeController(AppDbContext db) : Controller
         }
 
         TempData["Success"] = "Terima kasih! Kuesioner berhasil dikirim.";
-
-        // Redirect kembali ke halaman detail — tidak perlu token lagi
         return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan });
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // ERROR HANDLER
+    // ════════════════════════════════════════════════════════════════════════
+    //
+    // Diperlukan oleh Program.cs → app.UseExceptionHandler("/Home/Error").
+    // Tanpa action ini, setiap unhandled exception di production mode
+    // menghasilkan 404 (bukan 500) karena path "/Home/Error" tidak ditemukan,
+    // dan browser menampilkan URL halaman asal (bukan /Home/Error) sehingga
+    // sulit di-debug.
+
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        Response.StatusCode = 500;
+        return Content(
+            "Terjadi kesalahan pada sistem. Silakan kembali ke halaman sebelumnya dan coba lagi.",
+            "text/plain; charset=utf-8");
     }
 
     // ════════════════════════════════════════════════════════════════════════

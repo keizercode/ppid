@@ -145,10 +145,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     [HttpPost("daftar"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DaftarPemohonPost(DaftarPemohonVm vm)
     {
-        // ── VALIDASI BidangID ────────────────────────────────────────────────
-        // Guid.Parse() crash FormatException jika value bukan GUID valid.
-        // Input berasal dari <select> yang bisa dimanipulasi client-side.
-        // Lakukan TryParse dulu dan kumpulkan error ke ModelState.
+        // ── VALIDASI BidangID ─────────────────────────────────────────────────
         Guid? bidangGuid = null;
         if (!string.IsNullOrEmpty(vm.BidangID))
         {
@@ -159,23 +156,14 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                 bidangGuid = parsed;
         }
 
-        // ── SATU TITIK VALIDASI — tidak ada DB operation sebelum baris ini ──
         if (!ModelState.IsValid)
             return View("DaftarPemohon", vm);
 
-        // ── CAPTURED VARIABLES untuk redirect setelah transaksi selesai ─────
-        // Lebih bersih dari TempData side-channel: C# closure capture langsung.
         Guid lastId = Guid.Empty;
         string noPerm = string.Empty;
 
-        // ── SATU TRANSAKSI EKSPLISIT — all-or-nothing ─────────────────────
-        // Tanpa ini: Pribadi tersimpan → Permohonan gagal → orphan data di DB.
-        // ExecutionStrategy wajib untuk EF Core + Npgsql agar retry-safe.
         var strategy = db.Database.CreateExecutionStrategy();
 
-        // tempDir: file ditulis ke folder sementara dulu selama transaksi.
-        // Jika DB rollback, file temp dihapus → tidak ada file orphan di disk.
-        // File baru dipindah ke lokasi final hanya setelah CommitAsync berhasil.
         var tempDir = Path.Combine(Path.GetTempPath(), "ppid_upload_" + Guid.NewGuid());
         var movers = new List<(string Temp, string Final)>();
 
@@ -185,6 +173,17 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
             {
                 // Reset state antar retry (ExecutionStrategy bisa retry otomatis)
                 movers.Clear();
+
+                // ══ BUG FIX: NESTED TRANSACTION ══════════════════════════════════════
+                // GenerateNoPermohonan() membuka transaksinya sendiri menggunakan
+                // pg_advisory_xact_lock. Jika dipanggil SETELAH BeginTransactionAsync()
+                // di bawah, Npgsql melempar:
+                //   "The connection is already in a transaction and cannot participate
+                //    in another transaction."
+                // Solusi: panggil GenerateNoPermohonan() SEBELUM membuka transaksi
+                // utama. Jika retry terjadi, counter bertambah lagi (sequence lama
+                // dilewati — diterima karena Sequance hanya untuk sorting internal).
+                var (generatedNoPerm, nextSeq) = await db.GenerateNoPermohonan();
 
                 await using var tx = await db.Database.BeginTransactionAsync();
                 try
@@ -223,7 +222,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                         pribadi.UpdatedAt = now;
                     }
 
-                    // Flush agar PribadiID tersedia sebagai FK — masih dalam tx
                     await db.SaveChangesAsync();
 
                     // ── 2. PribadiPPID ────────────────────────────────────
@@ -257,8 +255,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                     }
 
                     // ── 3. PermohonanPPID ─────────────────────────────────
-                    var (generatedNoPerm, nextSeq) = await db.GenerateNoPermohonan();
-
+                    // generatedNoPerm & nextSeq sudah digenerate di atas
                     var permohonan = new PermohonanPPID
                     {
                         PribadiID = pribadi.PribadiID,
@@ -273,7 +270,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                         IsObservasi = vm.IsObservasi,
                         IsWawancara = vm.IsWawancara,
                         IsPermintaanData = vm.IsPermintaanData,
-                        BidangID = bidangGuid,   // ← hasil TryParse, bukan Guid.Parse
+                        BidangID = bidangGuid,
                         NamaBidang = vm.NamaBidang,
                         StatusPPIDID = StatusId.TerdaftarSistem,
                         Sequance = nextSeq,
@@ -283,7 +280,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                     };
                     db.PermohonanPPID.Add(permohonan);
 
-                    // Flush agar PermohonanPPIDID tersedia untuk Detail & Dokumen
                     await db.SaveChangesAsync();
 
                     // ── 4. Detail keperluan ───────────────────────────────
@@ -315,7 +311,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                         });
 
                     // ── 5. Dokumen — tulis ke temp dulu ──────────────────
-                    // File belum dipindah ke lokasi final sebelum commit.
                     Directory.CreateDirectory(tempDir);
                     await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileKTP, JenisDokumenId.KTP, "KTP", now, tempDir, movers);
                     await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now, tempDir, movers);
@@ -330,23 +325,20 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                         $"{(vm.IsWawancara ? "Wawancara" : "")}",
                         CurrentUser);
 
-                    // ── 7. Commit — semua atau tidak ada ─────────────────
+                    // ── 7. Commit ─────────────────────────────────────────
                     await db.SaveChangesAsync();
                     await tx.CommitAsync();
 
-                    // Capture untuk redirect di luar lambda
                     lastId = permohonan.PermohonanPPIDID;
                     noPerm = generatedNoPerm;
                 }
                 catch
                 {
                     await tx.RollbackAsync();
-                    throw; // biarkan ExecutionStrategy handle retry / surface
+                    throw;
                 }
             });
 
-            // ── DB commit berhasil → pindah file dari temp ke final ──────────
-            // File.Move atomic di filesystem yang sama; tidak ada window orphan.
             foreach (var (temp, final) in movers)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(final)!);
@@ -355,7 +347,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         }
         finally
         {
-            // Bersihkan folder temp apapun hasilnya (sukses maupun gagal)
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
         }
@@ -466,7 +457,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         return View(p);
     }
 
-    // ── HELPER: Upload langsung (dipakai action lain di luar DaftarPemohon) ──
+    // ── HELPER: Upload langsung ───────────────────────────────────────────
 
     private async Task UploadDokumen(Guid permohonanId, IFormFile? file,
         int jenisDokId, string nama, DateTime now)
@@ -493,10 +484,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         });
     }
 
-    // ── HELPER: Stage upload ke temp (dipakai DaftarPemohonPost) ─────────────
-    // Tulis ke folder sementara dan catat pasangan (temp → final) di movers.
-    // File baru dipindah ke lokasi final setelah DB CommitAsync berhasil,
-    // sehingga tidak ada file orphan di disk jika transaksi DB gagal.
+    // ── HELPER: Stage upload ke temp ──────────────────────────────────────
 
     private async Task StageUploadDokumen(Guid permohonanId, IFormFile? file,
         int jenisDokId, string nama, DateTime now,

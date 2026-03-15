@@ -65,7 +65,6 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
 
         var now = DateTime.UtcNow;
 
-        // Upload surat izin (opsional)
         if (vm.FileSuratIzin?.Length > 0)
         {
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
@@ -91,12 +90,10 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
         p.NoSuratPermohonan = vm.NoSuratIzin;
         p.UpdatedAt = now;
 
-        // ── BUG FIX: Update keperluan sesuai konfirmasi kepegawaian ─────────
         p.IsObservasi = vm.IsObservasi;
         p.IsPermintaanData = vm.IsPermintaanData;
         p.IsWawancara = vm.IsWawancara;
 
-        // ── ROUTING ──────────────────────────────────────────────────────────
         if (vm.IsWawancaraOnly)
         {
             p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
@@ -110,7 +107,6 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
                 : null;
         }
 
-        // ── Audit Log ─────────────────────────────────────────────────────
         db.AddAuditLog(
             vm.PermohonanPPIDID,
             statusLama,
@@ -308,9 +304,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         return RedirectToAction("Index");
     }
 
-    // ── BUG FIX: Selesai Observasi ────────────────────────────────────────
-    // Sebelumnya tidak ada endpoint ini, status ObservasiSelesai tidak pernah
-    // di-set sehingga permohonan stuck di ObservasiDijadwalkan.
+    // ── Selesai Observasi ─────────────────────────────────────────────────
 
     [HttpGet("selesai-observasi/{id}")]
     public async Task<IActionResult> SelesaiObservasi(Guid id)
@@ -319,7 +313,6 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
 
-        // Hanya permohonan yang sudah dijadwal observasi yang bisa diselesaikan
         if (p.StatusPPIDID != StatusId.ObservasiDijadwalkan)
         {
             TempData["Error"] = "Permohonan ini tidak dalam status Observasi Dijadwalkan.";
@@ -341,7 +334,6 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
-        // Guard: hanya boleh diselesaikan dari status ObservasiDijadwalkan
         if (p.StatusPPIDID != StatusId.ObservasiDijadwalkan)
         {
             TempData["Error"] = "Permohonan ini tidak dalam status Observasi Dijadwalkan.";
@@ -351,10 +343,6 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         var now = DateTime.UtcNow;
         var statusLama = p.StatusPPIDID;
 
-        // ── Tentukan routing pascaselesai ─────────────────────────────────────
-        // Cek via JadwalPPID (bukan hanya flag IsWawancara) agar idempoten:
-        // jika entah bagaimana jadwal wawancara sudah terbuat, jangan redirect
-        // ke halaman jadwal lagi — langsung ke upload data.
         bool wawancaraPerlu = p.IsWawancara;
         bool wawancaraSudahDijadwal = wawancaraPerlu &&
             await db.JadwalPPID.AnyAsync(j =>
@@ -384,7 +372,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         return RedirectToAction("UploadData", new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Jadwal Wawancara (kombinasi dengan data) ──────────────────────────
+    // ── Jadwal Wawancara ──────────────────────────────────────────────────
 
     [HttpGet("jadwal-wawancara/{id}")]
     public async Task<IActionResult> JadwalWawancara(Guid id)
@@ -412,13 +400,9 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
     {
         if (!ModelState.IsValid) return View("JadwalWawancara", vm);
 
-        // ── BUG 1 FIX: fetch permohonan ───────────────────────────────────
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
-        // ── Guard: hanya boleh dijadwal dari status yang relevan ──────────
-        //    DiProses      → wawancara saja (tanpa observasi), atau
-        //    ObservasiSelesai → wawancara setelah observasi selesai.
         bool statusValid = p.StatusPPIDID == StatusId.DiProses
                         || p.StatusPPIDID == StatusId.ObservasiSelesai;
         if (!statusValid)
@@ -429,9 +413,8 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
         }
 
         var now = DateTime.UtcNow;
-        var statusLama = p.StatusPPIDID;   // ← BUG 2 FIX: tangkap SEBELUM mutasi
+        var statusLama = p.StatusPPIDID;
 
-        // ── 1. Simpan jadwal wawancara ────────────────────────────────────
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
@@ -442,15 +425,13 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             CreatedAt = now
         });
 
-        // ── 2. Update status (inilah yang selama ini hilang — BUG 1) ─────
         p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
         p.UpdatedAt = now;
 
-        // ── 3. Audit log dengan nilai yang benar (BUG 2 FIX) ─────────────
         db.AddAuditLog(
             vm.PermohonanPPIDID,
-            statusLama,                          // nilai nyata, bukan null
-            StatusId.WawancaraDijadwalkan,        // bukan DiProses
+            statusLama,
+            StatusId.WawancaraDijadwalkan,
             $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} " +
             $"pukul {vm.WaktuWawancara:HH:mm}, PIC: {vm.NamaPIC}",
             CurrentUser);
@@ -459,13 +440,8 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
 
         TempData["Success"] =
             $"Jadwal wawancara <strong>{vm.TanggalWawancara:dd MMM yyyy}</strong> " +
-            $"pukul {vm.WaktuWawancara:HH:mm} berhasil dibuat. " +
-            $"Pemohon dapat melihat jadwal ini di halaman lacak permohonan.";
+            $"pukul {vm.WaktuWawancara:HH:mm} berhasil dibuat.";
 
-        // ── BUG 3 FIX: redirect ke Index, bukan UploadData ───────────────
-        //    Wawancara belum terjadi → upload data belum relevan.
-        //    Upload dilakukan setelah SelesaiWawancara (ProdusenData) atau
-        //    route wawancara-only di KDI ditangani oleh SelesaiObservasiPost.
         return RedirectToAction("Index");
     }
 
@@ -572,7 +548,6 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
 
-        // ── Cek apakah jadwal wawancara sudah dibuat (oleh KDI) ──────────────
         var jadwalExisting = await db.JadwalPPID
             .Where(j => j.PermohonanPPIDID == id && j.JenisJadwal == "Wawancara")
             .OrderByDescending(j => j.CreatedAt)
@@ -588,7 +563,6 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             DetailWawancara = detailWaw?.DetailKeperluan ?? "",
             NamaProdusenData = p.NamaProdusenData,
 
-            // Pre-fill dari jadwal KDI jika sudah ada
             TanggalWawancara = jadwalExisting?.Tanggal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
             WaktuWawancara = jadwalExisting?.Waktu ?? new TimeOnly(9, 0),
             NamaPIC = jadwalExisting?.NamaPIC ?? "",
@@ -603,11 +577,16 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
 
         var now = DateTime.UtcNow;
 
-        // ── Fetch untuk dapat statusLama yang akurat ──────────────────────────
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
         var statusLama = p.StatusPPIDID;
+
+        // ══ BUG FIX: status wajib di-set, sebelumnya terlewat ══
+        // Audit log mencatat WawancaraDijadwalkan tapi entity tidak pernah
+        // di-update sehingga status permohonan tidak berubah di DB.
+        p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
+        p.UpdatedAt = now;
 
         db.JadwalPPID.Add(new JadwalPPID
         {
@@ -621,7 +600,7 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
 
         db.AddAuditLog(
             vm.PermohonanPPIDID,
-            statusLama,                        // ← bukan null lagi
+            statusLama,
             StatusId.WawancaraDijadwalkan,
             $"Jadwal wawancara dibuat: {vm.TanggalWawancara:dd MMM yyyy} " +
             $"pukul {vm.WaktuWawancara:HH:mm}, narasumber: {vm.NamaPIC}",
