@@ -277,7 +277,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                         NamaBidang = vm.NamaBidang,
                         StatusPPIDID = StatusId.TerdaftarSistem,
                         Sequance = nextSeq,
-                        TokenLacak = TokenGenerator.Generate(),
+
                         CratedAt = now,
                         UpdatedAt = now
                     };

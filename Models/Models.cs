@@ -52,7 +52,15 @@ public class PermohonanPPID
 {
     [Key, Column("PermohonanPPIDID")] public Guid PermohonanPPIDID { get; set; } = Guid.NewGuid();
     [Column("PribadiID")] public Guid? PribadiID { get; set; }
+
+    /// <summary>
+    /// Nomor permohonan publik — format PPD/YYYY/XXXXXXXX.
+    /// Delapan karakter terakhir bersifat kriptografis-random (bukan sequential),
+    /// sehingga nomor ini sendiri berfungsi sebagai identifier sekaligus rahasia.
+    /// Tidak bisa dienumerasi — pemohon lain tidak dapat menebak nomor orang lain.
+    /// </summary>
     [Column("NoPermohonan")] public string? NoPermohonan { get; set; }
+
     [Column("KategoriPemohon")] public string? KategoriPemohon { get; set; }
     [Column("NoSuratPermohonan")] public string? NoSuratPermohonan { get; set; }
     [Column("TanggalPermohonan")] public DateOnly? TanggalPermohonan { get; set; }
@@ -63,21 +71,19 @@ public class PermohonanPPID
     [Column("IsWawancara")] public bool IsWawancara { get; set; }
     [Column("IsPermintaanData")] public bool IsPermintaanData { get; set; }
     [Column("StatusPPIDID")] public int? StatusPPIDID { get; set; }
+
+    /// <summary>
+    /// Urutan internal — dipakai untuk sorting dashboard dan laporan jumlah permohonan.
+    /// Tidak ditampilkan ke publik; tidak tertanam di NoPermohonan.
+    /// </summary>
     [Column("Sequance")] public int? Sequance { get; set; }
+
     [Column("CratedAt")] public DateTime? CratedAt { get; set; }
     [Column("UpdatedAt")] public DateTime? UpdatedAt { get; set; }
     [Column("BidangID")] public Guid? BidangID { get; set; }
     [Column("NamaBidang")] public string? NamaBidang { get; set; }
     [Column("NamaProdusenData")] public string? NamaProdusenData { get; set; }
     [Column("LoketJenis")] public string? LoketJenis { get; set; }
-
-    /// <summary>
-    /// Token 6-karakter acak untuk verifikasi publik.
-    /// Pemohon harus memasukkan NoPermohonan + TokenLacak agar bisa melihat detail.
-    /// Mencegah enumerasi nomor permohonan yang sequential.
-    /// Contoh: "A3KX9P"
-    /// </summary>
-    [Column("TokenLacak")] public string? TokenLacak { get; set; }
 
     [ForeignKey("PribadiID")] public Pribadi? Pribadi { get; set; }
     [ForeignKey("StatusPPIDID")] public StatusPPID? Status { get; set; }
@@ -87,23 +93,34 @@ public class PermohonanPPID
     public ICollection<AuditLogPPID> AuditLog { get; set; } = new List<AuditLogPPID>();
 }
 
-// ── Token Generator ───────────────────────────────────────────────────────────
+// ── Random Identifier Generator ───────────────────────────────────────────────
 
 /// <summary>
-/// Menghasilkan token acak kriptografis 6-karakter untuk TokenLacak.
-/// Karakter yang mudah dibaca: tidak ada O/0, I/1, dll.
+/// Menghasilkan token acak kriptografis dari alfabet 32-karakter yang
+/// menghindari karakter ambigu (0/O, 1/I, S/5, Z/2).
+/// Digunakan untuk suffix NoPermohonan (8 karakter → ~1,1 triliun kombinasi/tahun).
 /// </summary>
-public static class TokenGenerator
+public static class NoPermohonanToken
 {
-    // Alfabet 32 karakter — menghindari karakter ambigu (0, O, 1, I, S, Z, dll.)
+    // 32 karakter — tidak ada 0/O, 1/I, S, Z agar mudah dibaca/diketik
     private const string Alphabet = "23456789ABCDEFGHJKLMNPQRTUVWXY";
 
-    public static string Generate(int length = 6)
+    /// <param name="length">
+    /// Default 8 — memberikan ~10⁻⁹ collision probability pada 1 juta permohonan/tahun.
+    /// </param>
+    public static string Generate(int length = 8)
     {
         var buffer = new byte[length];
         RandomNumberGenerator.Fill(buffer);
         return new string(buffer.Select(b => Alphabet[b % Alphabet.Length]).ToArray());
     }
+}
+
+// Alias untuk backward-compatibility internal (tidak dipakai di luar assembly ini)
+[Obsolete("Gunakan NoPermohonanToken.Generate(). TokenGenerator dihapus bersama kolom TokenLacak.")]
+public static class TokenGenerator
+{
+    public static string Generate(int length = 8) => NoPermohonanToken.Generate(length);
 }
 
 // ── (sisa models tidak berubah) ───────────────────────────────────────────────

@@ -95,13 +95,16 @@
                     gap: 6px;
                     transition: all .15s;
                 }
+
                 .btn-print {
                     background: #f59e0b;
                     color: #1c1917;
                 }
+
                 .btn-print:hover {
                     background: #fbbf24;
                 }
+
                 .btn-next {
                     background: #059669;
                     color: white;
@@ -151,15 +154,17 @@
                     color: #444;
                     margin-bottom: 8px;
                 }
-
                 hr.thick {
                     border: none;
                     border-top: 2px solid #000;
                     margin-bottom: 12px;
                 }
 
-                /* ── TOKEN BOX — bagian paling penting untuk pemohon ── */
-                .token-box {
+                /* ══ NOMOR PERMOHONAN BOX
+                   Nomor permohonan kini bersifat random — ini adalah satu-satunya
+                   kunci yang dibutuhkan pemohon untuk melacak status online.
+                   Tampilkan dengan prominent agar pemohon menyimpannya. ══ */
+                .noperm-box {
                     margin-bottom: 14px;
                     border: 2.5px solid #1B3B6F;
                     border-radius: 6px;
@@ -169,8 +174,7 @@
                     align-items: center;
                     gap: 14px;
                 }
-
-                .token-box .token-label {
+                .noperm-box .noperm-label {
                     font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
                     font-size: 9pt;
                     color: #1B3B6F;
@@ -178,23 +182,21 @@
                     white-space: nowrap;
                     flex-shrink: 0;
                 }
-
-                .token-box .token-value {
+                .noperm-box .noperm-value {
                     font-family: 'Courier New', Courier, monospace;
-                    font-size: 22pt;
+                    font-size: 20pt;
                     font-weight: 900;
-                    letter-spacing: 0.25em;
+                    letter-spacing: 0.12em;
                     color: #1B3B6F;
                     flex: 1;
                     text-align: center;
                 }
-
-                .token-box .token-note {
+                .noperm-box .noperm-note {
                     font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
                     font-size: 8pt;
                     color: #374151;
                     flex-shrink: 0;
-                    max-width: 140px;
+                    max-width: 150px;
                     line-height: 1.4;
                 }
 
@@ -204,12 +206,10 @@
                     border-collapse: collapse;
                     margin-bottom: 4px;
                 }
-
                 table.data-table td {
                     vertical-align: top;
                     padding: 3px 0;
                 }
-
                 table.data-table td.label {
                     width: 185px;
                     font-weight: bold;
@@ -219,14 +219,12 @@
                 table.data-table td.sep {
                     width: 12px;
                 }
-
                 table.data-table td.value .underline {
                     display: block;
                     border-bottom: 1px solid #000;
                     min-height: 20px;
                     padding-bottom: 1px;
                 }
-
                 table.data-table td.value .multiline {
                     display: block;
                     border-bottom: 1px solid #000;
@@ -319,11 +317,9 @@
                     width: 50%;
                     text-align: center;
                 }
-
                 .sign-space {
                     height: 72px;
                 }
-
                 .sign-name {
                     font-weight: bold;
                     border-top: 1px solid #000;
@@ -350,7 +346,6 @@
                     body {
                         background: white;
                     }
-
                     .toolbar {
                         display: none !important;
                     }
@@ -366,6 +361,7 @@
                         padding: 12mm 15mm 10mm 20mm;
                         border-radius: 0;
                     }
+
                     @@page {
                         size: A4;
                         margin: 0;
@@ -398,16 +394,18 @@
             </p>
             <hr class="thick" />
 
-            <!-- ══ TOKEN BOX — Kode Verifikasi untuk Lacak Online ══ -->
-            <div class="token-box">
-                <div class="token-label">
-                    🔑 KODE<br />VERIFIKASI
+            <!-- ══ NOMOR PERMOHONAN — kunci pelacakan online ══
+         Nomor ini bersifat unik dan tidak dapat ditebak.
+         Cukup masukkan nomor ini di portal untuk melacak status. -->
+            <div class="noperm-box">
+                <div class="noperm-label">
+                    📋 NOMOR<br />PERMOHONAN
                 </div>
-                <div class="token-value">
-                    @(Model.TokenLacak ?? "------")
+                <div class="noperm-value">
+                    @(Model.NoPermohonan ?? "—")
                 </div>
-                <div class="token-note">
-                    Simpan kode ini. Diperlukan bersama Nomor Permohonan untuk melacak status di portal online.
+                <div class="noperm-note">
+                    Simpan formulir ini. Nomor di atas diperlukan untuk melacak status permohonan di portal online.
                 </div>
             </div>
 
@@ -566,8 +564,9 @@
                         <strong>NB:</strong> Formulir ini dibuat untuk mengetahui kebutuhan mahasiswa yang berhubungan
                         penelitian
                         yang akan dilakukan untuk pendukung pembuatan surat pemberian izin penelitian.
-                        <strong>Simpan Kode Verifikasi yang tertera di atas untuk melacak status permohonan secara
-                            online.</strong>
+                        <strong>Simpan nomor permohonan yang tertera di atas — nomor tersebut diperlukan untuk
+                            melacak status permohonan secara online di portal PPID.</strong>
+                            Nomor ini bersifat unik dan tidak dapat ditebak pihak lain.
                         </p>
 
                     </div>

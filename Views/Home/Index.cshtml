@@ -19,51 +19,31 @@
             Lacak Status<br />Permohonan Data
         </h1>
         <p class="text-white/60 text-sm sm:text-base mb-8 max-w-sm mx-auto leading-relaxed">
-            Masukkan nomor permohonan dan kode verifikasi yang tercetak di formulir Anda.
+            Masukkan nomor permohonan yang tertera pada formulir identifikasi awal Anda.
         </p>
 
-        <!-- Search form — dua kolom: NoPermohonan + Token -->
+        <!-- Search form — nomor permohonan saja (sudah random/non-guessable) -->
         <form asp-action="LacakPost" method="post" class="max-w-lg mx-auto">
             @Html.AntiForgeryToken()
 
-            <div class="flex flex-col gap-2.5">
-
-                <!-- Baris 1: Nomor Permohonan -->
-                <div class="relative">
+            <div class="flex gap-2">
+                <div class="relative flex-1">
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">🔍</span>
                     <input asp-for="NoPermohonan"
-                           class="w-full h-12 pl-10 pr-4 rounded-xl text-gray-800 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-400 font-medium"
-                           placeholder="Nomor Permohonan — Contoh: PPD/2026/0001"             autocomplete="off" />
+                           class="w-full h-12 pl-10 pr-4 rounded-xl text-gray-800 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-400 font-mono tracking-wide uppercase"
+                           placeholder="Contoh: PPD/2026/A3KX9P7B" autocomplete="off"
+                           oninput="this.value = this.value.toUpperCase()" />
                 </div>
-
-                <!-- Baris 2: Kode Verifikasi + Tombol -->
-                <div class="flex gap-2">
-                    <div class="relative flex-1">
-                        <span
-                        class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">🔑</span>
-                        <input asp-for="TokenLacak"                 maxlength="6"
-                               class="w-full h-12 pl-10 pr-4 rounded-xl text-gray-800 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-400 font-mono tracking-widest uppercase"
-                               placeholder="Kode Verifikasi (6 karakter)"                          autocomplete="off"
-                               oninput="this.value = this.value.toUpperCase()" />
-                    </div>
-                    <button type="submit"
-                            class="h-12 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-gray-900 font-bold px-7 rounded-xl transition-colors text-sm whitespace-nowrap shadow-sm">
-                        Cek Status →
-                    </button>
-                </div>
-
+                <button type="submit"
+                        class="h-12 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-gray-900 font-bold px-7 rounded-xl transition-colors text-sm whitespace-nowrap shadow-sm">
+                    Cek Status →
+                </button>
             </div>
 
-            <!-- Validation messages -->
-            <div class="mt-2 space-y-0.5 text-left">
+            <!-- Validation message -->
+            <div class="mt-2 text-left">
                 <span asp-validation-for="NoPermohonan" class="text-amber-300 text-xs block"></span>
-                <span asp-validation-for="TokenLacak" class="text-amber-300 text-xs block"></span>
             </div>
-
-            <!-- Helper text -->
-            <p class="text-white/40 text-xs mt-3">
-                🔒 Kode verifikasi tercetak di formulir identifikasi awal yang Anda tanda tangani.
-            </p>
         </form>
     </div>
 </section>
@@ -79,10 +59,10 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         @{
             var steps = new[]{
-                new { Num="01", Icon="user", Title="Datang ke Loket", Desc="Bawa KTP, surat permohonan, dan dokumen pendukung     sesuai kategori Anda." },
-                new { Num="02", Icon="clipboard", Title="Identifikasi & Daftar", Desc="Petugas loket mendaftarkan dan memberikan nomor permohonan unik." },
-                new { Num="03", Icon="pencil", Title="Tandatangani Dokumen", Desc="Tanda tangani formulir — nomor permohonan dan       kode verifikasi tercetak di formulir ini." },
-                new { Num="04", Icon="download", Title="Pantau & Unduh Data", Desc="Gunakan nomor permohonan + kode verifikasi     dari formulir untuk memantau status." },
+                new { Num="01", Icon="user", Title="Datang ke Loket", Desc="Bawa KTP, surat permohonan, dan dokumen pendukung        sesuai kategori Anda." },
+                new { Num="02", Icon="clipboard", Title="Identifikasi & Daftar", Desc="Petugas loket mendaftarkan dan memberikan       nomor permohonan unik." },
+                new { Num="03", Icon="pencil", Title="Tandatangani Dokumen", Desc="Tanda tangani formulir — nomor permohonan        tercetak di formulir ini. Simpan baik-baik." },
+                new { Num="04", Icon="download", Title="Pantau & Unduh Data", Desc="Gunakan nomor permohonan dari formulir untuk       memantau status secara online." },
             };
         }
 
@@ -157,8 +137,7 @@
                     @foreach (var d in new[] { "Fotokopi KTP", "Surat Permohonan", "Proposal Penelitian" })
                     {
                         <div class="flex items-center gap-2.5">
-                            <div
-                                class="w-5 h-5 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
+                            <div class="w-5 h-5 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
                                 <span class="text-blue-600 text-[10px] font-bold">✓</span>
                             </div>
                             <span class="text-gray-600 text-sm">@d</span>

@@ -10,13 +10,20 @@ public class HomeController(AppDbContext db) : Controller
 {
     public IActionResult Index() => View(new LacakViewModel());
 
+    // ════════════════════════════════════════════════════════════════════════
+    // LACAK — single-factor: NoPermohonan saja sudah cukup karena format
+    // PPD/YYYY/XXXXXXXX tidak dapat dienumerasi (32^8 ≈ 1,1 triliun).
+    // ════════════════════════════════════════════════════════════════════════
+
     [HttpGet]
-    public async Task<IActionResult> Lacak(string? noPermohonan, string? tokenLacak)
+    public async Task<IActionResult> Lacak(string? noPermohonan)
     {
         if (string.IsNullOrEmpty(noPermohonan))
             return View("Index", new LacakViewModel());
 
-        // ── Cari berdasarkan NoPermohonan saja dulu ───────────────────────────
+        // Normalize: uppercase, trim whitespace
+        noPermohonan = noPermohonan.Trim().ToUpperInvariant();
+
         var permohonan = await db.PermohonanPPID
             .Include(p => p.Status)
             .Include(p => p.Detail).ThenInclude(d => d.Keperluan)
@@ -24,30 +31,15 @@ public class HomeController(AppDbContext db) : Controller
             .Include(p => p.Jadwal)
             .FirstOrDefaultAsync(p => p.NoPermohonan == noPermohonan);
 
-        // ── Nomor tidak ditemukan sama sekali ─────────────────────────────────
         if (permohonan == null)
         {
-            TempData["Error"] = $"Nomor permohonan <strong>{noPermohonan}</strong> tidak ditemukan.";
+            // Pesan generik — tidak mengkonfirmasi apakah nomor ada/tidak
+            // (mitigasi oracle attack meski nomor sudah non-sequential)
+            TempData["Error"] = "Nomor permohonan tidak ditemukan. "
+                              + "Pastikan nomor diketik persis seperti yang tertera di formulir Anda.";
             return View("Index", new LacakViewModel { NoPermohonan = noPermohonan });
         }
 
-        // ── Token salah → pesan generik (tidak bocorkan apakah nomor valid) ──
-        // Bandingkan case-insensitive; token disimpan uppercase di DB.
-        bool tokenValid = string.Equals(
-            permohonan.TokenLacak,
-            tokenLacak?.Trim().ToUpperInvariant(),
-            StringComparison.OrdinalIgnoreCase);
-
-        if (!tokenValid)
-        {
-            // Pesan yang sama apakah nomor tidak ada ATAU token salah,
-            // sehingga penyerang tidak tahu mana yang benar.
-            TempData["Error"] = "Nomor permohonan atau kode verifikasi tidak valid. "
-                              + "Pastikan kode verifikasi sesuai dengan yang tercetak di formulir Anda.";
-            return View("Index", new LacakViewModel { NoPermohonan = noPermohonan });
-        }
-
-        // ── Token valid → tampilkan detail ───────────────────────────────────
         var pribadi = await db.Pribadi
             .Include(p => p.PribadiPPID)
             .FirstOrDefaultAsync(p => p.PribadiID == permohonan.PribadiID);
@@ -73,10 +65,13 @@ public class HomeController(AppDbContext db) : Controller
 
         return RedirectToAction("Lacak", new
         {
-            noPermohonan = model.NoPermohonan.Trim().ToUpperInvariant(),
-            tokenLacak = model.TokenLacak.Trim().ToUpperInvariant()
+            noPermohonan = model.NoPermohonan.Trim().ToUpperInvariant()
         });
     }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // KUESIONER
+    // ════════════════════════════════════════════════════════════════════════
 
     [HttpGet]
     public async Task<IActionResult> Kuesioner(Guid id)
@@ -94,7 +89,7 @@ public class HomeController(AppDbContext db) : Controller
         var p = await db.PermohonanPPID.FindAsync(model.PermohonanPPIDID);
         if (p != null)
         {
-            var statusLama = p.StatusPPIDID;           // ← tangkap dulu
+            var statusLama = p.StatusPPIDID;
             p.StatusPPIDID = StatusId.Selesai;
             p.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
@@ -102,7 +97,7 @@ public class HomeController(AppDbContext db) : Controller
             db.AuditLog.Add(new AuditLogPPID
             {
                 PermohonanPPIDID = model.PermohonanPPIDID,
-                StatusLama = statusLama,               // ← pakai yang sudah ditangkap
+                StatusLama = statusLama,
                 StatusBaru = StatusId.Selesai,
                 Keterangan = "Kuesioner kepuasan diisi pemohon",
                 Operator = "Pemohon",
@@ -112,15 +107,13 @@ public class HomeController(AppDbContext db) : Controller
         }
 
         TempData["Success"] = "Terima kasih! Kuesioner berhasil dikirim.";
-        return RedirectToAction("Lacak", new
-        {
-            noPermohonan = model.NoPermohonan,
-            tokenLacak = p?.TokenLacak   // tetap kirim token agar redirect berhasil
-        });
+
+        // Redirect kembali ke halaman detail — tidak perlu token lagi
+        return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan });
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // TIMELINE BUILDER (tidak berubah)
+    // TIMELINE BUILDER
     // ════════════════════════════════════════════════════════════════════════
 
     private static List<RiwayatStatusVm> BuildRiwayat(PermohonanPPID p)

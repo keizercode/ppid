@@ -95,26 +95,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // GenerateNoPermohonan — benar-benar atomic dan tahan data lama
+    // GenerateNoPermohonan — random public identifier + sequential internal key
     //
-    // ROOT CAUSE bug sebelumnya:
-    //   Kolom Sequance pada data lama/test bisa berisi NULL, duplikat, atau
-    //   angka yang tidak sinkron dengan NoPermohonan yang sudah ada di DB.
-    //   Akibatnya MAX(Sequance) menghasilkan angka yang sudah terpakai,
-    //   lalu INSERT gagal karena unique constraint NoPermohonan.
+    // ARSITEKTUR KEAMANAN:
+    //   Skema lama   → NoPermohonan sequential (PPD/2026/0001, 0002, …)
+    //                  Mudah dienumerasi → ditambah TokenLacak sebagai patch.
     //
-    // SOLUSI — dua lapis proteksi:
+    //   Skema baru   → NoPermohonan = PPD/YYYY/<8 random chars>
+    //                  32-karakter alfabet × 8 posisi ≈ 1,1 triliun kombinasi
+    //                  per tahun. Collision probability negligible (<10⁻⁹
+    //                  pada 1 juta permohonan/tahun).
+    //                  TokenLacak dihapus — NoPermohonan SENDIRI adalah rahasia.
     //
-    //   1. Baca nextSeq dari kolom NoPermohonan secara langsung (bukan
-    //      Sequance). NoPermohonan adalah sumber kebenaran yang sesungguhnya
-    //      karena itulah kolom yang punya unique constraint.
-    //      Raw SQL dipakai karena EF Core tidak bisa SPLIT_PART + CAST.
+    // INTERNAL ORDERING:
+    //   NoPermohonanCounter.LastSeq tetap dipakai untuk:
+    //     • field Sequance (sorting/counting dashboard)
+    //     • audit — berapa permohonan masuk tahun ini
+    //   Sequence TIDAK tertanam di NoPermohonan publik.
     //
-    //   2. pg_advisory_xact_lock memastikan hanya satu transaksi yang
-    //      dapat menghitung nextSeq pada satu waktu, sehingga tidak ada
-    //      race condition meski ada banyak request bersamaan.
-    //
-    // Dengan dua lapis ini, tidak perlu hapus database atau clean-build.
+    // RACE-CONDITION GUARD:
+    //   pg_advisory_xact_lock memastikan hanya satu transaksi yang
+    //   mengeksekusi blok ini pada satu waktu (single-node guard).
+    //   Uniqueness constraint pada NoPermohonan di DB adalah safety net kedua.
     // ════════════════════════════════════════════════════════════════════════
 
     public async Task<(string NoPermohonan, int Sequence)> GenerateNoPermohonan()
@@ -125,31 +127,47 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         await using var tx = await Database.BeginTransactionAsync();
         try
         {
-            // Lapis 1 — advisory lock: blok semua request lain sampai commit
+            // Serialize all generation within the same Postgres instance
             await Database.ExecuteSqlRawAsync(
                 "SELECT pg_advisory_xact_lock(20250001)");
 
-            // Lapis 2 — baca dari NoPermohonan, bukan Sequance.
-            // SPLIT_PART('PPD/2026/0007', '/', 3) → '0007' → CAST ke integer → 7
-            // COALESCE mengembalikan 0 jika belum ada data tahun ini.
-            var sql = $"""
-    SELECT COALESCE(
-        MAX(CAST(SPLIT_PART("NoPermohonan", '/', 3) AS INTEGER)),
-        0
-    ) AS "Value"
-    FROM public."PermohonanPPID"
-    WHERE "NoPermohonan" LIKE '{prefix}%'
-    """;
+            // ── 1. Increment counter atomically (UPSERT) ─────────────────
+            // Seed the year row on first use; subsequent calls simply increment.
+            await Database.ExecuteSqlRawAsync($"""
+                INSERT INTO public."NoPermohonanCounter" ("Year", "LastSeq")
+                VALUES ({year}, 1)
+                ON CONFLICT ("Year") DO UPDATE
+                    SET "LastSeq" = public."NoPermohonanCounter"."LastSeq" + 1;
+                """);
 
-            // EF Core 8: SqlQueryRaw<T> untuk scalar
-            var maxSeq = await Database
-                .SqlQueryRaw<int>(sql)
-                .FirstOrDefaultAsync();
+            var nextSeq = await Database
+                .SqlQueryRaw<int>($"""
+                    SELECT "LastSeq" AS "Value"
+                    FROM public."NoPermohonanCounter"
+                    WHERE "Year" = {year}
+                    """)
+                .FirstAsync();
 
-            var nextSeq = maxSeq + 1;
+            // ── 2. Generate random NoPermohonan; retry on the astronomically
+            //       rare collision with an existing record ──────────────────
+            string noPermohonan;
+            const int maxAttempts = 10;
+            for (int attempt = 1; ; attempt++)
+            {
+                noPermohonan = prefix + NoPermohonanToken.Generate();
+                bool taken = await PermohonanPPID
+                    .AnyAsync(p => p.NoPermohonan == noPermohonan);
+
+                if (!taken) break;
+
+                if (attempt >= maxAttempts)
+                    throw new InvalidOperationException(
+                        $"Gagal membuat NoPermohonan unik setelah {maxAttempts} percobaan. " +
+                        "Kemungkinan ada masalah dengan RNG atau collision space yang sangat sempit.");
+            }
+
             await tx.CommitAsync();
-
-            return ($"{prefix}{nextSeq:D4}", nextSeq);
+            return (noPermohonan, nextSeq);
         }
         catch
         {

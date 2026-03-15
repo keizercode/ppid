@@ -4,21 +4,16 @@ using PermintaanData.Models;
 namespace PermintaanData.Models.ViewModels;
 
 // ── PUBLIC: Lacak ─────────────────────────────────────────────────────────────
+//
+// TokenLacak dihapus. NoPermohonan kini berformat PPD/YYYY/XXXXXXXX
+// (8 karakter random) sehingga tidak dapat dienumerasi. Pemohon cukup
+// memasukkan nomor yang tertera di formulir — nomor itu sendiri adalah rahasia.
 
 public class LacakViewModel
 {
     [Required(ErrorMessage = "Nomor permohonan wajib diisi")]
     [Display(Name = "Nomor Permohonan")]
     public string NoPermohonan { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Kode verifikasi 6-karakter yang dicetak di formulir pemohon.
-    /// Wajib diisi bersamaan dengan NoPermohonan untuk mencegah enumerasi.
-    /// </summary>
-    [Required(ErrorMessage = "Kode verifikasi wajib diisi")]
-    [Display(Name = "Kode Verifikasi")]
-    [StringLength(6, MinimumLength = 6, ErrorMessage = "Kode verifikasi harus 6 karakter")]
-    public string TokenLacak { get; set; } = string.Empty;
 }
 
 public class DetailLacakViewModel
@@ -283,6 +278,7 @@ public class JadwalWawancaraVm
 
     [Display(Name = "Lokasi / Platform")]
     public string? Lokasi { get; set; }
+
     /// <summary>True jika jadwal sudah dibuat oleh KDI — form tampil read-only.</summary>
     public bool JadwalSudahAda { get; set; }
 }
