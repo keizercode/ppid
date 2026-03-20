@@ -44,342 +44,351 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
           rel="stylesheet" />
     <style>
-                    * {
-                        box-sizing: border-box;
-                        margin: 0;
-                        padding: 0;
-                    }
+                                        * {
+                                            box-sizing: border-box;
+                                            margin: 0;
+                                            padding: 0;
+                                        }
 
-                    body {
-                        font-family: 'Times New Roman', Times, serif;
-                        font-size: 11pt;
-                        background: #eef2f7;
-                        color: #000;
-                    }
+                                        body {
+                                            font-family: 'Times New Roman', Times, serif;
+                                            font-size: 11pt;
+                                            background: #eef2f7;
+                                            color: #000;
+                                        }
 
-                    /* ── Toolbar ── */
-                    .toolbar {
-                        background: linear-gradient(135deg, #001e55 0%, #002d7a 100%);
-                        color: white;
-                        padding: 0 24px;
-                        height: 56px;
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                        position: sticky;
-                        top: 0;
-                        z-index: 100;
-                        box-shadow: 0 2px 12px rgba(0, 0, 0, .25);
-                    }
+                                        /* ── Toolbar ── */
+                                        .toolbar {
+                                            background: linear-gradient(135deg, #001e55 0%, #002d7a 100%);
+                                            color: white;
+                                            padding: 0 24px;
+                                            height: 56px;
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 12px;
+                                            position: sticky;
+                                            top: 0;
+                                            z-index: 100;
+                                            box-shadow: 0 2px 12px rgba(0, 0, 0, .25);
+                                        }
 
-                    .toolbar-brand {
-                        font-family: 'Plus Jakarta Sans', sans-serif;
-                        font-size: 13px;
-                        font-weight: 700;
-                        color: white;
-                        flex: 1;
-                    }
+                                        .toolbar-brand {
+                                            font-family: 'Plus Jakarta Sans', sans-serif;
+                                            font-size: 13px;
+                                            font-weight: 700;
+                                            color: white;
+                                            flex: 1;
+                                        }
 
-                    .toolbar-brand span {
-                        font-family: monospace;
-                        font-size: 12px;
-                        background: rgba(255, 255, 255, 0.1);
-                        border: 1px solid rgba(255, 255, 255, 0.15);
-                        padding: 2px 8px;
-                        border-radius: 6px;
-                        margin-left: 8px;
-                    }
+                                        .toolbar-brand span {
+                                            font-family: monospace;
+                                            font-size: 12px;
+                                            background: rgba(255, 255, 255, 0.1);
+                                            border: 1px solid rgba(255, 255, 255, 0.15);
+                                            padding: 2px 8px;
+                                            border-radius: 6px;
+                                            margin-left: 8px;
+                                        }
 
-                    .btn {
-                        font-family: 'Plus Jakarta Sans', sans-serif;
-                        padding: 7px 18px;
-                        border-radius: 9px;
-                        font-size: 12px;
-                        font-weight: 700;
-                        cursor: pointer;
-                        border: none;
-                        text-decoration: none;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 6px;
-                        transition: all .15s;
-                    }
-                    .btn-print {
-                        background: #f59e0b;
-                        color: #1c1917;
-                    }
-                    .btn-print:hover {
-                        background: #fbbf24;
-                    }
+                                        .btn {
+                                            font-family: 'Plus Jakarta Sans', sans-serif;
+                                            padding: 7px 18px;
+                                            border-radius: 9px;
+                                            font-size: 12px;
+                                            font-weight: 700;
+                                            cursor: pointer;
+                                            border: none;
+                                            text-decoration: none;
+                                            display: inline-flex;
+                                            align-items: center;
+                                            gap: 6px;
+                                            transition: all .15s;
+                                        }
 
-                    .btn-next {
-                        background: #059669;
-                        color: white;
-                    }
+                                        .btn-print {
+                                            background: #f59e0b;
+                                            color: #1c1917;
+                                        }
 
-                    .btn-next:hover {
-                        background: #047857;
-                    }
+                                        .btn-print:hover {
+                                            background: #fbbf24;
+                                        }
 
-                    .btn-back {
-                        background: rgba(255, 255, 255, 0.08);
-                        color: rgba(255, 255, 255, 0.7);
-                        border: 1px solid rgba(255, 255, 255, 0.15);
-                    }
+                                        .btn-next {
+                                            background: #059669;
+                                            color: white;
+                                        }
 
-                    .btn-back:hover {
-                        background: rgba(255, 255, 255, 0.15);
-                        color: white;
-                    }
+                                        .btn-next:hover {
+                                            background: #047857;
+                                        }
 
-                    /* ── Page wrapper ── */
-                    .page-wrapper {
-                        padding: 28px;
-                        display: flex;
-                        justify-content: center;
-                    }
+                                        .btn-back {
+                                            background: rgba(255, 255, 255, 0.08);
+                                            color: rgba(255, 255, 255, 0.7);
+                                            border: 1px solid rgba(255, 255, 255, 0.15);
+                                        }
 
-                    /* ── A4 paper ── */
-                    .paper {
-                        background: white;
-                        width: 210mm;
-                        min-height: 297mm;
-                        padding: 20mm 20mm 15mm 25mm;
-                        box-shadow: 0 8px 32px rgba(0, 0, 0, .12);
-                        border-radius: 4px;
-                    }
+                                        .btn-back:hover {
+                                            background: rgba(255, 255, 255, 0.15);
+                                            color: white;
+                                        }
 
-                    /* ── Typography ── */
-                    h1.form-title {
-                        font-size: 13pt;
-                        font-weight: bold;
-                        text-transform: uppercase;
-                        text-align: center;
-                        margin-bottom: 4px;
-                    }
+                                        /* ── Page wrapper ── */
+                                        .page-wrapper {
+                                            padding: 28px;
+                                            display: flex;
+                                            justify-content: center;
+                                        }
 
-                    .subtitle {
-                        font-size: 9pt;
-                        text-align: center;
-                        color: #444;
-                        margin-bottom: 8px;
-                    }
+                                        /* ── A4 paper ── */
+                                        .paper {
+                                            background: white;
+                                            width: 210mm;
+                                            min-height: 297mm;
+                                            padding: 20mm 20mm 15mm 25mm;
+                                            box-shadow: 0 8px 32px rgba(0, 0, 0, .12);
+                                            border-radius: 4px;
+                                        }
 
-                    hr.thick {
-                        border: none;
-                        border-top: 2px solid #000;
-                        margin-bottom: 12px;
-                    }
+                                        /* ── Typography ── */
+                                        h1.form-title {
+                                            font-size: 13pt;
+                                            font-weight: bold;
+                                            text-transform: uppercase;
+                                            text-align: center;
+                                            margin-bottom: 4px;
+                                        }
 
-                    /* ── Nomor Permohonan Box ── */
-                    .noperm-box {
-                        margin-bottom: 14px;
-                        border: 2.5px solid #1B3B6F;
-                        border-radius: 6px;
-                        padding: 10px 14px;
-                        background: #f0f4ff;
-                        display: flex;
-                        align-items: center;
-                        gap: 14px;
-                    }
+                                        .subtitle {
+                                            font-size: 9pt;
+                                            text-align: center;
+                                            color: #444;
+                                            margin-bottom: 8px;
+                                        }
 
-                    .noperm-box .noperm-label {
-                        font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
-                        font-size: 9pt;
-                        color: #1B3B6F;
-                        font-weight: 700;
-                        white-space: nowrap;
-                        flex-shrink: 0;
-                    }
+                                        hr.thick {
+                                            border: none;
+                                            border-top: 2px solid #000;
+                                            margin-bottom: 12px;
+                                        }
 
-                    .noperm-box .noperm-value {
-                        font-family: 'Courier New', Courier, monospace;
-                        font-size: 20pt;
-                        font-weight: 900;
-                        letter-spacing: 0.12em;
-                        color: #1B3B6F;
-                        flex: 1;
-                        text-align: center;
-                    }
+                                        /* ── Nomor Permohonan Box ── */
+                                        .noperm-box {
+                                            margin-bottom: 14px;
+                                            border: 2.5px solid #1B3B6F;
+                                            border-radius: 6px;
+                                            padding: 10px 14px;
+                                            background: #f0f4ff;
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 14px;
+                                        }
 
-                    .noperm-box .noperm-note {
-                        font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
-                        font-size: 8pt;
-                        color: #374151;
-                        flex-shrink: 0;
-                        max-width: 150px;
-                        line-height: 1.4;
-                    }
+                                        .noperm-box .noperm-label {
+                                            font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
+                                            font-size: 9pt;
+                                            color: #1B3B6F;
+                                            font-weight: 700;
+                                            white-space: nowrap;
+                                            flex-shrink: 0;
+                                        }
 
-                    /* ── Data rows ── */
-                    table.data-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 4px;
-                    }
+                                        .noperm-box .noperm-value {
+                                            font-family: 'Courier New', Courier, monospace;
+                                            font-size: 20pt;
+                                            font-weight: 900;
+                                            letter-spacing: 0.12em;
+                                            color: #1B3B6F;
+                                            flex: 1;
+                                            text-align: center;
+                                        }
 
-                    table.data-table td {
-                        vertical-align: top;
-                        padding: 3px 0;
-                    }
+                                        .noperm-box .noperm-note {
+                                            font-family: 'Plus Jakarta Sans', 'Arial', sans-serif;
+                                            font-size: 8pt;
+                                            color: #374151;
+                                            flex-shrink: 0;
+                                            max-width: 150px;
+                                            line-height: 1.4;
+                                        }
 
-                    table.data-table td.label {
-                        width: 185px;
-                        font-weight: bold;
-                        white-space: nowrap;
-                    }
+                                        /* ── Data rows ── */
+                                        table.data-table {
+                                            width: 100%;
+                                            border-collapse: collapse;
+                                            margin-bottom: 4px;
+                                        }
 
-                    table.data-table td.sep {
-                        width: 12px;
-                    }
+                                        table.data-table td {
+                                            vertical-align: top;
+                                            padding: 3px 0;
+                                        }
 
-                    table.data-table td.value .underline {
-                        display: block;
-                        border-bottom: 1px solid #000;
-                        min-height: 20px;
-                        padding-bottom: 1px;
-                    }
+                                        table.data-table td.label {
+                                            width: 185px;
+                                            font-weight: bold;
+                                            white-space: nowrap;
+                                        }
 
-                    table.data-table td.value .multiline {
-                        display: block;
-                        border-bottom: 1px solid #000;
-                        min-height: 48px;
-                        padding-bottom: 2px;
-                        white-space: pre-wrap;
-                        line-height: 1.5;
-                    }
+                                        table.data-table td.sep {
+                                            width: 12px;
+                                        }
 
-                    /* ── Checkboxes ── */
-                    .cb-row {
-                        margin: 8px 0 4px;
-                    }
+                                        table.data-table td.value .underline {
+                                            display: block;
+                                            border-bottom: 1px solid #000;
+                                            min-height: 20px;
+                                            padding-bottom: 1px;
+                                        }
 
-                    .cb {
-                        display: inline-block;
-                        width: 13px;
-                        height: 13px;
-                        border: 1.5px solid #000;
-                        margin-right: 4px;
-                        vertical-align: middle;
-                        text-align: center;
-                        font-size: 10pt;
-                        line-height: 12px;
-                    }
+                                        table.data-table td.value .multiline {
+                                            display: block;
+                                            border-bottom: 1px solid #000;
+                                            min-height: 48px;
+                                            padding-bottom: 2px;
+                                            white-space: pre-wrap;
+                                            line-height: 1.5;
+                                        }
 
-                    .cb.checked::after {
-                        content: '✓';
-                        font-weight: bold;
-                    }
+                                        /* ── Checkboxes ── */
+                                        .cb-row {
+                                            margin: 8px 0 4px;
+                                        }
 
-                    .cb-label {
-                        margin-right: 24px;
-                        vertical-align: middle;
-                    }
+                                        .cb {
+                                            display: inline-block;
+                                            width: 13px;
+                                            height: 13px;
+                                            border: 1.5px solid #000;
+                                            margin-right: 4px;
+                                            vertical-align: middle;
+                                            text-align: center;
+                                            font-size: 10pt;
+                                            line-height: 12px;
+                                        }
 
-                    /* ── Section title ── */
-                    .section-title {
-                        font-weight: bold;
-                        margin: 10px 0 4px;
-                    }
+                                        .cb.checked::after {
+                                            content: '✓';
+                                            font-weight: bold;
+                                        }
 
-                    /* ── Detail table ── */
-                    table.detail-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 4px;
-                    }
+                                        .cb-label {
+                                            margin-right: 24px;
+                                            vertical-align: middle;
+                                        }
 
-                    table.detail-table td {
-                        vertical-align: top;
-                        padding: 3px 0;
-                    }
+                                        /* ── Section title ── */
+                                        .section-title {
+                                            font-weight: bold;
+                                            margin: 10px 0 4px;
+                                        }
 
-                    table.detail-table td.dlabel {
-                        width: 230px;
-                        font-style: italic;
-                        font-size: 10pt;
-                    }
-                    table.detail-table td.dsep {
-                        width: 12px;
-                    }
-                    table.detail-table td.dvalue .underline {
-                        display: block;
-                        border-bottom: 1px solid #000;
-                        min-height: 44px;
-                        padding-bottom: 2px;
-                        white-space: pre-wrap;
-                        font-style: normal;
-                    }
-                    .hint {
-                        font-size: 8pt;
-                        color: #555;
-                        display: block;
-                    }
+                                        /* ── Detail table ── */
+                                        table.detail-table {
+                                            width: 100%;
+                                            border-collapse: collapse;
+                                            margin-bottom: 4px;
+                                        }
 
-                    /* ── Signature ── */
-                    .sign-row {
-                        display: flex;
-                        margin-top: 24px;
-                    }
+                                        table.detail-table td {
+                                            vertical-align: top;
+                                            padding: 3px 0;
+                                        }
 
-                    .sign-col {
-                        flex: 1;
-                        text-align: center;
-                        padding: 8px 10px;
-                    }
-                    .sign-space {
-                        height: 72px;
-                    }
+                                        table.detail-table td.dlabel {
+                                            width: 230px;
+                                            font-style: italic;
+                                            font-size: 10pt;
+                                        }
 
-                    .sign-name {
-                        font-weight: bold;
-                        border-top: 1px solid #000;
-                        display: inline-block;
-                        padding-top: 3px;
-                        min-width: 150px;
-                        margin-top: 4px;
-                    }
-                    .sign-nik {
-                        font-size: 9pt;
-                        margin-top: 2px;
-                    }
+                                        table.detail-table td.dsep {
+                                            width: 12px;
+                                        }
 
-                    /* ── NB ── */
-                    .nb {
-                        font-size: 8.5pt;
-                        color: #333;
-                        margin-top: 14px;
-                    }
+                                        table.detail-table td.dvalue .underline {
+                                            display: block;
+                                            border-bottom: 1px solid #000;
+                                            min-height: 44px;
+                                            padding-bottom: 2px;
+                                            white-space: pre-wrap;
+                                            font-style: normal;
+                                        }
 
-                    /* ── Print ── */
-                    @@media print {
-                        body {
-                            background: white;
-                        }
+                                        .hint {
+                                            font-size: 8pt;
+                                            color: #555;
+                                            display: block;
+                                        }
 
-                        .toolbar {
-                            display: none !important;
-                        }
-                        .noperm-box {
-                            display: none !important;
-                        }
-                        .page-wrapper {
-                            padding: 0;
-                        }
+                                        /* ── Signature ── */
+                                        .sign-row {
+                                            display: flex;
+                                            margin-top: 24px;
+                                        }
 
-                        .paper {
-                            box-shadow: none;
-                            width: 100%;
-                            min-height: unset;
-                            padding: 12mm 15mm 10mm 20mm;
-                            border-radius: 0;
-                        }
+                                        .sign-col {
+                                            flex: 1;
+                                            text-align: center;
+                                            padding: 8px 10px;
+                                        }
 
-                        @@page {
-                            size: A4;
-                            margin: 0;
-                        }
-                    }
+                                        .sign-space {
+                                            height: 72px;
+                                        }
+
+                                        .sign-name {
+                                            font-weight: bold;
+                                            border-top: 1px solid #000;
+                                            display: inline-block;
+                                            padding-top: 3px;
+                                            min-width: 150px;
+                                            margin-top: 4px;
+                                        }
+
+                                        .sign-nik {
+                                            font-size: 9pt;
+                                            margin-top: 2px;
+                                        }
+
+                                        /* ── NB ── */
+                                        .nb {
+                                            font-size: 8.5pt;
+                                            color: #333;
+                                            margin-top: 14px;
+                                        }
+
+                                        /* ── Print ── */
+                                        @@media print {
+                                            body {
+                                                background: white;
+                                            }
+
+                                            .toolbar {
+                                                display: none !important;
+                                            }
+
+                                            .noperm-box {
+                                                display: none !important;
+                                            }
+
+                                            .page-wrapper {
+                                                padding: 0;
+                                            }
+
+                                            .paper {
+                                                box-shadow: none;
+                                                width: 100%;
+                                                min-height: unset;
+                                                padding: 12mm 15mm 10mm 20mm;
+                                                border-radius: 0;
+                                            }
+
+                                            @@page {
+                                                size: A4;
+                                                margin: 0;
+                                            }
+                                        }
     </style>
 </head>
 
@@ -410,7 +419,7 @@
 
             <!-- Nomor Permohonan Box (hanya tampil di layar, hidden saat print) -->
             <div class="noperm-box">
-                <div class="noperm-label">📋 NOMOR<br />PERMOHONAN</div>
+                <div class="noperm-label">📋 NOMOR<br />PERMOHONAN</div> <br />
                 <div class="noperm-value">@(Model.NoPermohonan ?? "—")</div>
                 <div class="noperm-note">
                     Simpan formulir ini. Nomor di atas diperlukan untuk melacak status permohonan di portal online.
@@ -496,7 +505,7 @@
                 <span class="cb @(isLainnya ? "checked" : "")"></span><span class="cb-label">Lainnya, sebutkan :</span>
                 <span
                     style="display:inline-block;border-bottom:1px solid #000;min-width:260px;padding-bottom:1px;">@(isLainnya
-                                                                                ? tujuan : "")</span>
+                                                                                                                                                                                    ? tujuan : "")</span>
                 </div>
 
                 <!-- Keperluan -->
