@@ -63,19 +63,19 @@
 
                         <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10
                             @(step.Selesai ? "bg-emerald-500 text-white" :
-                                                           step.AktifSekarang ? "bg-[#1B3B6F] text-white" :
-                                                                                "bg-gray-100 text-gray-400")">
+                                                                                        step.AktifSekarang ? "bg-[#1B3B6F] text-white" :
+                                                                                                             "bg-gray-100 text-gray-400")">
                             @(step.Selesai ? "✓" : step.AktifSekarang ? "●" : "○")
                         </div>
 
                         <div class="flex-1 pt-0.5">
                             <div class="rounded-xl px-4 py-3 border
                                 @(step.AktifSekarang ? "bg-blue-50 border-blue-100" :
-                                                                   step.Selesai ? "bg-emerald-50 border-emerald-100" :
-                                                                                        "bg-gray-50 border-gray-100")">
+                                                                                                    step.Selesai ? "bg-emerald-50 border-emerald-100" :
+                                                                                                                         "bg-gray-50 border-gray-100")">
                                 <p class="font-semibold text-sm
                                     @(step.AktifSekarang ? "text-blue-800" :
-                                                                         step.Selesai ? "text-emerald-700" : "text-gray-400")">
+                                                                                                            step.Selesai ? "text-emerald-700" : "text-gray-400")">
                                     @step.Label
                                 </p>
                                 @if (step.AktifSekarang)

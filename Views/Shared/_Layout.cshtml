@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] — PPID DLH Jakarta</title>
+    <title>@ViewData["Title"]</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -18,14 +18,14 @@
         }
 
         body {
-        background-color: #F5F7FA;
-        color: #111827;
+        background-color: #F7F9FC;
+        color: #1A1A2E;
         }
 
+        /* Global alert animations */
         .alert-slide {
         animation: alertSlide .25s ease both;
         }
-
         @@keyframes alertSlide {
         from {
         opacity: 0;
@@ -42,102 +42,17 @@
 
 <body class="min-h-screen flex flex-col antialiased">
 
-    <!-- NAV -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-
-            <a href="/" class="flex items-center gap-2.5">
-
-                <div class="w-8 h-8 bg-[#1B3B6F] rounded-lg flex items-center justify-center">
-
-                    <!-- building icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                         stroke-width="2" class="w-5 h-5 text-white">
-
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-
-                    </svg>
-
-                </div>
-
-                <div>
-                    <p class="text-[10px] text-gray-400 uppercase tracking-widest leading-none font-medium">
-                        Dinas Lingkungan Hidup
-                    </p>
-
-                    <p class="text-gray-800 font-semibold text-[13px] leading-tight">
-                        Sistem Permohonan Data
-                    </p>
-                </div>
-
-            </a>
-
-            <nav class="flex items-center gap-1">
-
-                <a href="/"
-                       class="text-gray-500 hover:text-gray-900 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                    Beranda
-                </a>
-
-            </nav>
-
-        </div>
-    </header>
-
-
-    <!-- SUCCESS ALERT -->
-    @if (TempData["Success"] != null)
+    @* ── Success alert (non-homepage pages, e.g. Kuesioner redirect) ── *@
+    @if (TempData["Success"] != null && !ViewData.ContainsKey("HideGlobalAlert"))
     {
         <div class="alert-slide bg-emerald-50 border-b border-emerald-200">
-
             <div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2.5">
-
-                <div class="w-5 h-5 text-emerald-600 flex-shrink-0">
-
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                         stroke-width="2">
-
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-
-                    </svg>
-
-                </div>
-
-                <p class="text-emerald-800 text-sm font-medium">
-                    @Html.Raw(TempData["Success"])
-                </p>
-
+                <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                     stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <p class="text-emerald-800 text-sm font-medium">@Html.Raw(TempData["Success"])</p>
             </div>
-
-        </div>
-    }
-
-
-    <!-- ERROR ALERT -->
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert-slide bg-red-50 border-b border-red-200">
-
-            <div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-2.5">
-
-                <div class="w-5 h-5 text-red-600 flex-shrink-0">
-
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                         stroke-width="2">
-
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-
-                    </svg>
-
-                </div>
-
-                <p class="text-red-800 text-sm font-medium">
-                    @Html.Raw(TempData["Error"])
-                </p>
-
-            </div>
-
         </div>
     }
 
@@ -145,12 +60,68 @@
         @RenderBody()
     </main>
 
+    <!-- ══ SITE FOOTER ══ -->
+    <footer style="background:#0D1F3C; color:rgba(255,255,255,.45);">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
 
-    <footer class="bg-white border-t border-gray-200 mt-auto">
-        <div class="max-w-6xl mx-auto px-6 py-6">
-            <p class="text-gray-400 text-xs text-center">
-                &copy; @DateTime.Now.Year · Sistem Informasi PPID DLH
-            </p>
+                <!-- Brand -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <img src="https://ppid.jakarta.go.id/assets/home/ppidNew/images/logo/logo-ppid-email.png"
+                             alt="Logo PPID"         class="h-9 object-contain"                   onerror="this.style.display='none'" />
+                        <div>
+                            <p class="text-white font-bold text-sm leading-tight">PPID DLH Jakarta</p>
+                            <p style="color:rgba(255,255,255,.4)" class="text-[11px]">Dinas Lingkungan Hidup</p>
+                        </div>
+                    </div>
+                    <p style="color:rgba(255,255,255,.4)" class="text-xs leading-relaxed">
+                        Pejabat Pengelola Informasi dan Dokumentasi Dinas Lingkungan Hidup Provinsi DKI Jakarta.
+                        Melayani permohonan informasi publik bidang lingkungan hidup secara transparan dan akuntabel.
+                    </p>
+                </div>
+
+                <!-- Layanan -->
+                <div>
+                    <p class="text-white font-bold text-xs uppercase tracking-widest mb-4">Layanan</p>
+                    <ul class="space-y-2">
+                        @foreach (var l in new[]{
+                            ("Lacak Permohonan", "#lacak"),
+                            ("Alur Permohonan", "#alur"),
+                            ("Tentang PPID", "#tentang"),
+                            ("Portal PPID Jakarta", "https://ppid.jakarta.go.id"),
+                        })
+                        {
+                            <li>
+                                <a href="@l.Item2" style="color:rgba(255,255,255,.45)"
+                                   class="text-xs hover:text-white transition-colors">@l.Item1</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <!-- Kontak -->
+                <div>
+                    <p class="text-white font-bold text-xs uppercase tracking-widest mb-4">Kontak</p>
+                    <ul class="space-y-2 text-xs" style="color:rgba(255,255,255,.45)">
+                        <li>📍 Jl. Mandala V No. 67, Cililitan, Jakarta Timur</li>
+                        <li>📞 (021) 8591-2230</li>
+                        <li>📧 ppid.dlh@jakarta.go.id</li>
+                        <li>🕐 Senin – Jumat, 08.00 – 16.00 WIB</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3"
+                 style="border-color:rgba(255,255,255,.08)">
+                <p class="text-xs" style="color:rgba(255,255,255,.3)">
+                    &copy; @DateTime.Now.Year · PPID Dinas Lingkungan Hidup Provinsi DKI Jakarta
+                </p>
+                <a href="/auth/login"                   class="text-xs font-medium transition-colors"                   style="color:rgba(255,255,255,.3)">
+                    Masuk sebagai Petugas →
+                </a>
+            </div>
         </div>
     </footer>
 
