@@ -183,6 +183,11 @@
                 <span class="sec-num">5</span>
                 <p class="sec-title">Keperluan <span class="text-gray-400 font-normal text-xs">(bisa lebih dari 1)</span></p>
             </div>
+@*
+            <%-- CATATAN: Unit Kerja dihapus dari form ini.
+                 Disposisi unit kerja dilakukan oleh Kepegawaian saat menerbitkan Surat Izin.
+                 Kepegawaian dapat memilih lebih dari satu unit kerja. --%> *@
+
             <div class="space-y-3">
                 <div class="border border-gray-100 rounded-xl overflow-hidden">
                     <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
@@ -214,21 +219,10 @@
             </div>
         </div>
 
-        <!-- ── 6. UNIT KERJA ── -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
-            <div class="sec-header">
-                <span class="sec-num">6</span>
-                <p class="sec-title">Unit Kerja</p>
-            </div>
-            <select id="sel-bidang" class="fld" disabled onchange="onBidangChange()"><option value="">Memuat...</option></select>
-            <input type="hidden" asp-for="BidangID"   id="f-bidangID"   />
-            <input type="hidden" asp-for="NamaBidang" id="f-namaBidang" />
-        </div>
-
-        <!-- ── 7. UPLOAD DOKUMEN ── -->
+        <!-- ── 6. UPLOAD DOKUMEN ── -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
             <div class="sec-header">
-                <span class="sec-num">7</span>
+                <span class="sec-num">6</span>
                 <p class="sec-title">Upload Dokumen Persyaratan</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -282,12 +276,12 @@
 
 @section Scripts {
 <script>
-// ─── Helpers (same pattern as PetugasLoket/DaftarPemohon) ────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 function g(id){return document.getElementById(id)}
 function setF(id,val){var el=g(id);if(el)el.value=(val==null)?'':String(val)}
 function getF(id){var el=g(id);return el?el.value:''}
 function toArray(raw){if(!raw)return[];if(Array.isArray(raw))return raw;if(Array.isArray(raw.data))return raw.data;return[]}
-function itemLabel(item){return item.data||item.nama||item.name||item.namaBidang||String(item.id||'')}
+function itemLabel(item){return item.data||item.nama||item.name||String(item.id||'')}
 function fillSel(selId,items,ph){var sel=g(selId);if(!sel)return;sel.innerHTML='<option value="">'+ph+'</option>';items.forEach(function(item){var o=document.createElement('option');o.value=String(item.id||'');o.text=itemLabel(item);sel.appendChild(o)});sel.disabled=(items.length===0)}
 function pickSel(selId,value,hidValId,hidNamId){if(!value&&value!==0)return false;var needle=String(value);var sel=g(selId);if(!sel)return false;for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===needle){sel.selectedIndex=i;setF(hidValId,sel.options[i].value);setF(hidNamId,sel.options[i].text);return true}}setF(hidValId,needle);return false}
 function resetSel(selId,ph,hidValId,hidNamId){var sel=g(selId);if(sel){sel.innerHTML='<option value="">'+ph+'</option>';sel.disabled=true}if(hidValId)setF(hidValId,'');if(hidNamId)setF(hidNamId,'')}
@@ -305,9 +299,6 @@ async function onProvinsiChange(){var sel=g('sel-provinsi');var opt=sel.options[
 async function onKabupatenChange(){var sel=g('sel-kabupaten');var opt=sel.options[sel.selectedIndex];setF('f-kabupatenID',opt.value);setF('f-namaKabupaten',opt.text);resetSel('sel-kecamatan','— Pilih Kecamatan —','f-kecamatanID','f-namaKecamatan');resetSel('sel-kelurahan','— Pilih Kelurahan —','f-kelurahanID','f-namaKelurahan');if(opt.value){setAlamatLoading(true);await loadKecamatan(opt.value);setAlamatLoading(false)}}
 async function onKecamatanChange(){var sel=g('sel-kecamatan');var opt=sel.options[sel.selectedIndex];setF('f-kecamatanID',opt.value);setF('f-namaKecamatan',opt.text);resetSel('sel-kelurahan','— Pilih Kelurahan —','f-kelurahanID','f-namaKelurahan');if(opt.value){setAlamatLoading(true);await loadKelurahan(opt.value);setAlamatLoading(false)}}
 function onKelurahanChange(){var sel=g('sel-kelurahan');var opt=sel.options[sel.selectedIndex];setF('f-kelurahanID',opt.value);setF('f-namaKelurahan',opt.text)}
-function onBidangChange(){var sel=g('sel-bidang');var opt=sel.options[sel.selectedIndex];setF('f-bidangID',opt.value);setF('f-namaBidang',opt.text)}
-
-async function loadBidang(){try{var raw=await fetchJSON('/api/bidang');var items=toArray(raw);var sel=g('sel-bidang');sel.innerHTML='<option value="">— Pilih Unit Kerja —</option>';items.forEach(function(d){var o=document.createElement('option');o.value=String(d.id||'');o.text=d.namaBidang||d.nama||'';sel.appendChild(o)});sel.disabled=false;var savedId=getF('f-bidangID');if(savedId)pickSel('sel-bidang',savedId,'f-bidangID','f-namaBidang')}catch(e){var sel=g('sel-bidang');sel.innerHTML='<option value="">— Gagal memuat —</option>';sel.disabled=false}}
 
 function switchTab(t){var isNik=(t==='nik');g('panel-nik').style.display=isNik?'block':'none';var base='px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors ';g('tab-nik').className=base+(isNik?'bg-[#002d7a] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200');g('tab-manual').className=base+(!isNik?'bg-[#002d7a] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200')}
 function nikMsg(html,type){var el=g('nik-msg');var bg={ok:'bg-green-50 text-green-700',err:'bg-red-50 text-red-700',warn:'bg-amber-50 text-amber-700',info:'bg-blue-50 text-blue-600'};el.className='mt-2 text-xs p-2 rounded-lg '+(bg[type]||'');el.innerHTML=html;el.classList.remove('hidden')}
@@ -316,6 +307,6 @@ g('btn-cari').addEventListener('click',cariNik);
 async function cariNik(){var nik=g('nik-input').value.replace(/\D/g,'');var btn=g('btn-cari');if(nik.length!==16){nikMsg('NIK harus 16 digit angka.','err');return}btn.disabled=true;btn.innerHTML='⏳';nikMsg('Mencari...','info');var d;try{d=await fetchJSON('/api/cek-nik?nik='+nik)}catch(e){nikMsg('❌ Gagal menghubungi server.','err');setF('f-nik',nik);switchTab('manual');btn.disabled=false;btn.textContent='Cari';return}if(!d||!d.nama){nikMsg('⚠️ NIK tidak ditemukan. Isi manual.','warn');setF('f-nik',nik);switchTab('manual');btn.disabled=false;btn.textContent='Cari';return}setF('f-nik',nik);setF('f-nama',d.nama);setF('f-telepon',d.telepon);setF('f-email',d.email);setF('f-rt',d.rt);setF('f-rw',d.rw);setF('f-alamat',d.alamat);setF('f-lembaga',d.lembaga);setF('f-pekerjaan',d.pekerjaan);if(d.provinsiID){setF('f-provinsiID',d.provinsiID);setF('f-namaProvinsi',d.namaProvinsi);pickSel('sel-provinsi',d.provinsiID,'f-provinsiID','f-namaProvinsi')}setF('f-kabupatenID',d.kabupatenID);setF('f-namaKabupaten',d.kota);setF('f-kecamatanID',d.kecamatanID);setF('f-namaKecamatan',d.kecamatan);setF('f-kelurahanID',d.kelurahanID);setF('f-namaKelurahan',d.kelurahan);if(d.kabupatenID||d.kecamatanID||d.kelurahanID)await cascadeWilayah(d.kabupatenID,d.kecamatanID,d.kelurahanID,d.kota,d.kecamatan,d.kelurahan);nikMsg('✅ Data ditemukan: <strong>'+d.nama+'</strong>','ok');switchTab('manual');btn.disabled=false;btn.textContent='Cari'}
 
 function toggleDetail(id,cb){var el=g(id);if(el)el.classList.toggle('hidden',!cb.checked)}
-(async function init(){switchTab('nik');await Promise.all([loadProvinsi(),loadBidang()]);var sk=getF('f-kabupatenID'),sc=getF('f-kecamatanID'),sl=getF('f-kelurahanID'),sp=getF('f-provinsiID');if(sp)pickSel('sel-provinsi',sp,'f-provinsiID','f-namaProvinsi');if(sk||sc||sl)await cascadeWilayah(sk,sc,sl,getF('f-namaKabupaten'),getF('f-namaKecamatan'),getF('f-namaKelurahan'))})();
+(async function init(){switchTab('nik');await loadProvinsi();var sk=getF('f-kabupatenID'),sc=getF('f-kecamatanID'),sl=getF('f-kelurahanID'),sp=getF('f-provinsiID');if(sp)pickSel('sel-provinsi',sp,'f-provinsiID','f-namaProvinsi');if(sk||sc||sl)await cascadeWilayah(sk,sc,sl,getF('f-namaKabupaten'),getF('f-namaKecamatan'),getF('f-namaKelurahan'))})();
 </script>
 }
