@@ -1,0 +1,73 @@
+@model IdentifikasiPemohonVm
+@{
+    ViewData["Title"] = "Identifikasi Pemohon — Loket Umum";
+    ViewData["Role"]  = "Loket Umum";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-lg mx-auto">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl">🏢</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Langkah 1 — Identifikasi Pemohon</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Pilih kategori pemohon Loket Umum</p>
+            </div>
+        </div>
+
+        <div class="p-6">
+
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-5 flex gap-3 items-start">
+                <span class="text-emerald-500 text-lg mt-0.5 flex-shrink-0">ℹ️</span>
+                <div>
+                    <p class="font-bold text-emerald-800 text-sm">Loket Umum</p>
+                    <p class="text-emerald-700 text-xs mt-1 leading-relaxed">
+                        Loket ini melayani pemohon dari LSM, Organisasi, dan Perusahaan.
+                        Nomor permohonan akan menggunakan prefix <strong>UMM</strong>.
+                    </p>
+                </div>
+            </div>
+
+            <form asp-action="IdentifikasiPost" asp-controller="LoketUmum" method="post">
+                @Html.AntiForgeryToken()
+
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Pilih Kategori Pemohon</p>
+
+                <div class="space-y-2.5 mb-6">
+                    @foreach (var (val, icon, lbl, desc, border) in new[]{
+                        ("LSM",           "🏛️", "LSM / NGO",         "KTP + Akta Notaris + Surat Permohonan",            "has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50"),
+                        ("Organisasi",    "🤝", "Organisasi",         "KTP + Surat Keterangan Organisasi + Surat Permohonan","has-[:checked]:border-blue-500    has-[:checked]:bg-blue-50"),
+                        ("Perusahaan",    "🏢", "Perusahaan / Badan Usaha","KTP + SIUP/NIB + Surat Permohonan",            "has-[:checked]:border-amber-500   has-[:checked]:bg-amber-50"),
+                        ("Perseorangan",  "👤", "Masyarakat Umum / Perseorangan","KTP + Surat Permohonan",                "has-[:checked]:border-gray-400    has-[:checked]:bg-gray-50"),
+                    })
+                    {
+                        <label class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100 hover:border-gray-200 cursor-pointer transition-all @border">
+                            <input type="radio" asp-for="Kategori" value="@val" class="mt-0.5 accent-blue-600 flex-shrink-0" />
+                            <div class="flex items-start gap-3 flex-1">
+                                <span class="text-xl mt-0.5">@icon</span>
+                                <div>
+                                    <p class="font-bold text-sm text-gray-800">@lbl</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">@desc</p>
+                                </div>
+                            </div>
+                        </label>
+                    }
+                </div>
+
+                <span asp-validation-for="Kategori" class="text-red-500 text-xs block -mt-3 mb-4"></span>
+
+                <div class="flex gap-3">
+                    <a href="/loket-umum"
+                       class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                        Batal
+                    </a>
+                    <button type="submit"
+                            class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                        Lanjutkan →
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

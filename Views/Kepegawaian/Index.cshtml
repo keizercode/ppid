@@ -5,6 +5,70 @@
     Layout = "_LayoutAdmin";
 }
 
+@{
+    // Stat per tahap alur
+    int menungguSuratIzin = Model.Count(p => p.StatusPPIDID == StatusId.MenungguSuratIzin);
+    int sudahDisposisi    = Model.Count(p => p.StatusPPIDID >= StatusId.Didisposisi && p.StatusPPIDID < StatusId.DataSiap);
+    int selesai           = Model.Count(p => p.StatusPPIDID >= StatusId.DataSiap);
+    int total             = Model.Count;
+}
+
+<!-- ── POINT 3: ALUR PROSES KEPEGAWAIAN ─────────────────────────────────── -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+    <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Alur Proses Permohonan</p>
+
+    <div class="flex items-center gap-0 overflow-x-auto pb-2">
+        @{
+            var steps = new (string Icon, string Label, string Sub, string Color, int Count, bool IsActive)[]
+            {
+                ("📝", "Permohonan",          "Masuk dari Loket",             "blue",   total,           false),
+                ("✍️",  "Identifikasi Awal",   "TTD Pemohon",                  "indigo", 0,               false),
+                ("🔍", "Verifikasi Kasubkel",  "Kasubkel acc & disposisi unit","violet", 0,               false),
+                ("📋", "Surat Izin",           "Diterbitkan Kepegawaian",      "amber",  menungguSuratIzin,true),
+                ("📤", "Disposisi ke KDI",     "Diteruskan ke unit",           "orange", sudahDisposisi,  false),
+                ("📊", "Proses / Jadwal",      "KDI olah data/jadwal",         "teal",   0,               false),
+                ("💬", "Feedback Pemohon",     "Kuesioner kepuasan",           "pink",   0,               false),
+                ("✅", "Selesai",              "Permohonan tuntas",            "emerald",selesai,         false),
+            };
+            var colorMap = new System.Collections.Generic.Dictionary<string, string> {
+                {"blue","bg-blue-100 text-blue-700 border-blue-200"},
+                {"indigo","bg-indigo-100 text-indigo-700 border-indigo-200"},
+                {"violet","bg-violet-100 text-violet-700 border-violet-200"},
+                {"amber","bg-amber-100 text-amber-700 border-amber-300"},
+                {"orange","bg-orange-100 text-orange-700 border-orange-200"},
+                {"teal","bg-teal-100 text-teal-700 border-teal-200"},
+                {"pink","bg-pink-100 text-pink-700 border-pink-200"},
+                {"emerald","bg-emerald-100 text-emerald-700 border-emerald-200"},
+            };
+        }
+
+        @for (int i = 0; i < steps.Length; i++) {
+            var s = steps[i];
+            string cls = colorMap.ContainsKey(s.Color) ? colorMap[s.Color] : "bg-gray-100 text-gray-600 border-gray-200";
+            string activeCls = s.IsActive ? "ring-2 ring-amber-400 ring-offset-1" : "";
+            <div class="flex items-center flex-shrink-0">
+                <div class="flex flex-col items-center w-24 @activeCls rounded-xl p-0.5">
+                    <div class="w-10 h-10 rounded-full @cls border-2 flex items-center justify-center text-lg mb-1.5 @activeCls">
+                        @s.Icon
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-700 text-center leading-tight">@s.Label</p>
+                    <p class="text-[9px] text-gray-400 text-center mt-0.5 leading-tight">@s.Sub</p>
+                    @if (s.Count > 0) {
+                        <span class="mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full @cls border">@s.Count</span>
+                    }
+                    @if (s.IsActive) {
+                        <span class="mt-1 text-[9px] font-bold text-amber-600 animate-pulse">◀ Di sini</span>
+                    }
+                </div>
+                @if (i < steps.Length - 1) {
+                    <div class="w-5 h-0.5 bg-gray-200 flex-shrink-0 mx-1"></div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ── Header + count ── -->
 <div class="flex items-center justify-between mb-4">
     <div>
         <p class="font-bold text-gray-700 text-sm">Permohonan Menunggu Surat Izin</p>
@@ -15,6 +79,7 @@
     }
 </div>
 
+<!-- ── Table ── -->
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     @if (!Model.Any()) {
         <div class="text-center py-20">
@@ -27,27 +92,45 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-50">
-                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">No. Permohonan</th>
-                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pemohon</th>
-                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Kategori</th>
-                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Judul</th>
-                        <th class="px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aksi</th>
+                        <th class="col-th">No. Permohonan</th>
+                        <th class="col-th">Pemohon</th>
+                        <th class="col-th">Kategori</th>
+                        <th class="col-th">Keperluan</th>
+                        <th class="col-th">Batas Waktu</th>
+                        <th class="col-th">Pengampu</th>
+                        <th class="col-th">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @foreach (var item in Model) {
-                        <tr class="hover:bg-blue-50/30 transition-colors group">
+                        bool overdue = item.IsOverdue;
+                        <tr class="hover:bg-blue-50/30 transition-colors group @(overdue ? "bg-red-50/20" : "")">
                             <td class="px-5 py-3.5 font-mono text-xs text-blue-600 font-semibold">@item.NoPermohonan</td>
                             <td class="px-5 py-3.5 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
                             <td class="px-5 py-3.5">
-                                <span class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
-                                    @(item.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa" : "🏢 LSM")
+                                <span class="text-xs font-medium @(item.KategoriPemohon=="Mahasiswa"?"text-blue-600":"text-emerald-600")">
+                                    @(item.KategoriPemohon=="Mahasiswa"?"🎓 Mahasiswa":"🏢 LSM")
                                 </span>
                             </td>
-                            <td class="px-5 py-3.5 text-xs text-gray-500 max-w-xs truncate">@item.JudulPenelitian</td>
+                            <td class="px-5 py-3.5">
+                                <div class="flex flex-wrap gap-1">
+                                    @if(item.IsObservasi){<span class="text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-1.5 py-0.5 rounded-full">Obs</span>}
+                                    @if(item.IsPermintaanData){<span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-full">Data</span>}
+                                    @if(item.IsWawancara){<span class="text-[10px] bg-violet-50 text-violet-700 border border-violet-100 px-1.5 py-0.5 rounded-full">Waw</span>}
+                                </div>
+                            </td>
+                            <td class="px-5 py-3.5">
+                                @if(item.BatasWaktu.HasValue){
+                                    <span class="text-xs @(overdue?"text-red-600 font-semibold":item.HariSisa<=3?"text-amber-600":"text-gray-500")">
+                                        @(overdue?"⚠ ":"")@item.BatasWaktu.Value.ToString("dd MMM yyyy")
+                                        @if(item.HariSisa.HasValue){<span class="block text-[10px] @(overdue?"text-red-400":"text-gray-400")">@(overdue?$"Lewat {Math.Abs(item.HariSisa.Value)} hari":$"Sisa {item.HariSisa.Value} hari")</span>}
+                                    </span>
+                                } else { <span class="text-gray-300 text-xs">—</span> }
+                            </td>
+                            <td class="px-5 py-3.5 text-xs text-gray-500">@(item.Pengampu ?? "—")</td>
                             <td class="px-5 py-3.5">
                                 <a href="/kepegawaian/surat-izin/@item.PermohonanPPIDID"
-                                   class="inline-flex items-center gap-1.5 text-xs bg-[#002d7a] hover:bg-blue-900 text-white px-3.5 py-2 rounded-lg font-semibold transition-colors shadow-sm">
+                                   class="inline-flex items-center gap-1.5 text-xs bg-[#002d7a] hover:bg-blue-900 text-white px-3.5 py-2 rounded-lg font-semibold shadow-sm">
                                     📋 Buat Surat Izin
                                 </a>
                             </td>
@@ -58,3 +141,7 @@
         </div>
     }
 </div>
+
+<style>
+    .col-th{padding:12px 20px;text-align:left;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em}
+</style>

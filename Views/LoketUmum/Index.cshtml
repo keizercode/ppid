@@ -1,0 +1,217 @@
+@model List<PermohonanPPID>
+@{
+    ViewData["Title"] = "Dashboard Loket Umum";
+    ViewData["Role"]  = "Loket Umum";
+    Layout = "_LayoutAdmin";
+    var q      = ViewData["Q"]     as string;
+    var status = ViewData["Status"] as int?;
+    var dash   = ViewData["DashVm"] as DashboardVm ?? new DashboardVm();
+    int pctProses  = dash.Total > 0 ? (int)Math.Round(dash.Proses  * 100.0 / dash.Total) : 0;
+    int pctSelesai = dash.Total > 0 ? (int)Math.Round(dash.Selesai * 100.0 / dash.Total) : 0;
+}
+
+<!-- ══ STAT CARDS ══ -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="rounded-2xl p-5 relative overflow-hidden shadow-md min-h-[110px] flex flex-col justify-between" style="background:#0f1f4a">
+        <div class="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/5 -translate-y-8 translate-x-8 pointer-events-none"></div>
+        <p class="text-[10px] font-bold uppercase tracking-[.15em] text-blue-300/70 mb-1">Total Permohonan</p>
+        <p class="text-5xl font-black text-white leading-none" style="font-variant-numeric:tabular-nums">@dash.Total</p>
+        <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-400 to-transparent"></div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden">
+        <div class="absolute top-4 right-4">
+            <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#FFFBEB" stroke-width="3.5"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#F59E0B" stroke-width="3.5"
+                        stroke-dasharray="@(Math.Round(87.96 * pctProses / 100.0, 1)) 87.96" stroke-linecap="round"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-amber-500 rotate-90">@pctProses%</span>
+        </div>
+        <p class="text-[10px] font-bold uppercase tracking-[.15em] text-gray-400 mb-1">Proses</p>
+        <p class="text-4xl font-black text-gray-800 leading-none mb-2">@dash.Proses</p>
+        <div class="w-full bg-amber-50 rounded-full h-1 overflow-hidden">
+            <div class="bg-amber-400 h-full rounded-full" style="width:@pctProses%"></div>
+        </div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden">
+        <div class="absolute top-4 right-4">
+            <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#ECFDF5" stroke-width="3.5"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#10B981" stroke-width="3.5"
+                        stroke-dasharray="@(Math.Round(87.96 * pctSelesai / 100.0, 1)) 87.96" stroke-linecap="round"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-emerald-500 rotate-90">@pctSelesai%</span>
+        </div>
+        <p class="text-[10px] font-bold uppercase tracking-[.15em] text-gray-400 mb-1">Selesai</p>
+        <p class="text-4xl font-black text-gray-800 leading-none mb-2">@dash.Selesai</p>
+        <div class="w-full bg-emerald-50 rounded-full h-1 overflow-hidden">
+            <div class="bg-emerald-500 h-full rounded-full" style="width:@pctSelesai%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ CHARTS ══ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Total Permohonan per Bulan</p>
+        <div style="height:200px"><canvas id="chartTotal"></canvas></div>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Proses & Selesai per Bulan</p>
+        <div style="height:200px"><canvas id="chartStatus"></canvas></div>
+    </div>
+</div>
+
+<!-- ══ SUB-MENU TABS ══ -->
+<div class="flex flex-wrap gap-2 mb-4">
+    <a href="/loket-umum"                class="tab-btn @(Context.Request.Path == "/loket-umum" ? "active" : "")">📋 Semua</a>
+    <a href="/loket-umum/permintaan-data" class="tab-btn @(Context.Request.Path.StartsWithSegments("/loket-umum/permintaan-data") ? "active" : "")">📊 Permintaan Data</a>
+    <a href="/loket-umum/wawancara"       class="tab-btn @(Context.Request.Path.StartsWithSegments("/loket-umum/wawancara") ? "active" : "")">🎤 Wawancara</a>
+    <a href="/loket-umum/observasi"       class="tab-btn @(Context.Request.Path.StartsWithSegments("/loket-umum/observasi") ? "active" : "")">🔍 Observasi</a>
+    <a href="/loket-umum/data"            class="tab-btn @(Context.Request.Path.StartsWithSegments("/loket-umum/data") ? "active" : "")">📂 Menu Data</a>
+</div>
+
+<!-- ══ SEARCH + ACTION ══ -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+    <form method="get" class="flex gap-2 flex-1">
+        <input type="text" name="q" value="@q" placeholder="Cari nama, NIK, atau nomor permohonan..."
+               class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        <select name="status" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+            <option value="">Semua Status</option>
+            <option value="2"  selected="@(status==2)">Terdaftar</option>
+            <option value="3"  selected="@(status==3)">Identifikasi Awal</option>
+            <option value="14" selected="@(status==14)">Menunggu Verifikasi</option>
+            <option value="4"  selected="@(status==4)">Menunggu Surat Izin</option>
+            <option value="7"  selected="@(status==7)">Sedang Diproses</option>
+            <option value="10" selected="@(status==10)">Data Siap</option>
+            <option value="11" selected="@(status==11)">Selesai</option>
+        </select>
+        <button type="submit" class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
+        @if (!string.IsNullOrEmpty(q) || status.HasValue)
+        {
+            <a href="/loket-umum" class="border border-gray-200 text-gray-500 text-xs px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a>
+        }
+    </form>
+    <a href="/loket-umum/identifikasi"
+       class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap">
+        + Permohonan Baru
+    </a>
+</div>
+
+<!-- ══ TABLE ══ -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-100">
+                    <th class="col-th">No Permohonan</th>
+                    <th class="col-th">Nama Pemohon</th>
+                    <th class="col-th">Kategori</th>
+                    <th class="col-th">Keperluan</th>
+                    <th class="col-th">Tgl Permohonan</th>
+                    <th class="col-th">Batas Waktu</th>
+                    <th class="col-th">Status</th>
+                    <th class="col-th">Tgl Selesai</th>
+                    <th class="col-th">Pengampu</th>
+                    <th class="col-th">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                @if (Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        bool overdue = item.IsOverdue;
+                        <tr class="hover:bg-emerald-50/30 transition-colors group @(overdue ? "bg-red-50/20" : "")">
+                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold whitespace-nowrap">@item.NoPermohonan</td>
+                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
+                            <td class="px-4 py-3 text-xs text-emerald-600 font-medium">🏢 @item.KategoriPemohon</td>
+                            <td class="px-4 py-3">
+                                <div class="flex flex-wrap gap-1">
+                                    @if (item.IsObservasi)      { <span class="badge bg-orange-50 text-orange-700 border-orange-100">Obs</span> }
+                                    @if (item.IsPermintaanData) { <span class="badge bg-blue-50 text-blue-700 border-blue-100">Data</span> }
+                                    @if (item.IsWawancara)      { <span class="badge bg-violet-50 text-violet-700 border-violet-100">Waw</span> }
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                @if (item.BatasWaktu.HasValue)
+                                {
+                                    <span class="text-xs @(overdue ? "text-red-600 font-semibold" : item.HariSisa <= 3 ? "text-amber-600" : "text-gray-500")">
+                                        @(overdue ? "⚠ " : "")@item.BatasWaktu.Value.ToString("dd MMM yyyy")
+                                        @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
+                                        {
+                                            <span class="block text-[10px] @(overdue ? "text-red-400" : "text-gray-400")">
+                                                @(overdue ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
+                                            </span>
+                                        }
+                                    </span>
+                                }
+                                else { <span class="text-gray-300 text-xs">—</span> }
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-[11px] px-2 py-0.5 rounded-full font-medium
+                                    @(item.StatusPPIDID >= StatusId.DataSiap ? "bg-emerald-50 text-emerald-700" :
+                                      item.StatusPPIDID == StatusId.TerdaftarSistem ? "bg-gray-100 text-gray-500" :
+                                      item.StatusPPIDID == StatusId.MenungguVerifikasi ? "bg-violet-50 text-violet-700" :
+                                      "bg-amber-50 text-amber-700")">
+                                    @item.Status?.NamaStatusPPID
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-gray-400">@(item.TanggalSelesai?.ToString("dd MMM yyyy") ?? "—")</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">@(item.Pengampu ?? "—")</td>
+                            <td class="px-4 py-3">
+                                <div class="flex gap-1 opacity-80 group-hover:opacity-100 flex-wrap">
+                                    <a href="/loket-umum/detail/@item.PermohonanPPIDID" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-lg font-medium">Detail</a>
+                                    @if (item.StatusPPIDID == StatusId.TerdaftarSistem)
+                                    { <a href="/loket-umum/input-identifikasi/@item.PermohonanPPIDID" class="text-[11px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-lg font-medium">Input ID</a> }
+                                    @if (item.StatusPPIDID == StatusId.IdentifikasiAwal)
+                                    { <a href="/loket-umum/cetak-identifikasi/@item.PermohonanPPIDID" class="text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded-lg font-medium">Cetak ID</a> }
+                                    @if (item.StatusPPIDID == StatusId.IdentifikasiAwal)
+                                    { <a href="/loket-umum/upload-ttd/@item.PermohonanPPIDID" class="text-[11px] bg-orange-100 hover:bg-orange-200 text-orange-700 px-2 py-1 rounded-lg font-medium">Upload TTD</a> }
+                                    @if (item.StatusPPIDID >= StatusId.MenungguSuratIzin)
+                                    { <a href="/loket-umum/cetak-identifikasi/@item.PermohonanPPIDID" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-lg font-medium">Cetak Surat</a> }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="10" class="px-6 py-16 text-center">
+                            <div class="text-3xl mb-3">🏢</div>
+                            <p class="text-sm text-gray-400">
+                                @(string.IsNullOrEmpty(q) && !status.HasValue ? "Belum ada permohonan dari Loket Umum" : "Tidak ada hasil yang cocok")
+                            </p>
+                            @if (!string.IsNullOrEmpty(q) || status.HasValue)
+                            { <a href="/loket-umum" class="mt-3 inline-block text-xs text-blue-600 hover:underline">↩ Reset filter</a> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .col-th { padding:12px 16px; text-align:left; font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em; }
+    .badge  { font-size:10px; padding:1px 6px; border-radius:999px; font-weight:600; border:1px solid; }
+    .tab-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:10px; font-size:12px; font-weight:600; border:1px solid #e5e7eb; color:#6b7280; background:white; text-decoration:none; transition:all .15s; }
+    .tab-btn:hover { background:#f9fafb; color:#374151; }
+    .tab-btn.active { background:#002d7a; color:white; border-color:#002d7a; }
+</style>
+
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const labels=@Html.Raw(dash.LabelsJson), totals=@Html.Raw(dash.TotalJson), proses=@Html.Raw(dash.ProsesJson), selesai=@Html.Raw(dash.SelesaiJson);
+const gridC='rgba(0,0,0,.06)', tickC='#9ca3af';
+const o={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tickC,font:{size:11},boxWidth:12}}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}}},y:{grid:{color:gridC},ticks:{color:tickC,font:{size:10},stepSize:1},beginAtZero:true}}};
+new Chart(document.getElementById('chartTotal'),{type:'bar',data:{labels,datasets:[{label:'Total',data:totals,backgroundColor:'rgba(16,185,129,.7)',borderRadius:6}]},options:o});
+new Chart(document.getElementById('chartStatus'),{type:'line',data:{labels,datasets:[
+    {label:'Proses',data:proses,borderColor:'#F59E0B',backgroundColor:'rgba(245,158,11,.12)',fill:true,tension:.4,pointRadius:4},
+    {label:'Selesai',data:selesai,borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.12)',fill:true,tension:.4,pointRadius:4}
+]},options:o});
+</script>
+}

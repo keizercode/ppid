@@ -1,0 +1,58 @@
+@* ─── Views/LoketUmum/InputIdentifikasi.cshtml ────────────────────────────── *@
+@model PermohonanPPID
+@{
+    ViewData["Title"] = "Input Identifikasi Awal — Loket Umum";
+    ViewData["Role"]  = "Loket Umum";
+    Layout = "_LayoutAdmin";
+    var pr   = Model.Pribadi;
+    var ppid = pr?.PribadiPPID;
+    var detailObs  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Observasi)?.DetailKeperluan;
+    var detailData = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.PermintaanData)?.DetailKeperluan;
+    var detailWaw  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara)?.DetailKeperluan;
+    var alamat = string.Join(", ", new[]{ pr?.Alamat, !string.IsNullOrEmpty(pr?.RT)?$"RT {pr!.RT}":null, !string.IsNullOrEmpty(pr?.RW)?$"RW {pr!.RW}":null, pr?.NamaKelurahan, pr?.NamaKecamatan, pr?.NamaKabupaten }.Where(s=>!string.IsNullOrEmpty(s)));
+}
+
+<div class="max-w-2xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl">📝</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Input Identifikasi Awal</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @pr?.Nama</p>
+        </div>
+    </div>
+    <div class="p-6">
+        <!-- Ringkasan -->
+        <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-5 mb-5">
+            <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-4">Ringkasan Permohonan</p>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div><span class="text-[10px] text-emerald-500 uppercase font-bold block">No. Permohonan</span><p class="text-emerald-800 font-mono font-bold">@Model.NoPermohonan</p></div>
+                <div><span class="text-[10px] text-emerald-500 uppercase font-bold block">Kategori</span><p class="text-emerald-700 font-medium">🏢 @Model.KategoriPemohon</p></div>
+                <div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Pemohon</span><p class="text-emerald-800 font-semibold">@pr?.Nama <span class="font-mono font-normal text-emerald-500 text-xs">· @pr?.NIK</span></p></div>
+                @if(!string.IsNullOrEmpty(ppid?.Lembaga)){<div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Lembaga</span><p class="text-emerald-700 text-sm">@ppid!.Lembaga</p></div>}
+                @if(!string.IsNullOrEmpty(alamat)){<div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Alamat</span><p class="text-emerald-600 text-xs">@alamat</p></div>}
+                <div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Judul</span><p class="text-emerald-700 leading-snug">@Model.JudulPenelitian</p></div>
+                <div class="col-span-2">
+                    <span class="text-[10px] text-emerald-500 uppercase font-bold block mb-1">Keperluan</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        @if(Model.IsObservasi){<span class="bg-orange-100 text-orange-700 text-xs px-2.5 py-0.5 rounded-full font-medium">Observasi</span>}
+                        @if(Model.IsPermintaanData){<span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-0.5 rounded-full font-medium">Permintaan Data</span>}
+                        @if(Model.IsWawancara){<span class="bg-violet-100 text-violet-700 text-xs px-2.5 py-0.5 rounded-full font-medium">Wawancara</span>}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex gap-2.5 items-start">
+            <span class="text-amber-500 mt-0.5 flex-shrink-0">⚠️</span>
+            <p class="text-amber-700 text-xs leading-relaxed">Setelah dikonfirmasi, status berubah ke <strong>Identifikasi Awal</strong>. Cetak formulir dan minta pemohon menandatangani.</p>
+        </div>
+        <form asp-action="InputIdentifikasiPost" asp-controller="LoketUmum" asp-route-id="@Model.PermohonanPPIDID" method="post">
+            @Html.AntiForgeryToken()
+            <div class="flex gap-3">
+                <a href="/loket-umum" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit" class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">📄 Konfirmasi & Cetak Formulir →</button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>

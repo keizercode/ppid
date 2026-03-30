@@ -1,13 +1,28 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using PermintaanData.Models;
+using PermintaanData.Data;
 
 namespace PermintaanData.Models.ViewModels;
 
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+public class DashboardVm
+{
+    public int Total   { get; set; }
+    public int Proses  { get; set; }
+    public int Selesai { get; set; }
+
+    public List<MonthlyStatRow> MonthlyStats { get; set; } = new();
+
+    // JSON strings untuk Chart.js
+    public string LabelsJson    => JsonSerializer.Serialize(MonthlyStats.Select(m => m.Label));
+    public string TotalJson     => JsonSerializer.Serialize(MonthlyStats.Select(m => m.Total));
+    public string ProsesJson    => JsonSerializer.Serialize(MonthlyStats.Select(m => m.Proses));
+    public string SelesaiJson   => JsonSerializer.Serialize(MonthlyStats.Select(m => m.Selesai));
+}
+
 // ── PUBLIC: Lacak ─────────────────────────────────────────────────────────────
-//
-// TokenLacak dihapus. NoPermohonan kini berformat PPD/YYYY/XXXXXXXX
-// (8 karakter random) sehingga tidak dapat dienumerasi. Pemohon cukup
-// memasukkan nomor yang tertera di formulir — nomor itu sendiri adalah rahasia.
 
 public class LacakViewModel
 {
@@ -28,10 +43,10 @@ public class DetailLacakViewModel
 
 public class RiwayatStatusVm
 {
-    public int StatusId { get; set; }
-    public string Label { get; set; } = string.Empty;
-    public bool Selesai { get; set; }
-    public bool AktifSekarang { get; set; }
+    public int    StatusId      { get; set; }
+    public string Label         { get; set; } = string.Empty;
+    public bool   Selesai       { get; set; }
+    public bool   AktifSekarang { get; set; }
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -51,20 +66,18 @@ public class LoginVm
     public bool RememberMe { get; set; }
 }
 
-// ── PETUGAS LOKET: Identifikasi ───────────────────────────────────────────────
+// ── PETUGAS LOKET ─────────────────────────────────────────────────────────────
 
 public class IdentifikasiPemohonVm
 {
     [Required(ErrorMessage = "Kategori wajib dipilih")]
-    public string Kategori { get; set; } = string.Empty;
+    public string Kategori   { get; set; } = string.Empty;
     public string LoketJenis { get; set; } = string.Empty;
 }
 
-// ── PETUGAS LOKET: Daftar Pemohon ─────────────────────────────────────────────
-
 public class DaftarPemohonVm
 {
-    public string Kategori { get; set; } = "Mahasiswa";
+    public string Kategori   { get; set; } = "Mahasiswa";
     public string LoketJenis { get; set; } = Models.LoketJenis.Kepegawaian;
 
     [Required(ErrorMessage = "NIK wajib diisi")]
@@ -83,31 +96,44 @@ public class DaftarPemohonVm
     [EmailAddress(ErrorMessage = "Format email tidak valid")]
     public string? Email { get; set; }
 
+    // ── Alamat ────────────────────────────────────────────────────────────
     [Display(Name = "Provinsi")]
-    public string? ProvinsiID { get; set; }
+    public string? ProvinsiID   { get; set; }
     public string? NamaProvinsi { get; set; }
 
     [Display(Name = "Kabupaten / Kota")]
-    public string? KabupatenID { get; set; }
+    public string? KabupatenID   { get; set; }
     public string? NamaKabupaten { get; set; }
 
     [Display(Name = "Kecamatan")]
-    public string? KecamatanID { get; set; }
+    public string? KecamatanID   { get; set; }
     public string? NamaKecamatan { get; set; }
 
     [Display(Name = "Kelurahan")]
-    public string? KelurahanID { get; set; }
+    public string? KelurahanID   { get; set; }
     public string? NamaKelurahan { get; set; }
 
     [Display(Name = "RT")] public string? RT { get; set; }
     [Display(Name = "RW")] public string? RW { get; set; }
     [Display(Name = "Alamat Lengkap")] public string? Alamat { get; set; }
 
-    [Display(Name = "Lembaga / Universitas")] public string? Lembaga { get; set; }
-    [Display(Name = "Fakultas")] public string? Fakultas { get; set; }
-    [Display(Name = "Program Studi / Jurusan")] public string? Jurusan { get; set; }
-    [Display(Name = "Pekerjaan")] public string? Pekerjaan { get; set; }
+    // ── Data Institusi ────────────────────────────────────────────────────
+    [Display(Name = "NIM")]
+    public string? NIM { get; set; }
 
+    [Display(Name = "Lembaga / Universitas")]
+    public string? Lembaga { get; set; }
+
+    [Display(Name = "Fakultas")]
+    public string? Fakultas { get; set; }
+
+    [Display(Name = "Program Studi / Jurusan")]
+    public string? Jurusan { get; set; }
+
+    [Display(Name = "Pekerjaan")]
+    public string? Pekerjaan { get; set; }
+
+    // ── Data Permohonan ───────────────────────────────────────────────────
     [Required(ErrorMessage = "No. Surat Permohonan wajib diisi")]
     [Display(Name = "No. Surat Permohonan")]
     public string NoSuratPermohonan { get; set; } = string.Empty;
@@ -115,6 +141,9 @@ public class DaftarPemohonVm
     [Required(ErrorMessage = "Tanggal permohonan wajib diisi")]
     [Display(Name = "Tanggal Permohonan")]
     public DateOnly TanggalPermohonan { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+
+    [Display(Name = "Pengampu / PIC")]
+    public string? Pengampu { get; set; }
 
     [Required(ErrorMessage = "Judul penelitian wajib diisi")]
     [Display(Name = "Judul Penelitian")]
@@ -128,47 +157,79 @@ public class DaftarPemohonVm
     [Display(Name = "Tujuan Permohonan")]
     public string TujuanPermohonan { get; set; } = string.Empty;
 
-    [Display(Name = "Observasi")] public bool IsObservasi { get; set; }
+    // ── Keperluan ─────────────────────────────────────────────────────────
+    [Display(Name = "Observasi")]       public bool IsObservasi      { get; set; }
     [Display(Name = "Permintaan Data")] public bool IsPermintaanData { get; set; }
-    [Display(Name = "Wawancara / Interview")] public bool IsWawancara { get; set; }
+    [Display(Name = "Wawancara")]       public bool IsWawancara      { get; set; }
 
-    [Display(Name = "Deskripsi Observasi")] public string? DetailObservasi { get; set; }
-    [Display(Name = "Data yang Diperlukan")] public string? DetailPermintaanData { get; set; }
-    [Display(Name = "Topik / Materi Wawancara")] public string? DetailWawancara { get; set; }
+    [Display(Name = "Deskripsi Observasi")]    public string? DetailObservasi     { get; set; }
+    [Display(Name = "Data yang Diperlukan")]   public string? DetailPermintaanData{ get; set; }
+    [Display(Name = "Topik / Materi Wawancara")] public string? DetailWawancara  { get; set; }
 
+    // ── Unit Kerja ────────────────────────────────────────────────────────
     [Display(Name = "Unit Kerja / Bidang")]
-    public string? BidangID { get; set; }
+    public string? BidangID   { get; set; }
     public string? NamaBidang { get; set; }
 
-    [Display(Name = "KTP")] public IFormFile? FileKTP { get; set; }
-    [Display(Name = "Surat Permohonan")] public IFormFile? FileSuratPermohonan { get; set; }
-    [Display(Name = "Proposal Penelitian")] public IFormFile? FileProposal { get; set; }
-    [Display(Name = "Akta Notaris (LSM)")] public IFormFile? FileAktaNotaris { get; set; }
+    // ── Upload Dokumen ────────────────────────────────────────────────────
+    [Display(Name = "KTP")]              public IFormFile? FileKTP              { get; set; }
+    [Display(Name = "Surat Permohonan")] public IFormFile? FileSuratPermohonan  { get; set; }
+    [Display(Name = "Proposal")]         public IFormFile? FileProposal         { get; set; }
+    [Display(Name = "Akta Notaris")]     public IFormFile? FileAktaNotaris      { get; set; }
 }
 
 // ── PETUGAS LOKET: Upload TTD ─────────────────────────────────────────────────
 
 public class UploadTTDVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
-    public string LoketJenis { get; set; } = Models.LoketJenis.Kepegawaian;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string LoketJenis       { get; set; } = Models.LoketJenis.Kepegawaian;
 
     [Required(ErrorMessage = "File wajib diupload")]
     [Display(Name = "Dokumen Identifikasi (Sudah TTD Pemohon)")]
     public IFormFile? FileDokumenTTD { get; set; }
 }
 
+// ── KASUBKEL KEPEGAWAIAN: Verifikasi ─────────────────────────────────────────
+
+public class VerifikasiVm
+{
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string Kategori         { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+    public string LatarBelakang    { get; set; } = string.Empty;
+    public bool   IsObservasi      { get; set; }
+    public bool   IsPermintaanData { get; set; }
+    public bool   IsWawancara      { get; set; }
+    public string NamaBidang       { get; set; } = string.Empty;
+
+    [Display(Name = "Catatan Verifikasi")]
+    public string? CatatanVerifikasi { get; set; }
+
+    [Required(ErrorMessage = "Disposisi unit wajib diisi")]
+    [Display(Name = "Disposisi ke Unit")]
+    public string DisposisiUnit { get; set; } = "PSMDI";
+
+    [Display(Name = "Nama Bidang (jika bukan PSMDI)")]
+    public string? NamaBidangDisposisi { get; set; }
+
+    public bool Disetujui { get; set; } = true;
+    public string? AlasanDitolak { get; set; }
+}
+
 // ── KEPEGAWAIAN: Surat Izin ───────────────────────────────────────────────────
 
 public class SuratIzinVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
-    public string Kategori { get; set; } = string.Empty;
-    public string JudulPenelitian { get; set; } = string.Empty;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string Kategori         { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "No. surat wajib diisi")]
     [Display(Name = "No. Surat Izin")]
@@ -184,9 +245,9 @@ public class SuratIzinVm
     [Display(Name = "File Surat Izin (PDF)")]
     public IFormFile? FileSuratIzin { get; set; }
 
-    public bool IsObservasi { get; set; }
+    public bool IsObservasi      { get; set; }
     public bool IsPermintaanData { get; set; }
-    public bool IsWawancara { get; set; }
+    public bool IsWawancara      { get; set; }
 
     [Display(Name = "Disposisi Ke (KDI)")]
     public string DisposisiKe { get; set; } = "PSMDI";
@@ -200,7 +261,7 @@ public class SuratIzinVm
     [Display(Name = "Unit Produsen Data (Wawancara)")]
     public string? NamaProdusenData { get; set; }
 
-    public bool HasKdiRoute => IsPermintaanData || IsObservasi;
+    public bool HasKdiRoute   => IsPermintaanData || IsObservasi;
     public bool IsWawancaraOnly => IsWawancara && !IsPermintaanData && !IsObservasi;
 }
 
@@ -208,24 +269,24 @@ public class SuratIzinVm
 
 public class TerimaDisposisiVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
-    public string JudulPenelitian { get; set; } = string.Empty;
-    public string LatarBelakang { get; set; } = string.Empty;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+    public string LatarBelakang    { get; set; } = string.Empty;
     public string? CatatanDisposisi { get; set; }
-    public bool PerluObservasi { get; set; }
-    public bool PerluWawancara { get; set; }
-    public string? Catatan { get; set; }
+    public bool   PerluObservasi   { get; set; }
+    public bool   PerluWawancara   { get; set; }
+    public string? Catatan         { get; set; }
 }
 
 // ── KDI: Jadwal Observasi ─────────────────────────────────────────────────────
 
 public class JadwalObservasiVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
 
     [Required]
     [Display(Name = "Tanggal")]
@@ -244,10 +305,10 @@ public class JadwalObservasiVm
 
 public class SelesaiObservasiVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
-    public string JudulPenelitian { get; set; } = string.Empty;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
 
     [Display(Name = "Catatan Hasil Observasi")]
     public string? Catatan { get; set; }
@@ -257,11 +318,11 @@ public class SelesaiObservasiVm
 
 public class JadwalWawancaraVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
-    public string JudulPenelitian { get; set; } = string.Empty;
-    public string DetailWawancara { get; set; } = string.Empty;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+    public string DetailWawancara  { get; set; } = string.Empty;
     public string? NamaProdusenData { get; set; }
 
     [Required]
@@ -279,18 +340,17 @@ public class JadwalWawancaraVm
     [Display(Name = "Lokasi / Platform")]
     public string? Lokasi { get; set; }
 
-    /// <summary>True jika jadwal sudah dibuat oleh KDI — form tampil read-only.</summary>
     public bool JadwalSudahAda { get; set; }
 }
 
-// ── KDI / Produsen Data: Upload Data ─────────────────────────────────────────
+// ── KDI: Upload Data ─────────────────────────────────────────────────────────
 
 public class UploadDataVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
-    public string JudulPenelitian { get; set; } = string.Empty;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "File wajib diupload")]
     [Display(Name = "File Data / Dokumen Hasil")]
@@ -300,52 +360,94 @@ public class UploadDataVm
     public string? Catatan { get; set; }
 }
 
-// ── TAMBAHAN di Models/ViewModels/ViewModels.cs ──────────────────────────────
-// Letakkan bagian ini SETELAH class UploadDataVm yang sudah ada.
-// Alasan: ProdusenDataController.SelesaiWawancara mengizinkan submit TANPA file
-// (wawancara selesai tapi dokumen belum tersedia), sedangkan KDI.UploadDataPost
-// WAJIB ada file. Menggunakan UploadDataVm yang sama dengan [Required] pada
-// FileData menyebabkan client-side validation memblokir submit tanpa file di
-// halaman SelesaiWawancara. ViewModel terpisah menghilangkan konflik ini.
-
-// ── PRODUSEN DATA: Selesai Wawancara ─────────────────────────────────────────
+// ── Produsen Data: Selesai Wawancara ─────────────────────────────────────────
 
 public class SelesaiWawancaraVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
-    public string NamaPemohon { get; set; } = string.Empty;
-    public string JudulPenelitian { get; set; } = string.Empty;
-
-    // Info jadwal (read-only, tampil di view untuk konfirmasi)
+    public Guid      PermohonanPPIDID { get; set; }
+    public string    NoPermohonan     { get; set; } = string.Empty;
+    public string    NamaPemohon      { get; set; } = string.Empty;
+    public string    JudulPenelitian  { get; set; } = string.Empty;
     public DateOnly? TanggalWawancara { get; set; }
-    public TimeOnly? WaktuWawancara { get; set; }
-    public string? NamaPIC { get; set; }
+    public TimeOnly? WaktuWawancara   { get; set; }
+    public string?   NamaPIC          { get; set; }
 
-    /// <summary>
-    /// Upload dokumen hasil OPSIONAL.
-    /// - Jika diisi → status menjadi DataSiap, pemohon dapat mengunduh.
-    /// - Jika kosong → status menjadi WawancaraSelesai, pemohon mengisi kuesioner.
-    /// [Required] sengaja TIDAK dipasang di sini.
-    /// </summary>
-    [System.ComponentModel.DataAnnotations.Display(Name = "Dokumen Hasil (Opsional)")]
+    [Display(Name = "Dokumen Hasil (Opsional)")]
     public IFormFile? FileHasil { get; set; }
 
-    [System.ComponentModel.DataAnnotations.Display(Name = "Catatan")]
+    [Display(Name = "Catatan")]
     public string? Catatan { get; set; }
 }
 
-
-// ── KUESIONER ─────────────────────────────────────────────────────────────────
+// ── Kuesioner ─────────────────────────────────────────────────────────────────
 
 public class KuesionerVm
 {
-    public Guid PermohonanPPIDID { get; set; }
-    public string NoPermohonan { get; set; } = string.Empty;
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
 
     [Required]
     [Range(1, 5)]
     public int NilaiKepuasan { get; set; }
 
     public string? Catatan { get; set; }
+}
+
+// ── Menu Data ──────────────────────────────────────────────────────────────────
+/// ViewModel untuk Menu Data — menampilkan rekap & export semua permohonan
+/// pada loket tertentu.
+public class MenuDataVm
+{
+    public List<PermohonanPPID> List        { get; set; } = new();
+    public string               LoketJenis  { get; set; } = Models.LoketJenis.Kepegawaian;
+    public string               Judul       { get; set; } = "Menu Data";
+
+    // ── Stat ringkasan ────────────────────────────────────────────────────
+    public int Total    => List.Count;
+    public int Proses   => List.Count(p => StatusId.IsProses(p.StatusPPIDID));
+    public int Selesai  => List.Count(p => StatusId.IsSelesai(p.StatusPPIDID));
+    public int Overdue  => List.Count(p => p.IsOverdue);
+
+    // ── Breakdown keperluan ───────────────────────────────────────────────
+    public int JmlObservasi      => List.Count(p => p.IsObservasi);
+    public int JmlPermintaanData => List.Count(p => p.IsPermintaanData);
+    public int JmlWawancara      => List.Count(p => p.IsWawancara);
+
+    // ── Breakdown kategori pemohon ────────────────────────────────────────
+    public int JmlMahasiswa => List.Count(p => p.KategoriPemohon == "Mahasiswa");
+    public int JmlLSM       => List.Count(p => p.KategoriPemohon != "Mahasiswa");
+}
+
+
+/// ViewModel untuk Edit permohonan oleh Loket Kepegawaian dan Loket Umum.
+/// Hanya field yang boleh diubah setelah pendaftaran.
+
+public class EditPermohonanVm
+{
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string LoketJenis       { get; set; } = Models.LoketJenis.Kepegawaian;
+
+    [Required(ErrorMessage = "Judul wajib diisi")]
+    [Display(Name = "Judul Penelitian / Tujuan")]
+    public string JudulPenelitian { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Latar belakang wajib diisi")]
+    [Display(Name = "Latar Belakang")]
+    public string LatarBelakang { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Tujuan wajib diisi")]
+    [Display(Name = "Tujuan Permohonan")]
+    public string TujuanPermohonan { get; set; } = string.Empty;
+
+    [Display(Name = "Pengampu / PIC")]
+    public string? Pengampu { get; set; }
+
+    [Display(Name = "Batas Waktu")]
+    public DateOnly? BatasWaktu { get; set; }
+
+    [Display(Name = "Observasi")]       public bool IsObservasi      { get; set; }
+    [Display(Name = "Permintaan Data")] public bool IsPermintaanData { get; set; }
+    [Display(Name = "Wawancara")]       public bool IsWawancara      { get; set; }
 }

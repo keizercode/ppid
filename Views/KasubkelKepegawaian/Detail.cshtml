@@ -1,0 +1,230 @@
+@* Views/KasubkelKepegawaian/Detail.cshtml *@
+@model PermohonanPPID
+@{
+    ViewData["Title"] = $"Detail {Model.NoPermohonan}";
+    ViewData["Role"]  = "Kasubkel Kepegawaian";
+    Layout = "_LayoutAdmin";
+
+    var pr   = Model.Pribadi;
+    var ppid = pr?.PribadiPPID;
+
+    string statusColor = Model.StatusPPIDID >= StatusId.DataSiap
+        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+        : Model.StatusPPIDID == StatusId.MenungguVerifikasi
+            ? "bg-violet-50 text-violet-700 border-violet-200"
+            : Model.StatusPPIDID == StatusId.TerdaftarSistem
+                ? "bg-gray-100 text-gray-500 border-gray-200"
+                : "bg-amber-50 text-amber-700 border-amber-200";
+}
+
+<div class="max-w-3xl mx-auto">
+    <a href="/kasubkel-kepegawaian/permohonan"
+       class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium mb-5 transition-colors">← Kembali</a>
+
+    <!-- Header -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Nomor Permohonan</p>
+            <h2 class="text-2xl font-extrabold font-mono text-gray-800">@Model.NoPermohonan</h2>
+            <div class="flex flex-wrap items-center gap-x-3 mt-1.5 text-xs text-gray-400">
+                <span>No. Surat: <span class="font-mono text-gray-600">@(Model.NoSuratPermohonan ?? "—")</span></span>
+                <span class="hidden sm:inline text-gray-200">·</span>
+                <span>Masuk: @Model.CratedAt?.ToString("dd MMM yyyy HH:mm")</span>
+                @if (Model.BatasWaktu.HasValue)
+                {
+                    <span class="hidden sm:inline text-gray-200">·</span>
+                    <span class="@(Model.IsOverdue ? "text-red-500 font-semibold" : "")">
+                        Batas: @Model.BatasWaktu.Value.ToString("dd MMM yyyy")
+                        @(Model.IsOverdue ? " ⚠" : "")
+                    </span>
+                }
+            </div>
+        </div>
+        <div class="flex items-center gap-2 border @statusColor rounded-full px-4 py-2 self-start sm:self-center">
+            <span class="w-2 h-2 rounded-full @(Model.StatusPPIDID >= StatusId.DataSiap ? "bg-emerald-400" : Model.StatusPPIDID == StatusId.MenungguVerifikasi ? "bg-violet-400" : "bg-amber-400") flex-shrink-0"></span>
+            <span class="text-sm font-semibold">@(Model.Status?.NamaStatusPPID ?? "—")</span>
+        </div>
+    </div>
+
+    <!-- Detail Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+        <!-- Data Pribadi -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Data Pribadi</p>
+            <dl class="space-y-3">
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">NIK</dt>
+                    <dd class="font-mono font-bold text-gray-800 text-sm mt-0.5">@pr?.NIK</dd>
+                </div>
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Nama</dt>
+                    <dd class="font-semibold text-gray-800 text-sm mt-0.5">@pr?.Nama</dd>
+                </div>
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Kategori</dt>
+                    <dd class="text-sm mt-0.5 font-medium @(Model.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
+                        @(Model.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa" : "🏢 LSM")
+                    </dd>
+                </div>
+                @if (!string.IsNullOrEmpty(ppid?.NIM))
+                {
+                    <div>
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">NIM</dt>
+                        <dd class="font-mono text-gray-700 text-sm mt-0.5">@ppid.NIM</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(ppid?.Lembaga))
+                {
+                    <div>
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Lembaga</dt>
+                        <dd class="text-gray-700 text-sm mt-0.5">@ppid.Lembaga</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(ppid?.Jurusan))
+                {
+                    <div>
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Program Studi</dt>
+                        <dd class="text-gray-700 text-sm mt-0.5">@ppid.Jurusan</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(pr?.Telepon))
+                {
+                    <div>
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Telepon</dt>
+                        <dd class="text-gray-700 text-sm mt-0.5">@pr.Telepon</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(pr?.Email))
+                {
+                    <div>
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Email</dt>
+                        <dd class="text-gray-700 text-sm mt-0.5">@pr.Email</dd>
+                    </div>
+                }
+            </dl>
+        </div>
+
+        <!-- Data Permohonan -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Data Permohonan</p>
+            <dl class="space-y-3">
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">No. Permohonan</dt>
+                    <dd class="font-mono font-bold text-blue-700 text-sm mt-0.5">@Model.NoPermohonan</dd>
+                </div>
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Tanggal</dt>
+                    <dd class="text-gray-700 text-sm mt-0.5">@Model.TanggalPermohonan?.ToString("dd MMM yyyy")</dd>
+                </div>
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Batas Waktu</dt>
+                    <dd class="text-sm mt-0.5 @(Model.IsOverdue ? "text-red-600 font-semibold" : "text-gray-700")">
+                        @(Model.BatasWaktu?.ToString("dd MMM yyyy") ?? "—") @(Model.IsOverdue ? " ⚠" : "")
+                    </dd>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Pengampu))
+                {
+                    <div>
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Pengampu</dt>
+                        <dd class="text-gray-700 text-sm mt-0.5">@Model.Pengampu</dd>
+                    </div>
+                }
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Judul</dt>
+                    <dd class="text-gray-700 text-sm mt-0.5 leading-snug">@Model.JudulPenelitian</dd>
+                </div>
+                <div>
+                    <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-1">Keperluan</dt>
+                    <dd class="flex flex-wrap gap-1.5">
+                        @if (Model.IsObservasi)      { <span class="bg-orange-50 text-orange-700 border border-orange-100 text-xs px-2.5 py-0.5 rounded-full font-medium">Observasi</span> }
+                        @if (Model.IsPermintaanData) { <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2.5 py-0.5 rounded-full font-medium">Permintaan Data</span> }
+                        @if (Model.IsWawancara)      { <span class="bg-violet-50 text-violet-700 border border-violet-100 text-xs px-2.5 py-0.5 rounded-full font-medium">Wawancara</span> }
+                    </dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Latar Belakang -->
+    @if (!string.IsNullOrEmpty(Model.LatarBelakang))
+    {
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Latar Belakang</p>
+            <p class="text-gray-700 text-sm leading-relaxed">@Model.LatarBelakang</p>
+        </div>
+    }
+
+    <!-- Detail Keperluan -->
+    @if (Model.Detail.Any())
+    {
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Detail Keperluan</p>
+            <div class="space-y-3">
+                @foreach (var d in Model.Detail)
+                {
+                    <div class="bg-gray-50 rounded-xl p-3">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">@d.Keperluan?.NamaKeperluan</p>
+                        <p class="text-sm text-gray-700 leading-relaxed">@d.DetailKeperluan</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Dokumen -->
+    @if (Model.Dokumen.Any())
+    {
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Dokumen Terlampir</p>
+            <div class="divide-y divide-gray-50">
+                @foreach (var d in Model.Dokumen)
+                {
+                    <div class="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-sm">📄</span>
+                            <span class="text-gray-700 text-sm font-medium">@d.NamaDokumenPPID</span>
+                        </div>
+                        <a href="@d.UploadDokumenPPID" target="_blank"
+                           class="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline">Lihat →</a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Audit Log -->
+    @if (Model.AuditLog.Any())
+    {
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Riwayat Aktivitas</p>
+            <div class="space-y-2">
+                @foreach (var log in Model.AuditLog.OrderByDescending(l => l.CreatedAt))
+                {
+                    <div class="flex gap-3 text-xs">
+                        <span class="text-gray-400 whitespace-nowrap flex-shrink-0">@log.CreatedAt.ToLocalTime().ToString("dd MMM HH:mm")</span>
+                        <span class="text-gray-500 font-medium">@log.Operator</span>
+                        <span class="text-gray-600 leading-relaxed">@log.Keterangan</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Action -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap gap-2.5">
+        @if (Model.StatusPPIDID == StatusId.MenungguVerifikasi
+          || Model.StatusPPIDID == StatusId.IdentifikasiAwal
+          || Model.StatusPPIDID == StatusId.MenungguSuratIzin)
+        {
+            <a href="/kasubkel-kepegawaian/verifikasi/@Model.PermohonanPPIDID"
+               class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-colors">
+                ✅ Verifikasi Permohonan
+            </a>
+        }
+        <a href="/kasubkel-kepegawaian/permohonan"
+           class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+            ← Kembali ke Daftar
+        </a>
+    </div>
+</div>

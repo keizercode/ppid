@@ -1,0 +1,321 @@
+@model DaftarPemohonVm
+@{
+    ViewData["Title"] = "Formulir Permohonan — Loket Umum";
+    ViewData["Role"]  = "Loket Umum";
+    Layout = "_LayoutAdmin";
+    bool isLSM       = Model.Kategori == "LSM";
+    bool isOrg       = Model.Kategori == "Organisasi";
+    bool isPerusahaan= Model.Kategori == "Perusahaan";
+    string iconKat   = isLSM ? "🏛️" : isOrg ? "🤝" : isPerusahaan ? "🏢" : "👤";
+}
+
+<div class="max-w-3xl mx-auto">
+
+    <!-- Category badge -->
+    <div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5 text-sm">
+        <span class="text-xl">@iconKat</span>
+        <div>
+            <p class="text-xs text-emerald-500 font-medium">Kategori Pemohon — Loket Umum</p>
+            <p class="text-emerald-800 font-bold">@Model.Kategori</p>
+        </div>
+        <span class="ml-auto text-xs font-mono bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg font-bold">Prefix: UMM</span>
+    </div>
+
+    <!-- NIK Lookup -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Cari Data via NIK</p>
+        <div class="flex gap-2 mb-3">
+            <button type="button" id="tab-nik"    onclick="switchTab('nik')"    class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors">🔍 Cari via NIK</button>
+            <button type="button" id="tab-manual" onclick="switchTab('manual')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors">✏️ Isi Manual</button>
+        </div>
+        <div id="panel-nik">
+            <div class="flex gap-2">
+                <input type="text" id="nik-input" maxlength="16" inputmode="numeric"
+                       placeholder="Masukkan 16 digit NIK perwakilan..."
+                       class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-300 bg-gray-50"/>
+                <button type="button" id="btn-cari"
+                        class="bg-[#002d7a] text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-900 min-w-[80px] flex items-center justify-center">
+                    Cari
+                </button>
+            </div>
+            <div id="nik-msg" class="mt-2 text-xs hidden p-2 rounded-lg"></div>
+        </div>
+    </div>
+
+    <form asp-action="DaftarPemohonPost" asp-controller="LoketUmum" method="post" enctype="multipart/form-data" id="mainForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Kategori"   />
+        <input type="hidden" asp-for="LoketJenis" value="Umum" />
+
+        <!-- ── 1. DATA PRIBADI PERWAKILAN ── -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <div class="sec-header">
+                <span class="sec-num">1</span>
+                <p class="sec-title">Data Pribadi Perwakilan</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="lbl">NIK Perwakilan <span class="req">*</span></label>
+                    <input asp-for="NIK"     id="f-nik"     maxlength="16" inputmode="numeric" class="fld font-mono" placeholder="16 digit NIK perwakilan" />
+                    <span asp-validation-for="NIK" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Nama Lengkap <span class="req">*</span></label>
+                    <input asp-for="Nama"    id="f-nama"    class="fld" placeholder="Nama perwakilan sesuai KTP" />
+                    <span asp-validation-for="Nama" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">No. Telepon</label>
+                    <input asp-for="Telepon" id="f-telepon" class="fld" placeholder="08xxxxxxxxxx" />
+                </div>
+                <div>
+                    <label class="lbl">Email</label>
+                    <input asp-for="Email"   id="f-email"   type="email" class="fld" placeholder="email@contoh.com" />
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 2. ALAMAT ── -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <div class="sec-header">
+                <span class="sec-num">2</span>
+                <p class="sec-title">Alamat</p>
+                <span id="alamat-loading" class="hidden ml-auto text-[10px] text-blue-500 font-medium flex items-center gap-1">
+                    <span class="inline-block w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></span>
+                    Memuat wilayah...
+                </span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="lbl">Provinsi</label>
+                    <select id="sel-provinsi" class="fld" disabled onchange="onProvinsiChange()"><option value="">Memuat...</option></select>
+                    <input type="hidden" asp-for="ProvinsiID"   id="f-provinsiID"   />
+                    <input type="hidden" asp-for="NamaProvinsi" id="f-namaProvinsi" />
+                </div>
+                <div>
+                    <label class="lbl">Kabupaten / Kota</label>
+                    <select id="sel-kabupaten" class="fld" disabled onchange="onKabupatenChange()"><option value="">— Pilih Kabupaten —</option></select>
+                    <input type="hidden" asp-for="KabupatenID"   id="f-kabupatenID"   />
+                    <input type="hidden" asp-for="NamaKabupaten" id="f-namaKabupaten" />
+                </div>
+                <div>
+                    <label class="lbl">Kecamatan</label>
+                    <select id="sel-kecamatan" class="fld" disabled onchange="onKecamatanChange()"><option value="">— Pilih Kecamatan —</option></select>
+                    <input type="hidden" asp-for="KecamatanID"   id="f-kecamatanID"   />
+                    <input type="hidden" asp-for="NamaKecamatan" id="f-namaKecamatan" />
+                </div>
+                <div>
+                    <label class="lbl">Kelurahan</label>
+                    <select id="sel-kelurahan" class="fld" disabled onchange="onKelurahanChange()"><option value="">— Pilih Kelurahan —</option></select>
+                    <input type="hidden" asp-for="KelurahanID"   id="f-kelurahanID"   />
+                    <input type="hidden" asp-for="NamaKelurahan" id="f-namaKelurahan" />
+                </div>
+                <div><label class="lbl">RT</label><input asp-for="RT" id="f-rt" class="fld" placeholder="001" maxlength="5"/></div>
+                <div><label class="lbl">RW</label><input asp-for="RW" id="f-rw" class="fld" placeholder="001" maxlength="5"/></div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Alamat Lengkap</label>
+                    <textarea asp-for="Alamat" id="f-alamat" rows="2" class="fld resize-none" placeholder="Nama jalan, nomor..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 3. DATA ORGANISASI ── -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <div class="sec-header">
+                <span class="sec-num">3</span>
+                <p class="sec-title">Data Organisasi / Lembaga</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="md:col-span-2">
+                    <label class="lbl">Nama @Model.Kategori <span class="req">*</span></label>
+                    <input asp-for="Lembaga" id="f-lembaga" class="fld" placeholder="@($"Nama {Model.Kategori} / Lembaga")" />
+                    <span asp-validation-for="Lembaga" class="err"></span>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Jabatan / Posisi Perwakilan</label>
+                    <input asp-for="Pekerjaan" id="f-pekerjaan" class="fld" placeholder="Ketua, Direktur, Koordinator, dll." />
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 4. DATA KEPERLUAN ── -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <div class="sec-header">
+                <span class="sec-num">4</span>
+                <p class="sec-title">Data Permohonan</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="lbl">No. Surat Permohonan <span class="req">*</span></label>
+                    <input asp-for="NoSuratPermohonan" class="fld" placeholder="001/SURAT/2024" />
+                    <span asp-validation-for="NoSuratPermohonan" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Tanggal Permohonan <span class="req">*</span></label>
+                    <input asp-for="TanggalPermohonan" type="date" class="fld" />
+                    <span asp-validation-for="TanggalPermohonan" class="err"></span>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Pengampu / PIC <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                    <input asp-for="Pengampu" class="fld" placeholder="Nama petugas pengampu" />
+                </div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Judul / Tujuan Permohonan <span class="req">*</span></label>
+                    <input asp-for="JudulPenelitian" class="fld" placeholder="Judul penelitian / tujuan permintaan informasi" />
+                    <span asp-validation-for="JudulPenelitian" class="err"></span>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Latar Belakang <span class="req">*</span></label>
+                    <textarea asp-for="LatarBelakang" rows="3" class="fld resize-none" placeholder="Jelaskan latar belakang keperluan permohonan..."></textarea>
+                    <span asp-validation-for="LatarBelakang" class="err"></span>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Tujuan Permohonan <span class="req">*</span></label>
+                    <input asp-for="TujuanPermohonan" id="f-tujuan" class="fld" placeholder="Ketik tujuan permohonan..." />
+                    <span asp-validation-for="TujuanPermohonan" class="err"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 5. KEPERLUAN ── -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <div class="sec-header">
+                <span class="sec-num">5</span>
+                <p class="sec-title">Keperluan <span class="text-gray-400 font-normal text-xs">(bisa lebih dari 1)</span></p>
+            </div>
+            <div class="space-y-3">
+                <div class="border border-gray-100 rounded-xl overflow-hidden">
+                    <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
+                        <input asp-for="IsObservasi"      type="checkbox" onchange="toggleDetail('det-obs',this)"  class="w-4 h-4 rounded accent-blue-600"/>
+                        <span class="font-semibold text-gray-700 text-sm">🔍 Observasi</span>
+                    </label>
+                    <div id="det-obs" class="@(!Model.IsObservasi ? "hidden" : "") px-4 pb-4">
+                        <textarea asp-for="DetailObservasi" rows="2" class="fld resize-none text-sm" placeholder="Jelaskan observasi yang diperlukan..."></textarea>
+                    </div>
+                </div>
+                <div class="border border-gray-100 rounded-xl overflow-hidden">
+                    <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
+                        <input asp-for="IsPermintaanData" type="checkbox" onchange="toggleDetail('det-data',this)" class="w-4 h-4 rounded accent-blue-600"/>
+                        <span class="font-semibold text-gray-700 text-sm">📊 Permintaan Data</span>
+                    </label>
+                    <div id="det-data" class="@(!Model.IsPermintaanData ? "hidden" : "") px-4 pb-4">
+                        <textarea asp-for="DetailPermintaanData" rows="2" class="fld resize-none text-sm" placeholder="Jelaskan data yang diperlukan..."></textarea>
+                    </div>
+                </div>
+                <div class="border border-gray-100 rounded-xl overflow-hidden">
+                    <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
+                        <input asp-for="IsWawancara"      type="checkbox" onchange="toggleDetail('det-waw',this)"  class="w-4 h-4 rounded accent-blue-600"/>
+                        <span class="font-semibold text-gray-700 text-sm">🎤 Wawancara</span>
+                    </label>
+                    <div id="det-waw" class="@(!Model.IsWawancara ? "hidden" : "") px-4 pb-4">
+                        <textarea asp-for="DetailWawancara" rows="2" class="fld resize-none text-sm" placeholder="Jelaskan topik wawancara..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 6. UNIT KERJA ── -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+            <div class="sec-header">
+                <span class="sec-num">6</span>
+                <p class="sec-title">Unit Kerja</p>
+            </div>
+            <select id="sel-bidang" class="fld" disabled onchange="onBidangChange()"><option value="">Memuat...</option></select>
+            <input type="hidden" asp-for="BidangID"   id="f-bidangID"   />
+            <input type="hidden" asp-for="NamaBidang" id="f-namaBidang" />
+        </div>
+
+        <!-- ── 7. UPLOAD DOKUMEN ── -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
+            <div class="sec-header">
+                <span class="sec-num">7</span>
+                <p class="sec-title">Upload Dokumen Persyaratan</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="lbl">📄 KTP Perwakilan</label>
+                    <input asp-for="FileKTP" type="file" accept=".pdf,.jpg,.jpeg,.png" class="file-fld"/>
+                </div>
+                <div>
+                    <label class="lbl">📄 Surat Permohonan</label>
+                    <input asp-for="FileSuratPermohonan" type="file" accept=".pdf" class="file-fld"/>
+                </div>
+                @if (isLSM || isOrg || isPerusahaan)
+                {
+                    <div class="md:col-span-2">
+                        <label class="lbl">📄 Akta Notaris / Legalitas Lembaga</label>
+                        <input asp-for="FileAktaNotaris" type="file" accept=".pdf" class="file-fld"/>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-700 text-xs"></div>
+
+        <div class="flex gap-3 mb-10">
+            <a href="/loket-umum"
+               class="flex-1 text-center border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold py-3 rounded-xl text-sm transition-colors">
+                Batal
+            </a>
+            <button type="submit"
+                    class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 px-8 rounded-xl text-sm transition-colors shadow-sm">
+                Simpan & Lanjutkan →
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #3b82f6;border-color:transparent;background:#fff}
+    select.fld{appearance:none;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");background-repeat:no-repeat;background-position:right 10px center;background-size:16px;padding-right:2.5rem}
+    select.fld:disabled{background-color:#f3f4f6;color:#9ca3af;cursor:not-allowed}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+    .file-fld{width:100%;font-size:12px;color:#6b7280;border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px;background:#fafafa}
+    .file-fld::file-selector-button{margin-right:8px;padding:4px 10px;border-radius:6px;border:none;font-size:11px;font-weight:700;background:#ecfdf5;color:#065f46;cursor:pointer}
+    .sec-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #f9fafb}
+    .sec-num{width:24px;height:24px;background:#059669;border-radius:6px;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .sec-title{font-weight:700;color:#374151;font-size:.875rem}
+</style>
+
+@section Scripts {
+<script>
+// ─── Helpers (same pattern as PetugasLoket/DaftarPemohon) ────────────────────
+function g(id){return document.getElementById(id)}
+function setF(id,val){var el=g(id);if(el)el.value=(val==null)?'':String(val)}
+function getF(id){var el=g(id);return el?el.value:''}
+function toArray(raw){if(!raw)return[];if(Array.isArray(raw))return raw;if(Array.isArray(raw.data))return raw.data;return[]}
+function itemLabel(item){return item.data||item.nama||item.name||item.namaBidang||String(item.id||'')}
+function fillSel(selId,items,ph){var sel=g(selId);if(!sel)return;sel.innerHTML='<option value="">'+ph+'</option>';items.forEach(function(item){var o=document.createElement('option');o.value=String(item.id||'');o.text=itemLabel(item);sel.appendChild(o)});sel.disabled=(items.length===0)}
+function pickSel(selId,value,hidValId,hidNamId){if(!value&&value!==0)return false;var needle=String(value);var sel=g(selId);if(!sel)return false;for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===needle){sel.selectedIndex=i;setF(hidValId,sel.options[i].value);setF(hidNamId,sel.options[i].text);return true}}setF(hidValId,needle);return false}
+function resetSel(selId,ph,hidValId,hidNamId){var sel=g(selId);if(sel){sel.innerHTML='<option value="">'+ph+'</option>';sel.disabled=true}if(hidValId)setF(hidValId,'');if(hidNamId)setF(hidNamId,'')}
+async function fetchJSON(url){var r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+function setAlamatLoading(show){var el=g('alamat-loading');if(el)el.classList.toggle('hidden',!show)}
+
+var _cache={};
+async function fetchW(url){if(_cache[url])return _cache[url];var items=toArray(await fetchJSON(url));_cache[url]=items;return items}
+async function loadProvinsi(){try{fillSel('sel-provinsi',await fetchW('/api/provinsi'),'— Pilih Provinsi —')}catch(e){fillSel('sel-provinsi',[],'— Gagal —')}}
+async function loadKabupaten(){try{var items=await fetchW('/api/kabupaten');fillSel('sel-kabupaten',items,'— Pilih Kabupaten —');return items}catch(e){fillSel('sel-kabupaten',[],'— Gagal —');return[]}}
+async function loadKecamatan(kabId){if(!kabId)return[];try{var items=await fetchW('/api/kecamatan?kab='+encodeURIComponent(kabId));fillSel('sel-kecamatan',items,'— Pilih Kecamatan —');return items}catch(e){fillSel('sel-kecamatan',[],'— Gagal —');return[]}}
+async function loadKelurahan(kecId){if(!kecId)return[];try{var items=await fetchW('/api/kelurahan?kec='+encodeURIComponent(kecId));fillSel('sel-kelurahan',items,'— Pilih Kelurahan —');return items}catch(e){fillSel('sel-kelurahan',[],'— Gagal —');return[]}}
+async function cascadeWilayah(kabId,kecId,kelId,kabNam,kecNam,kelNam){setAlamatLoading(true);try{if(kabId){await loadKabupaten();if(!pickSel('sel-kabupaten',kabId,'f-kabupatenID','f-namaKabupaten')&&kabNam)setF('f-namaKabupaten',kabNam)}if(kecId&&kabId){await loadKecamatan(kabId);if(!pickSel('sel-kecamatan',kecId,'f-kecamatanID','f-namaKecamatan')&&kecNam)setF('f-namaKecamatan',kecNam)}if(kelId&&kecId){await loadKelurahan(kecId);if(!pickSel('sel-kelurahan',kelId,'f-kelurahanID','f-namaKelurahan')&&kelNam)setF('f-namaKelurahan',kelNam)}}finally{setAlamatLoading(false)}}
+async function onProvinsiChange(){var sel=g('sel-provinsi');var opt=sel.options[sel.selectedIndex];setF('f-provinsiID',opt.value);setF('f-namaProvinsi',opt.text);resetSel('sel-kabupaten','— Pilih Kabupaten —','f-kabupatenID','f-namaKabupaten');resetSel('sel-kecamatan','— Pilih Kecamatan —','f-kecamatanID','f-namaKecamatan');resetSel('sel-kelurahan','— Pilih Kelurahan —','f-kelurahanID','f-namaKelurahan');if(opt.value){setAlamatLoading(true);await loadKabupaten();setAlamatLoading(false)}}
+async function onKabupatenChange(){var sel=g('sel-kabupaten');var opt=sel.options[sel.selectedIndex];setF('f-kabupatenID',opt.value);setF('f-namaKabupaten',opt.text);resetSel('sel-kecamatan','— Pilih Kecamatan —','f-kecamatanID','f-namaKecamatan');resetSel('sel-kelurahan','— Pilih Kelurahan —','f-kelurahanID','f-namaKelurahan');if(opt.value){setAlamatLoading(true);await loadKecamatan(opt.value);setAlamatLoading(false)}}
+async function onKecamatanChange(){var sel=g('sel-kecamatan');var opt=sel.options[sel.selectedIndex];setF('f-kecamatanID',opt.value);setF('f-namaKecamatan',opt.text);resetSel('sel-kelurahan','— Pilih Kelurahan —','f-kelurahanID','f-namaKelurahan');if(opt.value){setAlamatLoading(true);await loadKelurahan(opt.value);setAlamatLoading(false)}}
+function onKelurahanChange(){var sel=g('sel-kelurahan');var opt=sel.options[sel.selectedIndex];setF('f-kelurahanID',opt.value);setF('f-namaKelurahan',opt.text)}
+function onBidangChange(){var sel=g('sel-bidang');var opt=sel.options[sel.selectedIndex];setF('f-bidangID',opt.value);setF('f-namaBidang',opt.text)}
+
+async function loadBidang(){try{var raw=await fetchJSON('/api/bidang');var items=toArray(raw);var sel=g('sel-bidang');sel.innerHTML='<option value="">— Pilih Unit Kerja —</option>';items.forEach(function(d){var o=document.createElement('option');o.value=String(d.id||'');o.text=d.namaBidang||d.nama||'';sel.appendChild(o)});sel.disabled=false;var savedId=getF('f-bidangID');if(savedId)pickSel('sel-bidang',savedId,'f-bidangID','f-namaBidang')}catch(e){var sel=g('sel-bidang');sel.innerHTML='<option value="">— Gagal memuat —</option>';sel.disabled=false}}
+
+function switchTab(t){var isNik=(t==='nik');g('panel-nik').style.display=isNik?'block':'none';var base='px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors ';g('tab-nik').className=base+(isNik?'bg-[#002d7a] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200');g('tab-manual').className=base+(!isNik?'bg-[#002d7a] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200')}
+function nikMsg(html,type){var el=g('nik-msg');var bg={ok:'bg-green-50 text-green-700',err:'bg-red-50 text-red-700',warn:'bg-amber-50 text-amber-700',info:'bg-blue-50 text-blue-600'};el.className='mt-2 text-xs p-2 rounded-lg '+(bg[type]||'');el.innerHTML=html;el.classList.remove('hidden')}
+g('nik-input').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();cariNik()}});
+g('btn-cari').addEventListener('click',cariNik);
+async function cariNik(){var nik=g('nik-input').value.replace(/\D/g,'');var btn=g('btn-cari');if(nik.length!==16){nikMsg('NIK harus 16 digit angka.','err');return}btn.disabled=true;btn.innerHTML='⏳';nikMsg('Mencari...','info');var d;try{d=await fetchJSON('/api/cek-nik?nik='+nik)}catch(e){nikMsg('❌ Gagal menghubungi server.','err');setF('f-nik',nik);switchTab('manual');btn.disabled=false;btn.textContent='Cari';return}if(!d||!d.nama){nikMsg('⚠️ NIK tidak ditemukan. Isi manual.','warn');setF('f-nik',nik);switchTab('manual');btn.disabled=false;btn.textContent='Cari';return}setF('f-nik',nik);setF('f-nama',d.nama);setF('f-telepon',d.telepon);setF('f-email',d.email);setF('f-rt',d.rt);setF('f-rw',d.rw);setF('f-alamat',d.alamat);setF('f-lembaga',d.lembaga);setF('f-pekerjaan',d.pekerjaan);if(d.provinsiID){setF('f-provinsiID',d.provinsiID);setF('f-namaProvinsi',d.namaProvinsi);pickSel('sel-provinsi',d.provinsiID,'f-provinsiID','f-namaProvinsi')}setF('f-kabupatenID',d.kabupatenID);setF('f-namaKabupaten',d.kota);setF('f-kecamatanID',d.kecamatanID);setF('f-namaKecamatan',d.kecamatan);setF('f-kelurahanID',d.kelurahanID);setF('f-namaKelurahan',d.kelurahan);if(d.kabupatenID||d.kecamatanID||d.kelurahanID)await cascadeWilayah(d.kabupatenID,d.kecamatanID,d.kelurahanID,d.kota,d.kecamatan,d.kelurahan);nikMsg('✅ Data ditemukan: <strong>'+d.nama+'</strong>','ok');switchTab('manual');btn.disabled=false;btn.textContent='Cari'}
+
+function toggleDetail(id,cb){var el=g(id);if(el)el.classList.toggle('hidden',!cb.checked)}
+(async function init(){switchTab('nik');await Promise.all([loadProvinsi(),loadBidang()]);var sk=getF('f-kabupatenID'),sc=getF('f-kecamatanID'),sl=getF('f-kelurahanID'),sp=getF('f-provinsiID');if(sp)pickSel('sel-provinsi',sp,'f-provinsiID','f-namaProvinsi');if(sk||sc||sl)await cascadeWilayah(sk,sc,sl,getF('f-namaKabupaten'),getF('f-namaKecamatan'),getF('f-namaKelurahan'))})();
+</script>
+}

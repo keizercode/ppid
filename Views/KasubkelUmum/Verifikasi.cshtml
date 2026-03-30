@@ -1,0 +1,87 @@
+@* ─── Views/KasubkelUmum/Verifikasi.cshtml ───────────────────────────────── *@
+@model VerifikasiVm
+@{ ViewData["Title"]="Verifikasi — Kasubkel Umum"; ViewData["Role"]="Kasubkel Umum"; Layout="_LayoutAdmin"; }
+@* Gunakan layout verifikasi yang sama persis dengan KasubkelKepegawaian,
+   hanya bedanya form action mengarah ke /kasubkel-umum/verifikasi *@
+
+<div class="max-w-2xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl">✅</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Verifikasi Form Identifikasi Awal — Loket Umum</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+    <div class="p-6">
+        <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-5 space-y-3">
+            <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Ringkasan Permohonan</p>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><span class="text-[10px] text-emerald-500 uppercase font-semibold block">No. Permohonan</span><p class="font-mono font-bold text-emerald-800">@Model.NoPermohonan</p></div>
+                <div><span class="text-[10px] text-emerald-500 uppercase font-semibold block">Kategori</span><p class="text-emerald-700 font-medium">@Model.Kategori</p></div>
+                <div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-semibold block">Judul</span><p class="text-emerald-700 leading-snug">@Model.JudulPenelitian</p></div>
+                <div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-semibold block">Latar Belakang</span><p class="text-emerald-600 text-xs leading-relaxed line-clamp-3">@Model.LatarBelakang</p></div>
+                <div class="col-span-2">
+                    <span class="text-[10px] text-emerald-500 uppercase font-semibold block mb-1">Keperluan</span>
+                    <div class="flex flex-wrap gap-2">
+                        @if(Model.IsObservasi){<span class="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full font-semibold">🔍 Observasi</span>}
+                        @if(Model.IsPermintaanData){<span class="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-full font-semibold">📊 Permintaan Data</span>}
+                        @if(Model.IsWawancara){<span class="text-xs bg-violet-50 text-violet-700 border border-violet-200 px-2.5 py-1 rounded-full font-semibold">🎤 Wawancara</span>}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="VerifikasiPost" asp-controller="KasubkelUmum" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID"/><input type="hidden" asp-for="NoPermohonan"/>
+            <input type="hidden" asp-for="NamaPemohon"/><input type="hidden" asp-for="JudulPenelitian"/>
+            <input type="hidden" asp-for="LatarBelakang"/><input type="hidden" asp-for="IsObservasi"/>
+            <input type="hidden" asp-for="IsPermintaanData"/><input type="hidden" asp-for="IsWawancara"/>
+
+            <div class="mb-4">
+                <label class="lbl">Keputusan <span class="text-red-400">*</span></label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
+                        <input asp-for="Disetujui" type="radio" value="true" class="accent-emerald-600" id="setujui"/>
+                        <span class="text-sm font-semibold text-gray-700">✅ Setujui</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                        <input asp-for="Disetujui" type="radio" value="false" class="accent-red-600" id="tolak"/>
+                        <span class="text-sm font-semibold text-gray-700">❌ Tolak</span>
+                    </label>
+                </div>
+            </div>
+            <div id="div-setujui" class="mb-4">
+                <label class="lbl">Disposisi ke Unit <span class="text-red-400">*</span></label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"><input asp-for="DisposisiUnit" type="radio" value="PSMDI" class="accent-blue-600"/><span class="text-sm font-semibold text-gray-700">PSMDI</span></label>
+                    <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"><input asp-for="DisposisiUnit" type="radio" value="BidangTerkait" id="rdBidang" class="accent-blue-600"/><span class="text-sm font-semibold text-gray-700">Bidang Terkait</span></label>
+                </div>
+                <div id="div-bidang" class="mt-2 hidden"><input asp-for="NamaBidangDisposisi" class="fld" placeholder="Nama bidang terkait"/></div>
+            </div>
+            <div id="div-tolak" class="mb-4 hidden">
+                <label class="lbl">Alasan Penolakan</label>
+                <textarea asp-for="AlasanDitolak" rows="2" class="fld resize-none" placeholder="Tuliskan alasan..."></textarea>
+            </div>
+            <div class="mb-5">
+                <label class="lbl">Catatan Verifikasi</label>
+                <textarea asp-for="CatatanVerifikasi" rows="2" class="fld resize-none" placeholder="Catatan untuk Kepegawaian..."></textarea>
+            </div>
+            <div class="flex gap-3">
+                <a href="/kasubkel-umum" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit" class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm">Konfirmasi Verifikasi →</button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+<style>.lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}.fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}.fld:focus{box-shadow:0 0 0 2.5px #3b82f6;border-color:transparent;background:white}</style>
+<script>
+document.querySelectorAll('[name="Disetujui"]').forEach(r=>r.addEventListener('change',function(){
+    document.getElementById('div-setujui').style.display=this.value==='true'?'block':'none';
+    document.getElementById('div-tolak').style.display=this.value==='true'?'none':'block';
+}));
+document.getElementById('rdBidang')?.addEventListener('change',function(){document.getElementById('div-bidang').classList.toggle('hidden',!this.checked);});
+document.querySelectorAll('[name="DisposisiUnit"]').forEach(r=>{if(r.value!=='BidangTerkait')r.addEventListener('change',()=>document.getElementById('div-bidang').classList.add('hidden'));});
+</script>

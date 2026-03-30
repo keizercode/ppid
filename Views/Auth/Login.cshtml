@@ -12,9 +12,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <style>* { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+    <style>* { font-family:'Plus Jakarta Sans',sans-serif; }</style>
 </head>
-<body class="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4">
+<body class="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4 py-10">
 
 <div class="w-full max-w-sm">
 
@@ -24,20 +24,21 @@
             <svg viewBox="0 0 40 20" class="w-8 h-4">
                 <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle"
                       font-size="12" font-weight="700" fill="white"
-                      font-family="Plus Jakarta Sans, sans-serif">PPID</text>
+                      font-family="Plus Jakarta Sans,sans-serif">PPID</text>
             </svg>
         </div>
         <h1 class="text-xl font-extrabold text-gray-900">PPID DLH Jakarta</h1>
         <p class="text-gray-400 text-sm mt-1">Masuk ke panel admin</p>
     </div>
 
-    <!-- Card -->
+    <!-- Card Login -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
 
         @if (!ViewData.ModelState.IsValid)
         {
             <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-red-700 text-sm">
-                @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors)) {
+                @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
                     <p>@err.ErrorMessage</p>
                 }
             </div>
@@ -49,19 +50,17 @@
 
             <div class="mb-4">
                 <label class="lbl">Username</label>
-                <input asp-for="Username" class="fld" placeholder="Masukkan Username" autocomplete="username" />
+                <input asp-for="Username" id="Username" class="fld" placeholder="Masukkan username" autocomplete="username" />
                 <span asp-validation-for="Username" class="err"></span>
             </div>
 
             <div class="mb-5">
                 <label class="lbl">Password</label>
                 <div class="relative">
-                    <input asp-for="Password" type="password" id="pwdInput"
+                    <input asp-for="Password" type="password" id="Password"
                            class="fld pr-10" placeholder="••••••••" autocomplete="current-password" />
                     <button type="button" onclick="togglePwd()"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-sm">
-                        👁
-                    </button>
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">👁</button>
                 </div>
                 <span asp-validation-for="Password" class="err"></span>
             </div>
@@ -78,22 +77,41 @@
         </form>
     </div>
 
-    <!-- Role hints -->
+    <!-- Akun Testing -->
     <div class="mt-4 bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Akun Buat Testing</p>
-        <div class="space-y-1.5 text-xs text-gray-500">
-            @foreach (var (user, role, pass) in new[]{
-                ("loket",       "Petugas Loket",      "loket123"),
-                ("kepegawaian", "Kepegawaian",         "kepeg123"),
-                ("kdi",         "KDI",                 "kdi123"),
-                ("produsen",    "Produsen Data",       "produsen123"),
-                ("admin",       "Administrator",       "admin123"),
-            }) {
-                <div class="flex items-center justify-between">
-                    <span class="font-mono font-semibold text-gray-700">@user</span>
-                    <span class="text-gray-400">@role</span>
-                    <span class="font-mono text-gray-300">@pass</span>
-                </div>
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Akun Testing — Klik untuk auto-isi</p>
+
+        @{
+            var accounts = new (string User, string Role, string Pass, string Color, string Dot)[]
+            {
+                // ── Loket ──────────────────────────────────────────────────
+                ("loket",         "Loket Kepegawaian",      "loket123",         "text-blue-700",   "bg-blue-400"),
+                ("loketumum",     "Loket Umum",             "loketumum123",     "text-emerald-700","bg-emerald-400"),
+                // ── Kasubkel ───────────────────────────────────────────────
+                ("kasubkepeg",    "Kasubkel Kepegawaian",   "kasubkepeg123",    "text-violet-700", "bg-violet-400"),
+                ("kasubkelumum",  "Kasubkel Umum",          "kasubkelumum123",  "text-teal-700",   "bg-teal-400"),
+                // ── Kepegawaian ────────────────────────────────────────────
+                ("kepegawaian",   "Kepegawaian",            "kepeg123",         "text-purple-700", "bg-purple-400"),
+                // ── KDI ────────────────────────────────────────────────────
+                ("kasubkdi",      "Kasubkel KDI",           "kasubkdi123",      "text-cyan-700",   "bg-cyan-400"),
+                ("kdi",           "KDI",                    "kdi123",           "text-sky-700",    "bg-sky-400"),
+                // ── Produsen ───────────────────────────────────────────────
+                ("produsen",      "Produsen Data",          "produsen123",      "text-orange-700", "bg-orange-400"),
+                // ── Admin ──────────────────────────────────────────────────
+                ("admin",         "Administrator",          "admin123",         "text-red-700",    "bg-red-400"),
+            };
+        }
+
+        <div class="space-y-1">
+            @foreach (var (user, role, pass, color, dot) in accounts)
+            {
+                <button type="button" onclick="fillLogin('@user','@pass')"
+                        class="w-full flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                    <span class="w-1.5 h-1.5 rounded-full @dot flex-shrink-0"></span>
+                    <span class="font-mono font-bold text-xs @color w-28 flex-shrink-0">@user</span>
+                    <span class="text-gray-400 text-xs flex-1">@role</span>
+                    <span class="font-mono text-gray-300 text-[11px]">@pass</span>
+                </button>
             }
         </div>
     </div>
@@ -104,7 +122,7 @@
 </div>
 
 <style>
-    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
     .fld { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px; font-size:13.5px; background:#fafafa; outline:none; transition:all .15s; }
     .fld:focus { box-shadow:0 0 0 2.5px #3b82f6; border-color:transparent; background:white; }
     .err { color:#ef4444; font-size:11px; margin-top:3px; display:block; }
@@ -112,8 +130,12 @@
 
 <script>
 function togglePwd() {
-    const inp = document.getElementById('pwdInput');
+    const inp = document.getElementById('Password');
     inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+function fillLogin(user, pass) {
+    document.getElementById('Username').value = user;
+    document.getElementById('Password').value = pass;
 }
 </script>
 

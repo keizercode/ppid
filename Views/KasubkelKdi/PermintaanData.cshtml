@@ -1,0 +1,152 @@
+@model List<PermohonanPPID>
+@{
+    ViewData["Title"] = "Sub-menu Permintaan Data";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+    var q      = ViewData["Q"]      as string;
+    var status = ViewData["Status"] as int?;
+}
+
+<div class="flex items-center justify-between mb-4">
+    <div>
+        <p class="font-bold text-gray-700 text-sm">Permintaan Data</p>
+        <p class="text-xs text-gray-400 mt-0.5">Semua permohonan dengan keperluan permintaan data</p>
+    </div>
+    <a href="/kasubkel-kdi" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">← Dashboard</a>
+</div>
+
+<!-- Search + Filter -->
+<form method="get" class="flex gap-2 mb-4">
+    <input type="text" name="q" value="@q" placeholder="Cari nomor / nama pemohon..."
+           class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
+    <select name="status" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
+        <option value="">Semua Status</option>
+        <option value="6"  selected="@(status==6)">Didisposisi</option>
+        <option value="7"  selected="@(status==7)">Sedang Diproses</option>
+        <option value="10" selected="@(status==10)">Data Siap</option>
+        <option value="11" selected="@(status==11)">Selesai</option>
+    </select>
+    <button type="submit" class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
+    @if (!string.IsNullOrEmpty(q) || status.HasValue)
+    {
+        <a href="/kasubkel-kdi/permintaan-data" class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+    }
+</form>
+
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    @if (!Model.Any())
+    {
+        <div class="text-center py-20">
+            <div class="text-4xl mb-3">📊</div>
+            <p class="text-gray-400 text-sm font-medium">
+                @(string.IsNullOrEmpty(q) ? "Belum ada permintaan data" : $"Tidak ada hasil untuk \"{q}\"")
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-50">
+                        <th class="col-th">No Permohonan</th>
+                        <th class="col-th">Nama Pemohon</th>
+                        <th class="col-th">Kategori</th>
+                        <th class="col-th">Tgl Permohonan</th>
+                        <th class="col-th">Batas Waktu</th>
+                        <th class="col-th">Status</th>
+                        <th class="col-th">Pengampu</th>
+                        <th class="col-th">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var item in Model)
+                    {
+                        bool overdue = item.IsOverdue;
+                        <tr class="hover:bg-blue-50/30 transition-colors group">
+
+                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold whitespace-nowrap">
+                                @item.NoPermohonan
+                            </td>
+
+                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">
+                                @item.Pribadi?.Nama
+                            </td>
+
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
+                                    @(item.KategoriPemohon == "Mahasiswa" ? "🎓" : "🏢") @item.KategoriPemohon
+                                </span>
+                            </td>
+
+                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
+                                @item.TanggalPermohonan?.ToString("dd MMM yyyy")
+                            </td>
+
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                @if (item.BatasWaktu.HasValue)
+                                {
+                                    <span class="text-xs font-medium @(overdue ? "text-red-600" : item.HariSisa <= 3 ? "text-amber-600" : "text-gray-500")">
+                                        @(overdue ? "⚠ " : "")@item.BatasWaktu.Value.ToString("dd MMM yyyy")
+                                        @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
+                                        {
+                                            <span class="block text-[10px] @(overdue ? "text-red-400" : "text-gray-400")">
+                                                @(overdue
+                                                    ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari"
+                                                    : $"Sisa {item.HariSisa.Value} hari")
+                                            </span>
+                                        }
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-gray-300 text-xs">—</span>
+                                }
+                            </td>
+
+                            <td class="px-4 py-3">
+                                @{
+                                    string badgeCls = item.StatusPPIDID switch
+                                    {
+                                        StatusId.DataSiap   => "bg-emerald-50 text-emerald-700",
+                                        StatusId.Selesai    => "bg-emerald-100 text-emerald-800",
+                                        StatusId.DiProses   => "bg-blue-50 text-blue-700",
+                                        StatusId.Didisposisi => "bg-amber-50 text-amber-700",
+                                        _                   => "bg-gray-100 text-gray-500"
+                                    };
+                                }
+                                <span class="text-[11px] @badgeCls px-2.5 py-0.5 rounded-full font-medium">
+                                    @item.Status?.NamaStatusPPID
+                                </span>
+                            </td>
+
+                            <td class="px-4 py-3 text-xs text-gray-500">
+                                @(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)
+                            </td>
+
+                            <td class="px-4 py-3">
+                                <a href="/kasubkel-kdi/detail/@item.PermohonanPPIDID"
+                                   class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium opacity-80 group-hover:opacity-100 transition-opacity">
+                                    Detail
+                                </a>
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<style>
+    .col-th {
+        padding: 12px 16px;
+        text-align: left;
+        font-size: 10px;
+        font-weight: 700;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+</style>

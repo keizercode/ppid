@@ -15,7 +15,6 @@ public class AuthController(AppDbContext db) : Controller
     [HttpGet("login")]
     public IActionResult Login(string? returnUrl)
     {
-        // Jika sudah login, langsung redirect — tidak boleh return null
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToLocal(returnUrl) ?? RedirectToRoleHome(User.FindFirstValue(ClaimTypes.Role) ?? "");
 
@@ -48,7 +47,7 @@ public class AuthController(AppDbContext db) : Controller
             new("Username",                user.Username),
         };
 
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
         await HttpContext.SignInAsync(
@@ -57,12 +56,11 @@ public class AuthController(AppDbContext db) : Controller
             new AuthenticationProperties
             {
                 IsPersistent = vm.RememberMe,
-                ExpiresUtc = vm.RememberMe
+                ExpiresUtc   = vm.RememberMe
                     ? DateTimeOffset.UtcNow.AddDays(7)
                     : DateTimeOffset.UtcNow.AddHours(8)
             });
 
-        // RedirectToLocal bisa null jika returnUrl kosong → fallback ke role home
         return RedirectToLocal(returnUrl) ?? RedirectToRoleHome(user.Role);
     }
 
@@ -78,10 +76,6 @@ public class AuthController(AppDbContext db) : Controller
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Redirect ke returnUrl hanya jika URL tersebut local (aman dari open-redirect).
-    /// Mengembalikan null jika returnUrl kosong atau bukan local — caller wajib sediakan fallback.
-    /// </summary>
     private IActionResult? RedirectToLocal(string? returnUrl)
     {
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -90,12 +84,16 @@ public class AuthController(AppDbContext db) : Controller
     }
 
     private IActionResult RedirectToRoleHome(string role) => role switch
-    {
-        AppRoles.Loket => Redirect("/petugas-loket"),
-        AppRoles.Kepegawaian => Redirect("/kepegawaian"),
-        AppRoles.KDI => Redirect("/kdi"),
-        AppRoles.ProdusenData => Redirect("/produsen-data"),
-        AppRoles.Admin => Redirect("/petugas-loket"),
-        _ => Redirect("/petugas-loket"),
-    };
+{
+    AppRoles.Loket                  => Redirect("/petugas-loket"),
+    AppRoles.LoketUmum              => Redirect("/loket-umum"),           // ← TAMBAH
+    AppRoles.Kepegawaian            => Redirect("/kepegawaian"),
+    AppRoles.KasubkelKepegawaian    => Redirect("/kasubkel-kepegawaian"),
+    AppRoles.KasubkelUmum           => Redirect("/kasubkel-umum"),        // ← TAMBAH
+    AppRoles.KDI                    => Redirect("/kdi"),
+    AppRoles.KasubkelKDI            => Redirect("/kasubkel-kdi"),
+    AppRoles.ProdusenData           => Redirect("/produsen-data"),
+    AppRoles.Admin                  => Redirect("/petugas-loket"),
+    _                               => Redirect("/petugas-loket"),
+};
 }

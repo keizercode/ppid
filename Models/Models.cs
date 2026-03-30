@@ -41,6 +41,7 @@ public class PribadiPPID
     [Column("Fakultas")] public string? Fakultas { get; set; }
     [Column("Jurusan")] public string? Jurusan { get; set; }
     [Column("pekerjaan")] public string? Pekerjaan { get; set; }
+    [Column("NIM")] public string? NIM { get; set; }
     [Column("CreatedAt")] public DateTime? CreatedAt { get; set; }
     [Column("UpdatedAt")] public DateTime? UpdatedAt { get; set; }
 
@@ -54,16 +55,24 @@ public class PermohonanPPID
     [Column("PribadiID")] public Guid? PribadiID { get; set; }
 
     /// <summary>
-    /// Nomor permohonan publik — format PPD/YYYY/XXXXXXXX.
-    /// Delapan karakter terakhir bersifat kriptografis-random (bukan sequential),
-    /// sehingga nomor ini sendiri berfungsi sebagai identifier sekaligus rahasia.
-    /// Tidak bisa dienumerasi — pemohon lain tidak dapat menebak nomor orang lain.
+    /// Format baru: MHS687592/PPID/III/2026 atau UMM687592/PPID/III/2026
+    /// MHS = Mahasiswa (Loket Kepegawaian), UMM = Umum (Loket Umum)
     /// </summary>
     [Column("NoPermohonan")] public string? NoPermohonan { get; set; }
 
     [Column("KategoriPemohon")] public string? KategoriPemohon { get; set; }
     [Column("NoSuratPermohonan")] public string? NoSuratPermohonan { get; set; }
     [Column("TanggalPermohonan")] public DateOnly? TanggalPermohonan { get; set; }
+
+    /// <summary>Batas waktu penyelesaian — default TanggalPermohonan + 10 hari kerja (~14 hari kalender)</summary>
+    [Column("BatasWaktu")] public DateOnly? BatasWaktu { get; set; }
+
+    /// <summary>Tanggal permohonan benar-benar selesai</summary>
+    [Column("TanggalSelesai")] public DateOnly? TanggalSelesai { get; set; }
+
+    /// <summary>Petugas pengampu / PIC permohonan ini</summary>
+    [Column("Pengampu")] public string? Pengampu { get; set; }
+
     [Column("JudulPenelitian")] public string? JudulPenelitian { get; set; }
     [Column("LatarBelakang")] public string? LatarBelakang { get; set; }
     [Column("TujuanPermohonan")] public string? TujuanPermohonan { get; set; }
@@ -71,13 +80,7 @@ public class PermohonanPPID
     [Column("IsWawancara")] public bool IsWawancara { get; set; }
     [Column("IsPermintaanData")] public bool IsPermintaanData { get; set; }
     [Column("StatusPPIDID")] public int? StatusPPIDID { get; set; }
-
-    /// <summary>
-    /// Urutan internal — dipakai untuk sorting dashboard dan laporan jumlah permohonan.
-    /// Tidak ditampilkan ke publik; tidak tertanam di NoPermohonan.
-    /// </summary>
     [Column("Sequance")] public int? Sequance { get; set; }
-
     [Column("CratedAt")] public DateTime? CratedAt { get; set; }
     [Column("UpdatedAt")] public DateTime? UpdatedAt { get; set; }
     [Column("BidangID")] public Guid? BidangID { get; set; }
@@ -91,39 +94,56 @@ public class PermohonanPPID
     public ICollection<DokumenPPID> Dokumen { get; set; } = new List<DokumenPPID>();
     public ICollection<JadwalPPID> Jadwal { get; set; } = new List<JadwalPPID>();
     public ICollection<AuditLogPPID> AuditLog { get; set; } = new List<AuditLogPPID>();
+
+    // ── Computed helpers ─────────────────────────────────────────────────────
+    public bool IsOverdue => BatasWaktu.HasValue
+        && StatusPPIDID < StatusId.Selesai
+        && BatasWaktu.Value < DateOnly.FromDateTime(DateTime.Today);
+
+    public int? HariSisa => BatasWaktu.HasValue
+        ? (int?)(BatasWaktu.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays
+        : null;
 }
 
-// ── Random Identifier Generator ───────────────────────────────────────────────
+// ── NoPermohonan Token Generator ─────────────────────────────────────────────
 
 /// <summary>
-/// Menghasilkan token acak kriptografis dari alfabet 32-karakter yang
-/// menghindari karakter ambigu (0/O, 1/I, S/5, Z/2).
-/// Digunakan untuk suffix NoPermohonan (8 karakter → ~1,1 triliun kombinasi/tahun).
+/// Generate 6 digit random angka untuk suffix NoPermohonan.
+/// Format: MHS687592/PPID/III/2026 atau UMM687592/PPID/III/2026
 /// </summary>
 public static class NoPermohonanToken
 {
-    // 32 karakter — tidak ada 0/O, 1/I, S, Z agar mudah dibaca/diketik
-    private const string Alphabet = "23456789ABCDEFGHJKLMNPQRTUVWXY";
+    private static readonly string[] RomanMonths =
+        { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII" };
 
-    /// <param name="length">
-    /// Default 8 — memberikan ~10⁻⁹ collision probability pada 1 juta permohonan/tahun.
-    /// </param>
+    public static string GetRomanMonth(int month) => RomanMonths[month - 1];
+
+    /// <summary>Generate 6 digit random (100000–999999)</summary>
+    public static string GenerateDigits()
+    {
+        var buf = new byte[4];
+        RandomNumberGenerator.Fill(buf);
+        var val = (BitConverter.ToUInt32(buf) % 900_000) + 100_000;
+        return val.ToString("D6");
+    }
+
+    /// <summary>Legacy: 8-char alpha token untuk backward-compat</summary>
     public static string Generate(int length = 8)
     {
+        const string Alphabet = "23456789ABCDEFGHJKLMNPQRTUVWXY";
         var buffer = new byte[length];
         RandomNumberGenerator.Fill(buffer);
         return new string(buffer.Select(b => Alphabet[b % Alphabet.Length]).ToArray());
     }
 }
 
-// Alias untuk backward-compatibility internal (tidak dipakai di luar assembly ini)
-[Obsolete("Gunakan NoPermohonanToken.Generate(). TokenGenerator dihapus bersama kolom TokenLacak.")]
+[Obsolete("Gunakan NoPermohonanToken.Generate().")]
 public static class TokenGenerator
 {
     public static string Generate(int length = 8) => NoPermohonanToken.Generate(length);
 }
 
-// ── (sisa models tidak berubah) ───────────────────────────────────────────────
+// ── Models lainnya (tidak berubah) ───────────────────────────────────────────
 
 [Table("PermohonanPPIDDetail", Schema = "public")]
 public class PermohonanPPIDDetail
@@ -212,23 +232,44 @@ public class AuditLogPPID
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 }
 
-// ── Konstanta Status & Jenis Dokumen ─────────────────────────────────────────
+// ── Konstanta ─────────────────────────────────────────────────────────────────
 
 public static class StatusId
 {
     public const int Baru = 1;
     public const int TerdaftarSistem = 2;
-    public const int IdentifikasiAwal = 3;
-    public const int MenungguSuratIzin = 4;
-    public const int SuratIzinTerbit = 5;
-    public const int Didisposisi = 6;
-    public const int DiProses = 7;
-    public const int ObservasiDijadwalkan = 8;
-    public const int ObservasiSelesai = 9;
-    public const int DataSiap = 10;
-    public const int Selesai = 11;
-    public const int WawancaraDijadwalkan = 12;
-    public const int WawancaraSelesai = 13;
+    public const int IdentifikasiAwal = 3;          // Step 2 : TTD Form
+    public const int MenungguSuratIzin = 4;          // Step 3 : Verifikasi Kasubkel → Surat Izin
+    public const int SuratIzinTerbit = 5;            // Step 5 : Surat Izin Terbit
+    public const int Didisposisi = 6;                // Step 6 : Pembuatan Jadwal / Pemrosesan Data
+    public const int DiProses = 7;                   // Step 6b: Sedang Diproses
+    public const int ObservasiDijadwalkan = 8;       // Step 6c
+    public const int ObservasiSelesai = 9;           // Step 7c
+    public const int DataSiap = 10;                  // Step 7b: Data Tersedia
+    public const int Selesai = 11;                   // Step 9
+    public const int WawancaraDijadwalkan = 12;      // Step 6d
+    public const int WawancaraSelesai = 13;          // Step 7d
+    public const int MenungguVerifikasi = 14;        // NEW Step 3: Menunggu Verifikasi Kasubkel
+    public const int FeedbackPemohon = 15;           // NEW Step 8: Pengisian Feedback
+
+    /// <summary>Label tampilan 9-step sesuai requirements</summary>
+    public static string GetStepLabel(int? statusId) => statusId switch
+    {
+        TerdaftarSistem                         => "1. Permohonan",
+        IdentifikasiAwal                        => "2. Tanda Tangan Identifikasi Awal",
+        MenungguVerifikasi or MenungguSuratIzin => "3. Verifikasi Identifikasi Awal",
+        SuratIzinTerbit                         => "4–5. Surat Izin",
+        Didisposisi or DiProses                 => "6. Pemrosesan / Pembuatan Jadwal",
+        ObservasiDijadwalkan or WawancaraDijadwalkan => "6. Jadwal Observasi/Wawancara",
+        ObservasiSelesai or WawancaraSelesai or DataSiap => "7. Data Tersedia / Selesai Obs/Waw",
+        FeedbackPemohon                         => "8. Pengisian Feedback",
+        Selesai                                 => "9. Selesai",
+        _                                       => "—"
+    };
+
+    /// <summary>True jika permohonan masih dalam proses (bukan selesai)</summary>
+    public static bool IsProses(int? id) => id.HasValue && id.Value > TerdaftarSistem && id.Value < Selesai;
+    public static bool IsSelesai(int? id) => id == Selesai;
 }
 
 public static class JenisDokumenId
@@ -253,13 +294,21 @@ public static class LoketJenis
 {
     public const string Kepegawaian = "Kepegawaian";
     public const string Umum = "Umum";
+
+    /// <summary>Prefix NoPermohonan berdasarkan jenis loket</summary>
+    public static string GetPrefix(string? loketJenis) =>
+        loketJenis == Umum ? "UMM" : "MHS";
 }
 
 public static class AppRoles
 {
-    public const string Loket = "Loket";
-    public const string Kepegawaian = "Kepegawaian";
-    public const string KDI = "KDI";
-    public const string ProdusenData = "ProdusenData";
-    public const string Admin = "Admin";
+    public const string Loket                = "Loket";
+    public const string LoketUmum            = "LoketUmum";
+    public const string Kepegawaian          = "Kepegawaian";
+    public const string KasubkelKepegawaian  = "KasubkelKepegawaian";
+    public const string KasubkelUmum         = "KasubkelUmum";
+    public const string KDI                  = "KDI";
+    public const string KasubkelKDI          = "KasubkelKDI";
+    public const string ProdusenData         = "ProdusenData";
+    public const string Admin                = "Admin";
 }

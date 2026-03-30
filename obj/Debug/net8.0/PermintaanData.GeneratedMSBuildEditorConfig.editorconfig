@@ -42,6 +42,50 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxLdWVzaW9uZXIuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/Detail.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcRGV0YWlsLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/PermintaanData.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcUGVybWludGFhbkRhdGEuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Detail.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxEZXRhaWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Permohonan.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxQZXJtb2hvbmFuLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Verifikasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxWZXJpZmlrYXNpLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Detail.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXERldGFpbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Permohonan.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXFBlcm1vaG9uYW4uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Verifikasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXFZlcmlmaWthc2kuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Bidang.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEJpZGFuZy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -82,6 +126,38 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2VwZWdhd2FpYW5cU3VyYXRJemluLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/DaftarPemohon.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXERhZnRhclBlbW9ob24uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/Identifikasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXElkZW50aWZpa2FzaS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/InputIdentifikasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXElucHV0SWRlbnRpZmlrYXNpLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/Observasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXE9ic2VydmFzaS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/PermintaanData.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXFBlcm1pbnRhYW5EYXRhLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/Wawancara.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXFdhd2FuY2FyYS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/MenuData/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWVudURhdGFcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/CetakIdentifikasi.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XENldGFrSWRlbnRpZmlrYXNpLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -92,6 +168,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Detail.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XERldGFpbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XEVkaXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Identifikasi.cshtml]
@@ -106,8 +186,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XElucHV0SWRlbnRpZmlrYXNpLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Observasi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XE9ic2VydmFzaS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/PermintaanData.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XFBlcm1pbnRhYW5EYXRhLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/UploadTTD.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XFVwbG9hZFRURC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Wawancara.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XFdhd2FuY2FyYS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/ProdusenData/Index.cshtml]

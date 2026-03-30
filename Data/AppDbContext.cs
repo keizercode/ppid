@@ -62,19 +62,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         // ── Seed: StatusPPID ──────────────────────────────────────────────
         m.Entity<StatusPPID>().HasData(
-            new StatusPPID { StatusPPIDID = 1, NamaStatusPPID = "Baru" },
-            new StatusPPID { StatusPPIDID = 2, NamaStatusPPID = "Terdaftar" },
-            new StatusPPID { StatusPPIDID = 3, NamaStatusPPID = "Identifikasi Awal" },
-            new StatusPPID { StatusPPIDID = 4, NamaStatusPPID = "Menunggu Surat Izin" },
-            new StatusPPID { StatusPPIDID = 5, NamaStatusPPID = "Surat Izin Terbit" },
-            new StatusPPID { StatusPPIDID = 6, NamaStatusPPID = "Didisposisi" },
-            new StatusPPID { StatusPPIDID = 7, NamaStatusPPID = "Sedang Diproses" },
-            new StatusPPID { StatusPPIDID = 8, NamaStatusPPID = "Observasi Dijadwalkan" },
-            new StatusPPID { StatusPPIDID = 9, NamaStatusPPID = "Observasi Selesai" },
+            new StatusPPID { StatusPPIDID = 1,  NamaStatusPPID = "Baru" },
+            new StatusPPID { StatusPPIDID = 2,  NamaStatusPPID = "Terdaftar" },
+            new StatusPPID { StatusPPIDID = 3,  NamaStatusPPID = "Identifikasi Awal" },
+            new StatusPPID { StatusPPIDID = 4,  NamaStatusPPID = "Menunggu Surat Izin" },
+            new StatusPPID { StatusPPIDID = 5,  NamaStatusPPID = "Surat Izin Terbit" },
+            new StatusPPID { StatusPPIDID = 6,  NamaStatusPPID = "Didisposisi" },
+            new StatusPPID { StatusPPIDID = 7,  NamaStatusPPID = "Sedang Diproses" },
+            new StatusPPID { StatusPPIDID = 8,  NamaStatusPPID = "Observasi Dijadwalkan" },
+            new StatusPPID { StatusPPIDID = 9,  NamaStatusPPID = "Observasi Selesai" },
             new StatusPPID { StatusPPIDID = 10, NamaStatusPPID = "Data Siap" },
             new StatusPPID { StatusPPIDID = 11, NamaStatusPPID = "Selesai" },
             new StatusPPID { StatusPPIDID = 12, NamaStatusPPID = "Wawancara Dijadwalkan" },
-            new StatusPPID { StatusPPIDID = 13, NamaStatusPPID = "Wawancara Selesai" }
+            new StatusPPID { StatusPPIDID = 13, NamaStatusPPID = "Wawancara Selesai" },
+            new StatusPPID { StatusPPIDID = 14, NamaStatusPPID = "Menunggu Verifikasi Kasubkel" },
+            new StatusPPID { StatusPPIDID = 15, NamaStatusPPID = "Pengisian Feedback Pemohon" }
         );
 
         m.Entity<Keperluan>().HasData(
@@ -84,55 +86,45 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         );
 
         m.Entity<JenisDokumenPPID>().HasData(
-            new JenisDokumenPPID { JenisDokumenPPIDID = 1, NamaJenisDokumenPPID = "KTP", IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 2, NamaJenisDokumenPPID = "Surat Permohonan", IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 3, NamaJenisDokumenPPID = "Proposal Penelitian", IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 4, NamaJenisDokumenPPID = "Akta Notaris", IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 5, NamaJenisDokumenPPID = "Dokumen Identifikasi (TTD)", IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 6, NamaJenisDokumenPPID = "Surat Izin", IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 7, NamaJenisDokumenPPID = "Data Hasil", IsActive = true }
+            new JenisDokumenPPID { JenisDokumenPPIDID = 1, NamaJenisDokumenPPID = "KTP",                         IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 2, NamaJenisDokumenPPID = "Surat Permohonan",            IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 3, NamaJenisDokumenPPID = "Proposal Penelitian",         IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 4, NamaJenisDokumenPPID = "Akta Notaris",                IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 5, NamaJenisDokumenPPID = "Dokumen Identifikasi (TTD)",  IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 6, NamaJenisDokumenPPID = "Surat Izin",                  IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 7, NamaJenisDokumenPPID = "Data Hasil",                  IsActive = true }
         );
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // GenerateNoPermohonan — random public identifier + sequential internal key
+    // GenerateNoPermohonan — FORMAT BARU: MHS687592/PPID/III/2026
     //
-    // ARSITEKTUR KEAMANAN:
-    //   Skema lama   → NoPermohonan sequential (PPD/2026/0001, 0002, …)
-    //                  Mudah dienumerasi → ditambah TokenLacak sebagai patch.
+    // Prefix:
+    //   MHS = Mahasiswa  (LoketJenis.Kepegawaian)
+    //   UMM = Umum       (LoketJenis.Umum)
     //
-    //   Skema baru   → NoPermohonan = PPD/YYYY/<8 random chars>
-    //                  32-karakter alfabet × 8 posisi ≈ 1,1 triliun kombinasi
-    //                  per tahun. Collision probability negligible (<10⁻⁹
-    //                  pada 1 juta permohonan/tahun).
-    //                  TokenLacak dihapus — NoPermohonan SENDIRI adalah rahasia.
+    // Struktur:
+    //   [PREFIX][6 digit random]/PPID/[Bulan Romawi]/[Tahun]
     //
-    // INTERNAL ORDERING:
-    //   NoPermohonanCounter.LastSeq tetap dipakai untuk:
-    //     • field Sequance (sorting/counting dashboard)
-    //     • audit — berapa permohonan masuk tahun ini
-    //   Sequence TIDAK tertanam di NoPermohonan publik.
-    //
-    // RACE-CONDITION GUARD:
-    //   pg_advisory_xact_lock memastikan hanya satu transaksi yang
-    //   mengeksekusi blok ini pada satu waktu (single-node guard).
-    //   Uniqueness constraint pada NoPermohonan di DB adalah safety net kedua.
+    // Collision guard:
+    //   pg_advisory_xact_lock + UNIQUE index sebagai safety net.
     // ════════════════════════════════════════════════════════════════════════
 
-    public async Task<(string NoPermohonan, int Sequence)> GenerateNoPermohonan()
+    public async Task<(string NoPermohonan, int Sequence)> GenerateNoPermohonan(
+        string loketJenis = LoketJenis.Kepegawaian)
     {
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"PPD/{year}/";
+        var now       = DateTime.UtcNow;
+        var year      = now.Year;
+        var prefix    = LoketJenis.GetPrefix(loketJenis);
+        var romanMonth = NoPermohonanToken.GetRomanMonth(now.Month);
 
         await using var tx = await Database.BeginTransactionAsync();
         try
         {
-            // Serialize all generation within the same Postgres instance
-            await Database.ExecuteSqlRawAsync(
-                "SELECT pg_advisory_xact_lock(20250001)");
+            // Serialize antar transaksi di instance Postgres yang sama
+            await Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(20250002)");
 
-            // ── 1. Increment counter atomically (UPSERT) ─────────────────
-            // Seed the year row on first use; subsequent calls simply increment.
+            // ── Increment sequence counter ────────────────────────────────
             await Database.ExecuteSqlRawAsync($"""
                 INSERT INTO public."NoPermohonanCounter" ("Year", "LastSeq")
                 VALUES ({year}, 1)
@@ -148,13 +140,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                     """)
                 .FirstAsync();
 
-            // ── 2. Generate random NoPermohonan; retry on the astronomically
-            //       rare collision with an existing record ──────────────────
+            // ── Generate NoPermohonan dengan retry on collision ───────────
             string noPermohonan;
             const int maxAttempts = 10;
             for (int attempt = 1; ; attempt++)
             {
-                noPermohonan = prefix + NoPermohonanToken.Generate();
+                var digits = NoPermohonanToken.GenerateDigits();
+                noPermohonan = $"{prefix}{digits}/PPID/{romanMonth}/{year}";
+
                 bool taken = await PermohonanPPID
                     .AnyAsync(p => p.NoPermohonan == noPermohonan);
 
@@ -162,8 +155,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
                 if (attempt >= maxAttempts)
                     throw new InvalidOperationException(
-                        $"Gagal membuat NoPermohonan unik setelah {maxAttempts} percobaan. " +
-                        "Kemungkinan ada masalah dengan RNG atau collision space yang sangat sempit.");
+                        $"Gagal membuat NoPermohonan unik setelah {maxAttempts} percobaan.");
             }
 
             await tx.CommitAsync();
@@ -176,6 +168,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         }
     }
 
+    // ── Helper: hitung batas waktu (10 hari kerja ≈ 14 hari kalender) ───────
+
+    public static DateOnly HitungBatasWaktu(DateOnly tanggalPermohonan)
+    {
+        // Sederhana: +14 hari kalender. Untuk perhitungan hari kerja sejati,
+        // perlu tabel libur nasional — ini bisa dikembangkan kemudian.
+        return tanggalPermohonan.AddDays(14);
+    }
+
     // ── Helper Audit Log ──────────────────────────────────────────────────
 
     public void AddAuditLog(Guid permohonanId, int? statusLama, int statusBaru,
@@ -184,13 +185,59 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         AuditLog.Add(new AuditLogPPID
         {
             PermohonanPPIDID = permohonanId,
-            StatusLama = statusLama,
-            StatusBaru = statusBaru,
-            Keterangan = keterangan,
-            Operator = operator_,
-            CreatedAt = DateTime.UtcNow
+            StatusLama       = statusLama,
+            StatusBaru       = statusBaru,
+            Keterangan       = keterangan,
+            Operator         = operator_,
+            CreatedAt        = DateTime.UtcNow
         });
     }
+
+    // ── Dashboard Monthly Stats ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Query stat bulanan untuk chart dashboard — 12 bulan terakhir.
+    /// Dikembalikan sebagai list anonim yang bisa di-serialize ke JSON.
+    /// </summary>
+    public async Task<List<MonthlyStatRow>> GetMonthlyStats(int months = 12)
+    {
+        var from = DateTime.UtcNow.AddMonths(-(months - 1));
+        var fromDate = new DateTime(from.Year, from.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var raw = await PermohonanPPID
+            .AsNoTracking()
+            .Where(p => p.CratedAt >= fromDate)
+            .Select(p => new
+            {
+                p.CratedAt,
+                p.StatusPPIDID
+            })
+            .ToListAsync();
+
+        // Group in memory (simpler than complex EF Core date grouping)
+        var groups = raw
+            .GroupBy(p => new { p.CratedAt!.Value.Year, p.CratedAt!.Value.Month })
+            .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+            .Select(g => new MonthlyStatRow
+            {
+                Label   = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yy"),
+                Total   = g.Count(),
+                Proses  = g.Count(p => StatusId.IsProses(p.StatusPPIDID)),
+                Selesai = g.Count(p => StatusId.IsSelesai(p.StatusPPIDID))
+            })
+            .ToList();
+
+        return groups;
+    }
+}
+
+public record MonthlyStatRow(string Label = "", int Total = 0, int Proses = 0, int Selesai = 0)
+{
+    public MonthlyStatRow() : this("", 0, 0, 0) { }
+    public string Label   { get; init; } = Label;
+    public int    Total   { get; init; } = Total;
+    public int    Proses  { get; init; } = Proses;
+    public int    Selesai { get; init; } = Selesai;
 }
 
 // ════════════════════════════════════════════════════════════════════════════

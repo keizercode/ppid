@@ -32,7 +32,7 @@ namespace PermintaanData.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AppUserID"));
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<bool>("IsActive")
@@ -55,7 +55,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("Role");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.Property<string>("Username")
@@ -79,7 +79,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("AuditLogID");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<string>("Keterangan")
@@ -117,7 +117,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("DokumenPPIDID");
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<int?>("JenisDokumenPPIDID")
@@ -137,7 +137,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("PermohonanPPIDID");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.Property<string>("UploadDokumenPPID")
@@ -161,7 +161,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("JadwalPPIDID");
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<string>("JenisJadwal")
@@ -182,7 +182,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("Tanggal");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.Property<TimeOnly?>("Waktu")
@@ -206,7 +206,7 @@ namespace PermintaanData.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("JenisDokumenPPIDID"));
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<bool>("IsActive")
@@ -218,7 +218,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("NamaJenisDokumenPPID");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("JenisDokumenPPIDID");
@@ -280,7 +280,7 @@ namespace PermintaanData.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("KeperluanID"));
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<string>("NamaKeperluan")
@@ -288,7 +288,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("NamaKeperluan");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("KeperluanID");
@@ -320,12 +320,16 @@ namespace PermintaanData.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("PermohonanPPIDID");
 
+                    b.Property<DateOnly?>("BatasWaktu")
+                        .HasColumnType("date")
+                        .HasColumnName("BatasWaktu");
+
                     b.Property<Guid?>("BidangID")
                         .HasColumnType("uuid")
                         .HasColumnName("BidangID");
 
                     b.Property<DateTime?>("CratedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CratedAt");
 
                     b.Property<bool>("IsObservasi")
@@ -372,6 +376,10 @@ namespace PermintaanData.Migrations
                         .HasColumnType("text")
                         .HasColumnName("NoSuratPermohonan");
 
+                    b.Property<string>("Pengampu")
+                        .HasColumnType("text")
+                        .HasColumnName("Pengampu");
+
                     b.Property<Guid?>("PribadiID")
                         .HasColumnType("uuid")
                         .HasColumnName("PribadiID");
@@ -388,16 +396,16 @@ namespace PermintaanData.Migrations
                         .HasColumnType("date")
                         .HasColumnName("TanggalPermohonan");
 
-                    b.Property<string>("TokenLacak")
-                        .HasColumnType("text")
-                        .HasColumnName("TokenLacak");
+                    b.Property<DateOnly?>("TanggalSelesai")
+                        .HasColumnType("date")
+                        .HasColumnName("TanggalSelesai");
 
                     b.Property<string>("TujuanPermohonan")
                         .HasColumnType("text")
                         .HasColumnName("TujuanPermohonan");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("PermohonanPPIDID");
@@ -420,7 +428,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("PermohonanPPIDDetailID");
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<string>("DetailKeperluan")
@@ -436,7 +444,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("PermohonanPPIDID");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("PermohonanPPIDDetailID");
@@ -460,7 +468,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("Alamat");
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<string>("Email")
@@ -520,7 +528,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("Telepon");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("PribadiID");
@@ -536,7 +544,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("PribadiPPIDID");
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<string>("Fakultas")
@@ -550,6 +558,10 @@ namespace PermintaanData.Migrations
                     b.Property<string>("Lembaga")
                         .HasColumnType("text")
                         .HasColumnName("Lembaga");
+
+                    b.Property<string>("NIM")
+                        .HasColumnType("text")
+                        .HasColumnName("NIM");
 
                     b.Property<string>("NamaProvinsi")
                         .HasColumnType("text")
@@ -568,7 +580,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("ProvinsiID");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("PribadiPPIDID");
@@ -589,7 +601,7 @@ namespace PermintaanData.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("StatusPPIDID"));
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
                     b.Property<string>("NamaStatusPPID")
@@ -597,7 +609,7 @@ namespace PermintaanData.Migrations
                         .HasColumnName("NamaStatusPPID");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("StatusPPIDID");
@@ -669,6 +681,16 @@ namespace PermintaanData.Migrations
                         {
                             StatusPPIDID = 13,
                             NamaStatusPPID = "Wawancara Selesai"
+                        },
+                        new
+                        {
+                            StatusPPIDID = 14,
+                            NamaStatusPPID = "Menunggu Verifikasi Kasubkel"
+                        },
+                        new
+                        {
+                            StatusPPIDID = 15,
+                            NamaStatusPPID = "Pengisian Feedback Pemohon"
                         });
                 });
 

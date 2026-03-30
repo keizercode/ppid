@@ -1,0 +1,61 @@
+@* ─── Views/KasubkelUmum/Permohonan.cshtml ───────────────────────────────── *@
+@model List<PermohonanPPID>
+@{
+    ViewData["Title"] = "Permohonan Baru — Kasubkel Umum";
+    ViewData["Role"]  = "Kasubkel Umum";
+    Layout = "_LayoutAdmin";
+    var q = ViewData["Q"] as string; var status = ViewData["Status"] as int?;
+}
+<div class="flex items-center justify-between mb-4">
+    <div><p class="font-bold text-gray-700 text-sm">Daftar Permohonan Loket Umum</p><p class="text-xs text-gray-400 mt-0.5">LSM / Organisasi / Perusahaan</p></div>
+    <a href="/kasubkel-umum" class="text-xs font-semibold text-blue-600 hover:text-blue-800">← Dashboard</a>
+</div>
+<form method="get" class="flex gap-2 mb-4 flex-wrap">
+    <input type="text" name="q" value="@q" placeholder="Cari nomor / nama..." class="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"/>
+    <select name="status" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+        <option value="">Semua Status</option>
+        <option value="2" selected="@(status==2)">Terdaftar</option>
+        <option value="14" selected="@(status==14)">Menunggu Verifikasi</option>
+        <option value="4" selected="@(status==4)">Menunggu Surat Izin</option>
+        <option value="11" selected="@(status==11)">Selesai</option>
+    </select>
+    <button class="bg-[#002d7a] text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
+    @if(!string.IsNullOrEmpty(q)||status.HasValue){<a href="/kasubkel-umum/permohonan" class="border border-gray-200 text-gray-500 text-xs px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a>}
+</form>
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    @if(!Model.Any()){<div class="text-center py-16 text-gray-400 text-sm">Belum ada permohonan</div>}
+    else {
+        <div class="overflow-x-auto"><table class="w-full text-sm">
+            <thead><tr class="border-b border-gray-100">
+                <th class="col-th">No Permohonan</th><th class="col-th">Nama Pemohon</th><th class="col-th">Kategori</th>
+                <th class="col-th">Keperluan</th><th class="col-th">Tgl Permohonan</th><th class="col-th">Batas Waktu</th>
+                <th class="col-th">Status</th><th class="col-th">Tgl Selesai</th><th class="col-th">Pengampu</th><th class="col-th">Action</th>
+            </tr></thead>
+            <tbody class="divide-y divide-gray-50">
+                @foreach(var item in Model){
+                    bool bisaVerif=item.StatusPPIDID==StatusId.MenungguVerifikasi||item.StatusPPIDID==StatusId.IdentifikasiAwal||item.StatusPPIDID==StatusId.MenungguSuratIzin;
+                    <tr class="hover:bg-emerald-50/30 group">
+                        <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">@item.NoPermohonan</td>
+                        <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
+                        <td class="px-4 py-3 text-xs text-emerald-600 font-medium">🏢 @item.KategoriPemohon</td>
+                        <td class="px-4 py-3"><div class="flex flex-wrap gap-1">
+                            @if(item.IsObservasi){<span class="tag bg-orange-50 text-orange-700 border-orange-100">Obs</span>}
+                            @if(item.IsPermintaanData){<span class="tag bg-blue-50 text-blue-700 border-blue-100">Data</span>}
+                            @if(item.IsWawancara){<span class="tag bg-violet-50 text-violet-700 border-violet-100">Waw</span>}
+                        </div></td>
+                        <td class="px-4 py-3 text-xs text-gray-400">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</td>
+                        <td class="px-4 py-3 text-xs @(item.IsOverdue?"text-red-600 font-semibold":"text-gray-500")">@(item.BatasWaktu?.ToString("dd MMM yyyy")??"—")@(item.IsOverdue?" ⚠":"")</td>
+                        <td class="px-4 py-3"><span class="text-[11px] @(item.StatusPPIDID==StatusId.MenungguVerifikasi?"bg-violet-50 text-violet-700":item.StatusPPIDID>=StatusId.DataSiap?"bg-emerald-50 text-emerald-700":"bg-amber-50 text-amber-700") px-2 py-0.5 rounded-full font-medium">@item.Status?.NamaStatusPPID</span></td>
+                        <td class="px-4 py-3 text-xs text-gray-400">@(item.TanggalSelesai?.ToString("dd MMM yyyy")??"—")</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">@(item.Pengampu??"—")</td>
+                        <td class="px-4 py-3"><div class="flex gap-1.5 opacity-80 group-hover:opacity-100">
+                            <a href="/kasubkel-umum/detail/@item.PermohonanPPIDID" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-lg font-medium">Detail</a>
+                            @if(bisaVerif){<a href="/kasubkel-umum/verifikasi/@item.PermohonanPPIDID" class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-semibold">Verifikasi</a>}
+                        </div></td>
+                    </tr>
+                }
+            </tbody>
+        </table></div>
+    }
+</div>
+<style>.col-th{padding:12px 16px;text-align:left;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em}.tag{font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600;border:1px solid}</style>

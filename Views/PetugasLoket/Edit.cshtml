@@ -1,0 +1,100 @@
+@* Views/PetugasLoket/Edit.cshtml — dipakai juga oleh LoketUmum via shared path *@
+@model EditPermohonanVm
+@{
+    bool isUmum      = Model.LoketJenis == "Umum";
+    string baseUrl   = isUmum ? "/loket-umum" : "/petugas-loket";
+    string roleLabel = isUmum ? "Loket Umum" : "Petugas Loket";
+    ViewData["Title"] = $"Edit Permohonan — {Model.NoPermohonan}";
+    ViewData["Role"]  = roleLabel;
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-2xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 @(isUmum ? "bg-emerald-100" : "bg-blue-100") rounded-xl flex items-center justify-center text-xl">✏️</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Edit Data Permohonan</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex gap-2 items-start text-xs text-amber-700">
+            <span class="mt-0.5">⚠️</span>
+            <p>Hanya data permohonan (judul, latar belakang, tujuan, keperluan, pengampu) yang dapat diedit. Data pribadi pemohon diubah melalui sistem terpisah.</p>
+        </div>
+
+        <form asp-action="EditPost" asp-controller="@(isUmum ? "LoketUmum" : "PetugasLoket")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="LoketJenis" />
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="md:col-span-2">
+                    <label class="lbl">Judul Penelitian / Tujuan <span class="req">*</span></label>
+                    <input asp-for="JudulPenelitian" class="fld" />
+                    <span asp-validation-for="JudulPenelitian" class="err"></span>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Latar Belakang <span class="req">*</span></label>
+                    <textarea asp-for="LatarBelakang" rows="3" class="fld resize-none"></textarea>
+                    <span asp-validation-for="LatarBelakang" class="err"></span>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="lbl">Tujuan Permohonan <span class="req">*</span></label>
+                    <input asp-for="TujuanPermohonan" class="fld" />
+                    <span asp-validation-for="TujuanPermohonan" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Pengampu / PIC</label>
+                    <input asp-for="Pengampu" class="fld" placeholder="Nama petugas pengampu" />
+                </div>
+                <div>
+                    <label class="lbl">Batas Waktu</label>
+                    <input asp-for="BatasWaktu" type="date" class="fld" />
+                </div>
+            </div>
+
+            <!-- Keperluan -->
+            <div class="mb-5">
+                <label class="lbl mb-3 block">Keperluan</label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-100 hover:bg-gray-50">
+                        <input asp-for="IsObservasi" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
+                        <span class="text-sm font-semibold text-gray-700">🔍 Observasi</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-100 hover:bg-gray-50">
+                        <input asp-for="IsPermintaanData" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
+                        <span class="text-sm font-semibold text-gray-700">📊 Permintaan Data</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-100 hover:bg-gray-50">
+                        <input asp-for="IsWawancara" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
+                        <span class="text-sm font-semibold text-gray-700">🎤 Wawancara</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="@baseUrl/detail/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit"
+                        class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">
+                    💾 Simpan Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #3b82f6;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>

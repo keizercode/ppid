@@ -1,0 +1,47 @@
+@* ─── LoketUmum/Wawancara.cshtml ──────────────────────────────────────────── *@
+@model List<PermohonanPPID>
+@{ ViewData["Title"]="Wawancara — Loket Umum"; ViewData["Role"]="Loket Umum"; Layout="_LayoutAdmin"; var q=ViewData["Q"] as string; }
+<div class="flex flex-wrap gap-2 mb-4">
+    <a href="/loket-umum" class="tab-btn">📋 Semua</a>
+    <a href="/loket-umum/permintaan-data" class="tab-btn">📊 Permintaan Data</a>
+    <a href="/loket-umum/wawancara" class="tab-btn active">🎤 Wawancara</a>
+    <a href="/loket-umum/observasi" class="tab-btn">🔍 Observasi</a>
+    <a href="/loket-umum/data" class="tab-btn">📂 Menu Data</a>
+</div>
+<form method="get" class="flex gap-2 mb-4">
+    <input type="text" name="q" value="@q" placeholder="Cari..." class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"/>
+    <button class="bg-[#002d7a] text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
+    @if(!string.IsNullOrEmpty(q)){<a href="/loket-umum/wawancara" class="border border-gray-200 text-gray-500 text-xs px-3 py-2 rounded-xl">Reset</a>}
+</form>
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead><tr class="border-b border-gray-100">
+                <th class="col-th">No Permohonan</th><th class="col-th">Nama Pemohon</th><th class="col-th">Kategori</th>
+                <th class="col-th">Tgl Permohonan</th><th class="col-th">Batas Waktu</th><th class="col-th">Status</th>
+                <th class="col-th">Jadwal Wawancara</th><th class="col-th">Pengampu</th><th class="col-th">Action</th>
+            </tr></thead>
+            <tbody class="divide-y divide-gray-50">
+                @if(!Model.Any()){<tr><td colspan="9" class="px-6 py-16 text-center text-gray-400 text-sm">Belum ada permohonan wawancara</td></tr>}
+                @foreach(var item in Model){
+                    var jadwal=item.Jadwal.Where(j=>j.JenisJadwal=="Wawancara").OrderByDescending(j=>j.CreatedAt).FirstOrDefault();
+                    <tr class="hover:bg-violet-50/30 group">
+                        <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">@item.NoPermohonan</td>
+                        <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
+                        <td class="px-4 py-3 text-xs text-emerald-600 font-medium">🏢 @item.KategoriPemohon</td>
+                        <td class="px-4 py-3 text-xs text-gray-400">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</td>
+                        <td class="px-4 py-3 text-xs @(item.IsOverdue?"text-red-600 font-semibold":"text-gray-500")">@(item.BatasWaktu?.ToString("dd MMM yyyy") ?? "—")</td>
+                        <td class="px-4 py-3"><span class="text-[11px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium">@item.Status?.NamaStatusPPID</span></td>
+                        <td class="px-4 py-3 text-xs text-gray-600">
+                            @if(jadwal!=null){<span class="font-semibold">@jadwal.Tanggal?.ToString("dd MMM yyyy")</span><span class="text-gray-400 ml-1">@jadwal.Waktu?.ToString("HH:mm")</span>}
+                            else{<span class="text-gray-300">Belum dijadwalkan</span>}
+                        </td>
+                        <td class="px-4 py-3 text-xs text-gray-500">@(item.Pengampu??"—")</td>
+                        <td class="px-4 py-3"><a href="/loket-umum/detail/@item.PermohonanPPIDID" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<style>.col-th{padding:12px 16px;text-align:left;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em}.tab-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid #e5e7eb;color:#6b7280;background:white;text-decoration:none;transition:all .15s}.tab-btn:hover{background:#f9fafb;color:#374151}.tab-btn.active{background:#002d7a;color:white;border-color:#002d7a}</style>
