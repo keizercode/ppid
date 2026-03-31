@@ -1,0 +1,135 @@
+@model SelesaiSubTaskVm
+@{
+    bool isWaw   = Model.JenisTask == "Wawancara";
+    string color = isWaw ? "violet" : "orange";
+    string icon  = isWaw ? "🎤" : "🔍";
+    string label = isWaw ? "Wawancara" : "Observasi";
+    string postAction = isWaw ? "/kdi/selesai-wawancara" : "/kdi/selesai-observasi";
+    ViewData["Title"] = $"Konfirmasi Selesai {label}";
+    ViewData["Role"]  = "KDI";
+    Layout = "_LayoutAdmin";
+}
+<div class="max-w-lg mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-@(color)-100 rounded-xl flex items-center justify-center text-xl">✅</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Konfirmasi Selesai — @label</h3>
+            <p class="text-xs text-gray-400 mt-0.5">@Model.NamaPemohon · <span class="font-mono">@Model.NoPermohonan</span></p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        @* Info jadwal *@
+        <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5 space-y-2">
+            <div>
+                <span class="text-[10px] text-gray-400 uppercase font-bold">Judul Penelitian</span>
+                <p class="font-semibold text-gray-800 text-sm mt-0.5">@Model.JudulPenelitian</p>
+            </div>
+            @if (Model.TanggalJadwal.HasValue)
+            {
+                <div class="flex gap-4 text-xs text-gray-600 pt-1 border-t border-gray-100">
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Tanggal @label</span>
+                        @Model.TanggalJadwal.Value.ToString("dd MMM yyyy")
+                    </div>
+                    @if (Model.WaktuJadwal.HasValue)
+                    {
+                        <div>
+                            <span class="text-[10px] text-gray-400 uppercase font-bold block">Jam</span>
+                            @Model.WaktuJadwal.Value.ToString("HH:mm") WIB
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.NamaPIC))
+                    {
+                        <div>
+                            <span class="text-[10px] text-gray-400 uppercase font-bold block">@(isWaw ? "Narasumber" : "PIC")</span>
+                            @Model.NamaPIC
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @* Dua skenario — dengan/tanpa file *@
+        @if (isWaw)
+        {
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs text-emerald-700">
+                    <p class="font-bold mb-1">📁 Upload dokumen</p>
+                    <p>Sub-tugas selesai + file tersedia untuk diunduh pemohon</p>
+                </div>
+                <div class="bg-violet-50 border border-violet-100 rounded-xl p-3 text-xs text-violet-700">
+                    <p class="font-bold mb-1">📋 Tanpa dokumen</p>
+                    <p>Sub-tugas ditandai selesai, sistem cek tugas lain</p>
+                </div>
+            </div>
+        }
+
+        <div class="bg-@(color)-50 border border-@(color)-100 rounded-xl p-3 mb-5 text-xs text-@(color)-700 flex gap-2 items-start">
+            <span>💡</span>
+            <p>Setelah dikonfirmasi, sub-tugas <strong>@label</strong> ditandai Selesai. Sistem akan otomatis memeriksa apakah semua tugas paralel lain sudah selesai.</p>
+        </div>
+
+        <form method="post" action="@postAction" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="SubTaskID" />
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="JudulPenelitian" />
+            <input type="hidden" asp-for="JenisTask" />
+
+            @* Upload file opsional *@
+            <div class="mb-4">
+                <label class="lbl">
+                    Dokumen Hasil @label
+                    <span class="text-gray-400 font-normal normal-case ml-1">(opsional)</span>
+                </label>
+                <div id="dropzone"
+                     class="border-2 border-dashed border-gray-200 hover:border-@(color)-400 rounded-xl p-6 text-center cursor-pointer bg-gray-50 hover:bg-@(color)-50 group transition-all"
+                     onclick="document.getElementById('fileHasil').click()">
+                    <div class="text-2xl mb-1">📎</div>
+                    <p class="text-sm font-semibold text-gray-600 group-hover:text-@(color)-700">Klik untuk pilih file</p>
+                    <p class="text-xs text-gray-400 mt-0.5">PDF, Excel, ZIP — maks. 50 MB</p>
+                    <input asp-for="FileHasil" type="file" id="fileHasil" class="hidden"
+                           onchange="showFileName(this,'fn-label')" />
+                    <p id="fn-label" class="text-xs text-@(color)-600 mt-2 font-semibold hidden"></p>
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <label class="lbl">Catatan Hasil <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                <textarea asp-for="Catatan" rows="2"
+                          class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-@(color)-300 resize-none bg-gray-50 focus:bg-white transition-colors"
+                          placeholder="Catatan internal hasil @label?.ToLower()..."></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kdi/subtasks/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit"
+                        class="flex-grow bg-@(color)-600 hover:bg-@(color)-700 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">
+                    ✅ Konfirmasi Selesai
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+</style>
+@section Scripts {
+<script>
+function showFileName(input, labelId) {
+    if (input.files[0]) {
+        const el = document.getElementById(labelId);
+        el.textContent = '✓ ' + input.files[0].name;
+        el.classList.remove('hidden');
+    }
+}
+</script>
+}

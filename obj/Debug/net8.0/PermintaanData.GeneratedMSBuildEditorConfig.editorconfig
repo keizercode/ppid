@@ -98,6 +98,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbE9ic2VydmFzaS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/JadwalSubTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbFN1YlRhc2suY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/JadwalWawancara.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbFdhd2FuY2FyYS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -108,6 +112,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/SelesaiObservasi.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFNlbGVzYWlPYnNlcnZhc2kuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/SelesaiSubTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFNlbGVzYWlTdWJUYXNrLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/SubTasks.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFN1YlRhc2tzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/TerimaDisposisi.cshtml]

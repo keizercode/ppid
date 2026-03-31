@@ -232,6 +232,128 @@ public class AuditLogPPID
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 }
 
+// ── Sub-Task Parallel Processing ─────────────────────────────────────────────
+/// <summary>
+/// Melacak tugas individual (PermintaanData / Observasi / Wawancara) secara paralel
+/// dalam satu permohonan. Semua SubTask harus StatusTask = Selesai sebelum
+/// permohonan bisa advance ke DataSiap.
+/// </summary>
+[Table("SubTaskPPID", Schema = "public")]
+public class SubTaskPPID
+{
+    [Key, Column("SubTaskID")]
+    public Guid SubTaskID { get; set; } = Guid.NewGuid();
+
+    [Column("PermohonanPPIDID")]
+    public Guid PermohonanPPIDID { get; set; }
+
+    /// <summary>PermintaanData | Observasi | Wawancara</summary>
+    [Column("JenisTask")]
+    public string JenisTask { get; set; } = string.Empty;
+
+    /// <summary>0=Pending, 1=InProgress, 2=Selesai</summary>
+    [Column("StatusTask")]
+    public int StatusTask { get; set; } = SubTaskStatus.Pending;
+
+    /// <summary>Path file hasil (untuk PermintaanData atau Wawancara berkas)</summary>
+    [Column("FilePath")]
+    public string? FilePath { get; set; }
+
+    [Column("NamaFile")]
+    public string? NamaFile { get; set; }
+
+    [Column("Catatan")]
+    public string? Catatan { get; set; }
+
+    /// <summary>Nama PIC / narasumber untuk Observasi & Wawancara</summary>
+    [Column("NamaPIC")]
+    public string? NamaPIC { get; set; }
+
+    [Column("TanggalJadwal")]
+    public DateOnly? TanggalJadwal { get; set; }
+
+    [Column("WaktuJadwal")]
+    public TimeOnly? WaktuJadwal { get; set; }
+
+    [Column("Operator")]
+    public string? Operator { get; set; }
+
+    [Column("CreatedAt")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("SelesaiAt")]
+    public DateTime? SelesaiAt { get; set; }
+
+    [Column("UpdatedAt")]
+    public DateTime? UpdatedAt { get; set; }
+
+    [ForeignKey("PermohonanPPIDID")]
+    public PermohonanPPID? Permohonan { get; set; }
+
+    // ── Computed helpers ──────────────────────────────────────────────────────
+    public bool IsPending    => StatusTask == SubTaskStatus.Pending;
+    public bool IsInProgress => StatusTask == SubTaskStatus.InProgress;
+    public bool IsSelesai    => StatusTask == SubTaskStatus.Selesai;
+    public bool HasFile      => !string.IsNullOrEmpty(FilePath);
+    public bool HasJadwal    => TanggalJadwal.HasValue;
+}
+
+// ── Konstanta Status SubTask ──────────────────────────────────────────────────
+public static class SubTaskStatus
+{
+    public const int Pending    = 0;
+    public const int InProgress = 1;
+    public const int Selesai    = 2;
+
+    public static string GetLabel(int status) => status switch
+    {
+        Pending    => "Menunggu",
+        InProgress => "Sedang Diproses",
+        Selesai    => "Selesai",
+        _          => "—"
+    };
+
+    public static string GetBadgeClass(int status) => status switch
+    {
+        Pending    => "bg-gray-100 text-gray-500",
+        InProgress => "bg-amber-50 text-amber-700",
+        Selesai    => "bg-emerald-50 text-emerald-700",
+        _          => "bg-gray-50 text-gray-400"
+    };
+}
+
+// ── Konstanta Jenis Task ──────────────────────────────────────────────────────
+public static class JenisTask
+{
+    public const string PermintaanData = "PermintaanData";
+    public const string Observasi      = "Observasi";
+    public const string Wawancara      = "Wawancara";
+
+    public static string GetLabel(string jenis) => jenis switch
+    {
+        PermintaanData => "Permintaan Data",
+        Observasi      => "Observasi",
+        Wawancara      => "Wawancara",
+        _              => jenis
+    };
+
+    public static string GetIcon(string jenis) => jenis switch
+    {
+        PermintaanData => "📊",
+        Observasi      => "🔍",
+        Wawancara      => "🎤",
+        _              => "📋"
+    };
+
+    public static string GetColor(string jenis) => jenis switch
+    {
+        PermintaanData => "blue",
+        Observasi      => "orange",
+        Wawancara      => "violet",
+        _              => "gray"
+    };
+}
+
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
 public static class StatusId

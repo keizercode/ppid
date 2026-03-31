@@ -1,0 +1,108 @@
+@model JadwalSubTaskVm
+@{
+    bool isWaw    = Model.JenisTask == "Wawancara";
+    string color  = isWaw ? "violet" : "orange";
+    string icon   = isWaw ? "🎤" : "🔍";
+    string label  = isWaw ? "Wawancara" : "Observasi";
+    string action = isWaw ? "JadwalWawancaraPost" : "JadwalObservasiPost";
+    string route  = isWaw ? "/kdi/jadwal-wawancara" : "/kdi/jadwal";
+    ViewData["Title"] = $"Jadwal {label}";
+    ViewData["Role"]  = "KDI";
+    Layout = "_LayoutAdmin";
+}
+<div class="max-w-lg mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-@(color)-100 rounded-xl flex items-center justify-center text-xl">@icon</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Buat Jadwal @label</h3>
+            <p class="text-xs text-gray-400 mt-0.5">@Model.NamaPemohon · <span class="font-mono">@Model.NoPermohonan</span></p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        @* Info penelitian *@
+        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4">
+            <span class="text-[10px] text-gray-400 uppercase font-bold">Judul Penelitian</span>
+            <p class="font-semibold text-gray-800 text-sm mt-0.5">@Model.JudulPenelitian</p>
+            @if (!string.IsNullOrEmpty(Model.DetailKeperluan))
+            {
+                <span class="text-[10px] text-gray-400 uppercase font-bold mt-2 block">Topik / Detail</span>
+                <p class="text-gray-600 text-xs mt-0.5">@Model.DetailKeperluan</p>
+            }
+            @if (!string.IsNullOrEmpty(Model.NamaBidangTerkait))
+            {
+                <span class="text-[10px] text-gray-400 uppercase font-bold mt-2 block">Unit Bidang</span>
+                <p class="text-gray-600 text-xs mt-0.5">@Model.NamaBidangTerkait</p>
+            }
+        </div>
+
+        @* Peringatan wajib konfirmasi narasumber *@
+        <div class="bg-red-50 border border-red-300 rounded-xl p-4 mb-4 flex gap-3 items-start">
+            <span class="text-red-500 text-xl flex-shrink-0 mt-0.5">🔔</span>
+            <div>
+                <p class="font-bold text-red-700 text-sm">Perhatian Petugas — Wajib Konfirmasi</p>
+                <p class="text-red-600 text-xs mt-1 leading-relaxed">
+                    <strong>Petugas wajib mengingatkan dan mengkonfirmasi ketersediaan @(isWaw ? "narasumber" : "PIC observasi") sebelum menyimpan jadwal.</strong>
+                    Jadwal yang tersimpan langsung ditampilkan kepada pemohon di halaman lacak permohonan.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-@(color)-50 border border-@(color)-200 rounded-xl p-3 mb-5 text-xs text-@(color)-700 flex gap-2 items-start">
+            <span>💡</span>
+            <p>Jadwal ini ditampilkan kepada pemohon secara real-time dan menjadi acuan untuk sesi @label.</p>
+        </div>
+
+        <form asp-action="@action" asp-controller="Kdi" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="SubTaskID" />
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="JenisTask" />
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="lbl">Tanggal <span class="text-red-400">*</span></label>
+                    <input asp-for="Tanggal" type="date" class="fld" />
+                    <span asp-validation-for="Tanggal" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Jam <span class="text-red-400">*</span></label>
+                    <input asp-for="Waktu" type="time" class="fld" />
+                    <span asp-validation-for="Waktu" class="err"></span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="lbl">Nama @(isWaw ? "Narasumber" : "PIC / Penanggung Jawab") <span class="text-red-400">*</span></label>
+                <input asp-for="NamaPIC" class="fld" placeholder="@(isWaw ? "Nama narasumber yang diwawancara" : "Nama penanggung jawab observasi")" />
+                <span asp-validation-for="NamaPIC" class="err"></span>
+            </div>
+
+            <div class="mb-5">
+                <label class="lbl">Lokasi / Platform <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                <input asp-for="Lokasi" class="fld" placeholder="Ruang Rapat Lt. 3 / Google Meet / Zoom" />
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kdi/subtasks/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit"
+                        class="flex-grow bg-@(color)-600 hover:bg-@(color)-700 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">
+                    📅 Simpan Jadwal @label
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #7c3aed;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>

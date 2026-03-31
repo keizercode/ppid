@@ -451,3 +451,101 @@ public class EditPermohonanVm
     [Display(Name = "Permintaan Data")] public bool IsPermintaanData { get; set; }
     [Display(Name = "Wawancara")]       public bool IsWawancara      { get; set; }
 }
+
+// ── Parallel Tasks ────────────────────────────────────────────────────────────
+
+///
+/// ViewModel untuk halaman manajemen tugas paralel KDI.
+/// Menampilkan progress semua sub-tugas dalam satu permohonan.
+/// <
+public class ParallelTasksVm
+{
+    public PermohonanPPID   Permohonan { get; set; } = null!;
+    public List<SubTaskPPID> SubTasks  { get; set; } = new();
+
+    // ── Computed ──────────────────────────────────────────────────────────
+    public int  TotalTasks    => SubTasks.Count;
+    public int  DoneTasks     => SubTasks.Count(t => t.IsSelesai);
+    public bool AllDone       => TotalTasks > 0 && DoneTasks == TotalTasks;
+    public int  ProgressPct   => TotalTasks > 0 ? (int)Math.Round(DoneTasks * 100.0 / TotalTasks) : 0;
+
+    public SubTaskPPID? GetTask(string jenisTask)
+        => SubTasks.FirstOrDefault(t => t.JenisTask == jenisTask);
+}
+
+// ── Upload Data Sub-Task ──────────────────────────────────────────────────────
+
+///
+/// VM untuk upload file data pada sub-task PermintaanData.
+/// <
+public class UploadDataSubTaskVm
+{
+    public Guid   SubTaskID        { get; set; }
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "File data wajib diupload")]
+    [Display(Name = "File Data")]
+    public IFormFile? FileData { get; set; }
+
+    [Display(Name = "Catatan untuk Pemohon")]
+    public string? Catatan { get; set; }
+}
+
+// ── Jadwal SubTask (Observasi / Wawancara) ────────────────────────────────────
+
+///
+/// VM untuk membuat / memperbarui jadwal pada sub-task Observasi atau Wawancara.
+/// Digunakan bersama untuk kedua jenis jadwal.
+/// <
+public class JadwalSubTaskVm
+{
+    public Guid   SubTaskID        { get; set; }
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+    public string JenisTask        { get; set; } = string.Empty;  // "Observasi" | "Wawancara"
+    public string? DetailKeperluan { get; set; }
+    public string? NamaBidangTerkait { get; set; }
+
+    [Required]
+    [Display(Name = "Tanggal")]
+    public DateOnly Tanggal { get; set; } = DateOnly.FromDateTime(DateTime.Today.AddDays(3));
+
+    [Required]
+    [Display(Name = "Jam")]
+    public TimeOnly Waktu { get; set; } = new TimeOnly(9, 0);
+
+    [Required]
+    [Display(Name = "Nama PIC / Narasumber")]
+    public string NamaPIC { get; set; } = string.Empty;
+
+    [Display(Name = "Lokasi / Platform")]
+    public string? Lokasi { get; set; }
+}
+
+// ── Selesai SubTask ───────────────────────────────────────────────────────────
+
+public class SelesaiSubTaskVm
+{
+    public Guid   SubTaskID        { get; set; }
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+    public string JenisTask        { get; set; } = string.Empty;
+    public DateOnly? TanggalJadwal { get; set; }
+    public TimeOnly? WaktuJadwal   { get; set; }
+    public string?   NamaPIC       { get; set; }
+
+    [Display(Name = "Catatan Hasil")]
+    public string? Catatan { get; set; }
+
+    ///Opsional — upload berkas hasil wawancara
+    [Display(Name = "Dokumen Hasil (Opsional)")]
+    public IFormFile? FileHasil { get; set; }
+}
+
