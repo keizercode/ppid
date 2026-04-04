@@ -460,6 +460,11 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
             .Include(x => x.AuditLog)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id)
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+        ViewData["SubTasks"] = subTasks;
         return View(p);
     }
 

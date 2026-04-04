@@ -191,6 +191,7 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             TanggalWawancara  = jadwalExisting?.Tanggal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
             WaktuWawancara    = jadwalExisting?.Waktu   ?? new TimeOnly(9, 0),
             NamaPIC           = jadwalExisting?.NamaPIC ?? "",
+            TeleponPIC        = jadwalExisting?.TeleponPIC,
             JadwalSudahAda    = jadwalExisting != null,
         });
     }
@@ -215,6 +216,7 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             Tanggal          = vm.TanggalWawancara,
             Waktu            = vm.WaktuWawancara,
             NamaPIC          = vm.NamaPIC,
+            TeleponPIC       = vm.TeleponPIC,
             CreatedAt        = now
         });
 
@@ -226,6 +228,7 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             sub.TanggalJadwal = vm.TanggalWawancara;
             sub.WaktuJadwal   = vm.WaktuWawancara;
             sub.NamaPIC       = vm.NamaPIC;
+            sub.TeleponPIC    = vm.TeleponPIC;
             sub.Operator      = CurrentUser;
             sub.UpdatedAt     = now;
         }
@@ -265,6 +268,7 @@ public class ProdusenDataController(AppDbContext db, IWebHostEnvironment env) : 
             TanggalWawancara = jadwal?.Tanggal,
             WaktuWawancara   = jadwal?.Waktu,
             NamaPIC          = jadwal?.NamaPIC,
+            TeleponPIC       = jadwal?.TeleponPIC,
         });
     }
 

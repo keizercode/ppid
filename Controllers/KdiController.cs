@@ -372,6 +372,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             Tanggal           = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
             Waktu             = sub?.WaktuJadwal   ?? new TimeOnly(9, 0),
             NamaPIC           = sub?.NamaPIC       ?? "",
+            TeleponPIC        = sub?.TeleponPIC,
         });
     }
 
@@ -389,6 +390,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             Tanggal          = vm.Tanggal,
             Waktu            = vm.Waktu,
             NamaPIC          = vm.NamaPIC,
+            TeleponPIC       = vm.TeleponPIC,
             CreatedAt        = now
         });
 
@@ -402,6 +404,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             sub.TanggalJadwal = vm.Tanggal;
             sub.WaktuJadwal   = vm.Waktu;
             sub.NamaPIC       = vm.NamaPIC;
+            sub.TeleponPIC    = vm.TeleponPIC;
             sub.Operator      = CurrentUser;
             sub.UpdatedAt     = now;
         }
@@ -449,6 +452,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             TanggalJadwal    = sub?.TanggalJadwal,
             WaktuJadwal      = sub?.WaktuJadwal,
             NamaPIC          = sub?.NamaPIC,
+            TeleponPIC       = sub?.TeleponPIC,
         });
     }
 
@@ -520,6 +524,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             Tanggal           = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
             Waktu             = sub?.WaktuJadwal   ?? new TimeOnly(9, 0),
             NamaPIC           = sub?.NamaPIC       ?? "",
+            TeleponPIC        = sub?.TeleponPIC,
         });
     }
 
@@ -541,6 +546,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             Tanggal          = vm.Tanggal,
             Waktu            = vm.Waktu,
             NamaPIC          = vm.NamaPIC,
+            TeleponPIC       = vm.TeleponPIC,
             CreatedAt        = now
         });
 
@@ -554,6 +560,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             sub.TanggalJadwal = vm.Tanggal;
             sub.WaktuJadwal   = vm.Waktu;
             sub.NamaPIC       = vm.NamaPIC;
+            sub.TeleponPIC    = vm.TeleponPIC;
             sub.Operator      = CurrentUser;
             sub.UpdatedAt     = now;
         }
@@ -594,6 +601,7 @@ public class KdiController(AppDbContext db, IWebHostEnvironment env) : Controlle
             TanggalJadwal    = sub?.TanggalJadwal,
             WaktuJadwal      = sub?.WaktuJadwal,
             NamaPIC          = sub?.NamaPIC,
+            TeleponPIC       = sub?.TeleponPIC,
         });
     }
 

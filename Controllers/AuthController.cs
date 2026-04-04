@@ -86,10 +86,10 @@ public class AuthController(AppDbContext db) : Controller
     private IActionResult RedirectToRoleHome(string role) => role switch
 {
     AppRoles.Loket                  => Redirect("/petugas-loket"),
-    AppRoles.LoketUmum              => Redirect("/loket-umum"),           // ← TAMBAH
+    AppRoles.LoketUmum              => Redirect("/loket-umum"),
     AppRoles.Kepegawaian            => Redirect("/kepegawaian"),
     AppRoles.KasubkelKepegawaian    => Redirect("/kasubkel-kepegawaian"),
-    AppRoles.KasubkelUmum           => Redirect("/kasubkel-umum"),        // ← TAMBAH
+    AppRoles.KasubkelUmum           => Redirect("/kasubkel-umum"),
     AppRoles.KDI                    => Redirect("/kdi"),
     AppRoles.KasubkelKDI            => Redirect("/kasubkel-kdi"),
     AppRoles.ProdusenData           => Redirect("/produsen-data"),

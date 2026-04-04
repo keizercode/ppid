@@ -46,8 +46,9 @@ public class KasubkelKepegawaianController(AppDbContext db) : Controller
         var menunggu = await db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
+            .Include(p => p.Jadwal)
             .Where(p => p.StatusPPIDID == StatusId.MenungguVerifikasi
-                     || p.StatusPPIDID == StatusId.MenungguSuratIzin)
+                    || p.StatusPPIDID == StatusId.MenungguSuratIzin)
             .OrderByDescending(p => p.CratedAt)
             .ToListAsync();
 
@@ -181,6 +182,11 @@ public class KasubkelKepegawaianController(AppDbContext db) : Controller
             .Include(x => x.AuditLog)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id)
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+        ViewData["SubTasks"] = subTasks;
         return View(p);
     }
 }
@@ -257,6 +263,11 @@ public class KasubkelKdiController(AppDbContext db) : Controller
             .Include(x => x.AuditLog)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id)
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+        ViewData["SubTasks"] = subTasks;
         return View(p);
     }
 }

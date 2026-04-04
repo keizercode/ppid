@@ -1,4 +1,7 @@
-@* ─── Views/Kdi/JadwalWawancara.cshtml — POINT 2: note wajib mengingatkan ── *@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/Kdi/JadwalWawancara.cshtml — standalone (backward-compat)
+   UPDATE: tambah TeleponPIC field
+   ════════════════════════════════════════════════════════════════════════════ *@
 @model JadwalWawancaraVm
 @{
     ViewData["Title"] = "Jadwal Wawancara";
@@ -24,26 +27,25 @@
                 <p class="text-gray-600 text-xs mt-0.5">@Model.DetailWawancara</p>
             }
             @if (!string.IsNullOrEmpty(Model.NamaProdusenData)) {
-                <span class="text-[10px] text-gray-400 uppercase font-bold mt-2 block">Narasumber / Unit</span>
+                <span class="text-[10px] text-gray-400 uppercase font-bold mt-2 block">Unit / Narasumber</span>
                 <p class="text-gray-600 text-xs mt-0.5">@Model.NamaProdusenData</p>
             }
         </div>
 
-        <!-- ── POINT 2: NOTE WAJIB MENGINGATKAN ── -->
         <div class="bg-red-50 border border-red-300 rounded-xl p-4 mb-4 flex gap-3 items-start">
             <span class="text-red-500 text-xl flex-shrink-0 mt-0.5">🔔</span>
             <div>
                 <p class="font-bold text-red-700 text-sm">Perhatian Petugas</p>
                 <p class="text-red-600 text-xs mt-1 leading-relaxed">
                     <strong>Petugas wajib mengingatkan Produsen Data mengenai jadwal wawancara ini.</strong>
-                    Hubungi narasumber / PIC yang bersangkutan untuk konfirmasi ketersediaan sebelum menyimpan jadwal.
+                    Hubungi narasumber / PIC untuk konfirmasi ketersediaan sebelum menyimpan jadwal.
                 </p>
             </div>
         </div>
 
         <div class="bg-violet-50 border border-violet-200 rounded-xl p-3 mb-5 text-xs text-violet-700 flex gap-2 items-start">
             <span class="mt-0.5">💡</span>
-            <p>Jadwal ini akan diteruskan ke Produsen Data dan ditampilkan kepada pemohon di halaman lacak permohonan.</p>
+            <p>Jadwal ini akan diteruskan ke Produsen Data dan ditampilkan kepada pemohon.</p>
         </div>
 
         <form asp-action="JadwalWawancaraPost" asp-controller="Kdi" method="post">
@@ -63,11 +65,25 @@
                     <span asp-validation-for="WaktuWawancara" class="err"></span>
                 </div>
             </div>
-            <div class="mb-4">
-                <label class="lbl">Nama Narasumber / PIC <span class="text-red-400">*</span></label>
-                <input asp-for="NamaPIC" class="fld" placeholder="Nama narasumber yang akan diwawancara"/>
-                <span asp-validation-for="NamaPIC" class="err"></span>
+
+            @* ── Narasumber + Telepon ── *@
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="lbl">Nama Narasumber / PIC <span class="text-red-400">*</span></label>
+                    <input asp-for="NamaPIC" class="fld" placeholder="Nama narasumber yang akan diwawancara"/>
+                    <span asp-validation-for="NamaPIC" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">No. Telepon Narasumber</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">📱</span>
+                        <input asp-for="TeleponPIC" type="tel" class="fld pl-8" placeholder="08xxxxxxxxxx"/>
+                    </div>
+                    <span asp-validation-for="TeleponPIC" class="err"></span>
+                    <p class="text-[10px] text-gray-400 mt-1">Untuk konfirmasi & pengingat jadwal</p>
+                </div>
             </div>
+
             <div class="mb-5">
                 <label class="lbl">Lokasi / Platform</label>
                 <input asp-for="Lokasi" class="fld" placeholder="Contoh: Ruang Rapat Lt.3 / Google Meet"/>

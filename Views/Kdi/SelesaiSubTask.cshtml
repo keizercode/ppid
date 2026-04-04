@@ -1,3 +1,7 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/Kdi/SelesaiSubTask.cshtml
+   UPDATE: tampilkan TeleponPIC di info jadwal, plus update confirmation
+   ════════════════════════════════════════════════════════════════════════════ *@
 @model SelesaiSubTaskVm
 @{
     bool isWaw   = Model.JenisTask == "Wawancara";
@@ -30,23 +34,32 @@
             </div>
             @if (Model.TanggalJadwal.HasValue)
             {
-                <div class="flex gap-4 text-xs text-gray-600 pt-1 border-t border-gray-100">
+                <div class="flex flex-wrap gap-4 text-xs text-gray-600 pt-2 border-t border-gray-100">
                     <div>
                         <span class="text-[10px] text-gray-400 uppercase font-bold block">Tanggal @label</span>
-                        @Model.TanggalJadwal.Value.ToString("dd MMM yyyy")
+                        <p class="font-semibold">@Model.TanggalJadwal.Value.ToString("dddd, dd MMM yyyy")</p>
                     </div>
                     @if (Model.WaktuJadwal.HasValue)
                     {
                         <div>
                             <span class="text-[10px] text-gray-400 uppercase font-bold block">Jam</span>
-                            @Model.WaktuJadwal.Value.ToString("HH:mm") WIB
+                            <p class="font-semibold">@Model.WaktuJadwal.Value.ToString("HH:mm") WIB</p>
                         </div>
                     }
                     @if (!string.IsNullOrEmpty(Model.NamaPIC))
                     {
                         <div>
-                            <span class="text-[10px] text-gray-400 uppercase font-bold block">@(isWaw ? "Narasumber" : "PIC")</span>
-                            @Model.NamaPIC
+                            <span class="text-[10px] text-gray-400 uppercase font-bold block">
+                                @(isWaw ? "Narasumber" : "PIC")
+                            </span>
+                            <p class="font-semibold">@Model.NamaPIC</p>
+                            @if (!string.IsNullOrEmpty(Model.TeleponPIC))
+                            {
+                                <a href="tel:@Model.TeleponPIC"
+                                   class="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-0.5">
+                                    📱 @Model.TeleponPIC
+                                </a>
+                            }
                         </div>
                     }
                 </div>
@@ -70,7 +83,11 @@
 
         <div class="bg-@(color)-50 border border-@(color)-100 rounded-xl p-3 mb-5 text-xs text-@(color)-700 flex gap-2 items-start">
             <span>💡</span>
-            <p>Setelah dikonfirmasi, sub-tugas <strong>@label</strong> ditandai Selesai. Sistem akan otomatis memeriksa apakah semua tugas paralel lain sudah selesai.</p>
+            <p>
+                Setelah dikonfirmasi, sub-tugas <strong>@label</strong> ditandai Selesai.
+                Sistem akan otomatis memeriksa apakah semua tugas paralel lain sudah selesai.
+                Jika ya, status permohonan langsung menjadi <strong>Data Siap</strong>.
+            </p>
         </div>
 
         <form method="post" action="@postAction" enctype="multipart/form-data">

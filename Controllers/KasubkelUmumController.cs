@@ -163,6 +163,11 @@ public class KasubkelUmumController(AppDbContext db) : Controller
             .Include(x => x.AuditLog)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id)
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+        ViewData["SubTasks"] = subTasks;
         return View(p);
     }
 }

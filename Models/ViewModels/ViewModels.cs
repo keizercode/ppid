@@ -299,6 +299,10 @@ public class JadwalObservasiVm
     [Required]
     [Display(Name = "Nama PIC")]
     public string NamaPIC { get; set; } = string.Empty;
+
+    [Display(Name = "No. Telepon PIC")]
+    [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
+    public string? TeleponPIC { get; set; }
 }
 
 // ── KDI: Selesai Observasi ────────────────────────────────────────────────────
@@ -309,6 +313,11 @@ public class SelesaiObservasiVm
     public string NoPermohonan     { get; set; } = string.Empty;
     public string NamaPemohon      { get; set; } = string.Empty;
     public string JudulPenelitian  { get; set; } = string.Empty;
+
+    public string? NamaPIC     { get; set; }
+    public string? TeleponPIC  { get; set; }
+    public DateOnly? TanggalJadwal { get; set; }
+    public TimeOnly? WaktuJadwal   { get; set; }
 
     [Display(Name = "Catatan Hasil Observasi")]
     public string? Catatan { get; set; }
@@ -336,6 +345,11 @@ public class JadwalWawancaraVm
     [Required]
     [Display(Name = "Nama Narasumber / PIC")]
     public string NamaPIC { get; set; } = string.Empty;
+
+    [Display(Name = "No. Telepon Narasumber / PIC")]
+    [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
+    public string? TeleponPIC { get; set; }
+
 
     [Display(Name = "Lokasi / Platform")]
     public string? Lokasi { get; set; }
@@ -371,6 +385,7 @@ public class SelesaiWawancaraVm
     public DateOnly? TanggalWawancara { get; set; }
     public TimeOnly? WaktuWawancara   { get; set; }
     public string?   NamaPIC          { get; set; }
+    public string?   TeleponPIC       { get; set; }
 
     [Display(Name = "Dokumen Hasil (Opsional)")]
     public IFormFile? FileHasil { get; set; }
@@ -523,6 +538,10 @@ public class JadwalSubTaskVm
     [Display(Name = "Nama PIC / Narasumber")]
     public string NamaPIC { get; set; } = string.Empty;
 
+    [Display(Name = "No. Telepon PIC / Narasumber")]
+    [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
+    public string? TeleponPIC { get; set; }
+
     [Display(Name = "Lokasi / Platform")]
     public string? Lokasi { get; set; }
 }
@@ -540,6 +559,7 @@ public class SelesaiSubTaskVm
     public DateOnly? TanggalJadwal { get; set; }
     public TimeOnly? WaktuJadwal   { get; set; }
     public string?   NamaPIC       { get; set; }
+    public string?   TeleponPIC    { get; set; }
 
     [Display(Name = "Catatan Hasil")]
     public string? Catatan { get; set; }

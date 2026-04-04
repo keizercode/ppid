@@ -1,0 +1,269 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/Shared/Partials/_WorkflowTimeline.cshtml
+
+   Komponen reusable — timeline alur 9 step untuk panel admin.
+
+   PENGGUNAAN:
+     @await Html.PartialAsync("Partials/_WorkflowTimeline", Model)
+     atau
+     <partial name="Partials/_WorkflowTimeline" model="Model" />
+
+   MODEL: PermohonanPPID
+   ════════════════════════════════════════════════════════════════════════════ *@
+@model PermohonanPPID
+
+@{
+    // ── Helper: resolusi step berdasar status & keperluan ──────────────────
+    var current    = Model.StatusPPIDID ?? StatusId.TerdaftarSistem;
+    var subTasks   = ViewData["SubTasks"] as List<SubTaskPPID> ?? new();
+
+    // ── Parallel task status (untuk step 6 & 7) ───────────────────────────
+    var stData   = subTasks.FirstOrDefault(t => t.JenisTask == JenisTask.PermintaanData);
+    var stObs    = subTasks.FirstOrDefault(t => t.JenisTask == JenisTask.Observasi);
+    var stWaw    = subTasks.FirstOrDefault(t => t.JenisTask == JenisTask.Wawancara);
+
+    bool hasParallel = subTasks.Any();
+    bool isWawOnly   = Model.IsWawancara && !Model.IsPermintaanData && !Model.IsObservasi;
+
+    // ── Bangun steps sesuai alur ───────────────────────────────────────────
+    // Setiap step: (id, label, icon, isParallel, subLabel)
+    var steps = new List<(int Id, string Label, string Icon, bool IsParallel, string? SubLabel)>
+    {
+        (StatusId.TerdaftarSistem,    "1. Permohonan Terdaftar",         "📋", false, null),
+        (StatusId.IdentifikasiAwal,   "2. Tanda Tangan Identifikasi",    "✍️",  false, "Cetak → TTD Pemohon → Upload"),
+        (StatusId.MenungguVerifikasi, "3. Verifikasi Identifikasi Awal", "🔍", false, "Kasubkel & Disposisi Unit"),
+        (StatusId.MenungguSuratIzin,  "4. Pembuatan Surat Izin",         "📄", false, "Diterbitkan Kepegawaian"),
+        (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit",            "✅", false, "TTD & Upload Surat"),
+    };
+
+    if (isWawOnly)
+    {
+        steps.Add((StatusId.WawancaraDijadwalkan, "6. Jadwal Wawancara Dibuat", "📅", false, "Produsen Data menjadwalkan"));
+        steps.Add((StatusId.WawancaraSelesai,     "7. Wawancara Selesai",       "🎤", false, "Hasil wawancara tersedia"));
+    }
+    else
+    {
+        steps.Add((StatusId.Didisposisi, "6. Pembuatan Jadwal / Pemrosesan Data", "⚙️", true, null));
+        steps.Add((StatusId.DataSiap,   "7. Data Tersedia",                       "📦", false, "Semua tugas paralel selesai"));
+    }
+
+    steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback Pemohon", "📝", false, "Kuesioner kepuasan"));
+    steps.Add((StatusId.Selesai,         "9. Selesai",                    "🏁", false, "Permohonan tuntas"));
+
+    // ── Resolusi index aktif ───────────────────────────────────────────────
+    int FindActiveIdx()
+    {
+        // Step 3 mencakup MenungguVerifikasi DAN MenungguSuratIzin
+        if (current == StatusId.MenungguSuratIzin)
+            return steps.FindIndex(s => s.Id == StatusId.MenungguVerifikasi);
+
+        // Parallel step: ObservasiDijadwalkan, ObservasiSelesai, WawancaraDijadwalkan, WawancaraSelesai, DiProses
+        var parallelIds = new[] {
+            StatusId.Didisposisi, StatusId.DiProses,
+            StatusId.ObservasiDijadwalkan, StatusId.ObservasiSelesai,
+            StatusId.WawancaraDijadwalkan, StatusId.WawancaraSelesai
+        };
+        if (parallelIds.Contains(current) && !isWawOnly)
+            return steps.FindIndex(s => s.Id == StatusId.Didisposisi);
+
+        // FeedbackPemohon → step 8
+        if (current == StatusId.FeedbackPemohon)
+            return steps.FindIndex(s => s.Id == StatusId.FeedbackPemohon);
+
+        var exact = steps.FindIndex(s => s.Id == current);
+        if (exact >= 0) return exact;
+
+        // Fallback: cari step terdekat
+        int best = -1;
+        for (int i = 0; i < steps.Count; i++)
+            if (steps[i].Id <= current) best = i;
+        return best >= 0 ? best : 0;
+    }
+
+    int activeIdx = FindActiveIdx();
+
+    // ── Warna badge parallel task ──────────────────────────────────────────
+    string SubTaskBadge(SubTaskPPID? st)
+    {
+        if (st == null) return "bg-gray-100 text-gray-400";
+        return st.StatusTask switch
+        {
+            SubTaskStatus.Selesai    => "bg-emerald-100 text-emerald-700",
+            SubTaskStatus.InProgress => "bg-amber-100 text-amber-700",
+            _                        => "bg-gray-100 text-gray-400"
+        };
+    }
+    string SubTaskIcon(SubTaskPPID? st)
+    {
+        if (st == null) return "○";
+        return st.StatusTask switch
+        {
+            SubTaskStatus.Selesai    => "✓",
+            SubTaskStatus.InProgress => "⏳",
+            _                        => "○"
+        };
+    }
+}
+
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-5">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Alur Proses Permohonan</p>
+        <span class="text-xs font-semibold
+            @(current >= StatusId.DataSiap ? "text-emerald-600" :
+              current == StatusId.TerdaftarSistem ? "text-gray-400" : "text-amber-600")">
+            @(Model.Status?.NamaStatusPPID ?? "—")
+        </span>
+    </div>
+
+    <ol class="space-y-0">
+        @for (int i = 0; i < steps.Count; i++)
+        {
+            var s        = steps[i];
+            bool selesai = i < activeIdx;
+            bool aktif   = i == activeIdx;
+            bool pending = i > activeIdx;
+            bool isLast  = i == steps.Count - 1;
+
+            string circleClass = selesai ? "bg-emerald-500 text-white" :
+                                  aktif   ? "bg-[#1B3B6F] text-white ring-4 ring-[#1B3B6F]/20" :
+                                            "bg-gray-100 text-gray-400";
+            string lineClass   = selesai ? "bg-emerald-200" : "bg-gray-100";
+            string cardClass   = aktif   ? "bg-blue-50 border-blue-200" :
+                                  selesai ? "bg-emerald-50 border-emerald-100" :
+                                            "bg-gray-50 border-gray-100";
+            string labelClass  = aktif   ? "text-blue-800 font-bold" :
+                                  selesai ? "text-emerald-700 font-semibold" :
+                                            "text-gray-400";
+
+            <li class="flex gap-3 pb-0 relative">
+                @* Garis vertikal *@
+                @if (!isLast)
+                {
+                    <div class="absolute left-4 top-9 bottom-0 w-0.5 -mb-1 @lineClass" style="top:36px; height:calc(100% - 36px + 4px)"></div>
+                }
+
+                @* Lingkaran step *@
+                <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 mt-1 @circleClass">
+                    @(selesai ? "✓" : s.Icon)
+                </div>
+
+                @* Card konten *@
+                <div class="flex-1 mb-3">
+                    <div class="rounded-xl px-3.5 py-2.5 border @cardClass">
+                        <p class="text-sm @labelClass">@s.Label</p>
+                        @if (!string.IsNullOrEmpty(s.SubLabel) && !s.IsParallel)
+                        {
+                            <p class="text-[11px] mt-0.5 @(aktif ? "text-blue-500" : selesai ? "text-emerald-500" : "text-gray-400")">
+                                @s.SubLabel
+                            </p>
+                        }
+                        @if (aktif && !s.IsParallel && !isWawOnly)
+                        {
+                            <p class="text-[11px] text-blue-500 mt-0.5 font-medium animate-pulse">⏳ Sedang dalam proses</p>
+                        }
+
+                        @* ── Parallel sub-tasks (step 6 khusus) ── *@
+                        @if (s.IsParallel && hasParallel)
+                        {
+                            <div class="mt-2.5 grid grid-cols-1 gap-1.5">
+                                @if (Model.IsPermintaanData && stData != null)
+                                {
+                                    <div class="flex items-center justify-between rounded-lg px-2.5 py-1.5 border @(stData.IsSelesai ? "bg-emerald-50 border-emerald-200" : stData.IsInProgress ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100")">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm">📊</span>
+                                            <span class="text-xs font-semibold @(stData.IsSelesai ? "text-emerald-700" : stData.IsInProgress ? "text-amber-700" : "text-gray-400")">
+                                                Permintaan Data
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full @SubTaskBadge(stData)">
+                                            @SubTaskIcon(stData) @SubTaskStatus.GetLabel(stData.StatusTask)
+                                        </span>
+                                    </div>
+                                }
+                                @if (Model.IsObservasi && stObs != null)
+                                {
+                                    <div class="flex items-center justify-between rounded-lg px-2.5 py-1.5 border @(stObs.IsSelesai ? "bg-emerald-50 border-emerald-200" : stObs.IsInProgress ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100")">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm">🔍</span>
+                                            <span class="text-xs font-semibold @(stObs.IsSelesai ? "text-emerald-700" : stObs.IsInProgress ? "text-amber-700" : "text-gray-400")">
+                                                Observasi
+                                                @if (stObs.TanggalJadwal.HasValue)
+                                                {
+                                                    <span class="font-normal opacity-75 ml-1">· @stObs.TanggalJadwal.Value.ToString("dd MMM")</span>
+                                                }
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full @SubTaskBadge(stObs)">
+                                            @SubTaskIcon(stObs) @SubTaskStatus.GetLabel(stObs.StatusTask)
+                                        </span>
+                                    </div>
+                                }
+                                @if (Model.IsWawancara && stWaw != null)
+                                {
+                                    <div class="flex items-center justify-between rounded-lg px-2.5 py-1.5 border @(stWaw.IsSelesai ? "bg-emerald-50 border-emerald-200" : stWaw.IsInProgress ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100")">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm">🎤</span>
+                                            <span class="text-xs font-semibold @(stWaw.IsSelesai ? "text-emerald-700" : stWaw.IsInProgress ? "text-amber-700" : "text-gray-400")">
+                                                Wawancara
+                                                @if (stWaw.TanggalJadwal.HasValue)
+                                                {
+                                                    <span class="font-normal opacity-75 ml-1">· @stWaw.TanggalJadwal.Value.ToString("dd MMM")</span>
+                                                }
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full @SubTaskBadge(stWaw)">
+                                            @SubTaskIcon(stWaw) @SubTaskStatus.GetLabel(stWaw.StatusTask)
+                                        </span>
+                                    </div>
+                                }
+                                @{
+                                    int done  = subTasks.Count(t => t.IsSelesai);
+                                    int total = subTasks.Count;
+                                    int pct   = total > 0 ? done * 100 / total : 0;
+                                }
+                                <div class="mt-1 flex items-center gap-2">
+                                    <div class="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
+                                        <div class="@(done==total?"bg-emerald-500":"bg-blue-500") h-full rounded-full transition-all" style="width:@pct%"></div>
+                                    </div>
+                                    <span class="text-[10px] font-bold @(done==total?"text-emerald-600":"text-gray-500")">@done/@total selesai</span>
+                                </div>
+                            </div>
+                        }
+
+                        @* ── Wawancara Only: tampilkan jadwal jika ada ── *@
+                        @if (isWawOnly && aktif && (s.Id == StatusId.WawancaraDijadwalkan || s.Id == StatusId.WawancaraSelesai))
+                        {
+                            var jadwal = Model.Jadwal.Where(j => j.JenisJadwal == "Wawancara")
+                                              .OrderByDescending(j => j.CreatedAt).FirstOrDefault();
+                            if (jadwal != null)
+                            {
+                                <div class="mt-2 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-1.5">
+                                    <p class="text-xs font-semibold text-violet-700">📅 @jadwal.Tanggal?.ToString("dd MMM yyyy") pukul @jadwal.Waktu?.ToString("HH:mm")</p>
+                                    @if (!string.IsNullOrEmpty(jadwal.NamaPIC))
+                                    {
+                                        <p class="text-[10px] text-violet-500 mt-0.5">🎤 @jadwal.NamaPIC</p>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </li>
+        }
+    </ol>
+
+    @* ── Overdue warning ── *@
+    @if (Model.IsOverdue && current < StatusId.DataSiap)
+    {
+        <div class="mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 flex items-center gap-2.5">
+            <span class="text-red-500 text-base flex-shrink-0">⚠️</span>
+            <div>
+                <p class="text-xs font-bold text-red-700">Permohonan Melewati Batas Waktu</p>
+                <p class="text-[11px] text-red-500 mt-0.5">
+                    Batas waktu: @Model.BatasWaktu?.ToString("dd MMM yyyy")
+                    (Lewat @Math.Abs(Model.HariSisa ?? 0) hari)
+                </p>
+            </div>
+        </div>
+    }
+</div>

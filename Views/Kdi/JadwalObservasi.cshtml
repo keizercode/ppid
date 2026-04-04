@@ -1,4 +1,10 @@
-@* ─── Views/Kdi/JadwalObservasi.cshtml — POINT 2: note petugas wajib mengingatkan ── *@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/Kdi/JadwalObservasi.cshtml
+   UPDATE: tambah TeleponPIC field
+   NOTE: View ini masih digunakan dari halaman Psmdi.cshtml/Bidang.cshtml
+         via link /kdi/jadwal/{id} ketika SubTask belum ada (data lama).
+         Untuk SubTask baru, controller sudah redirect ke JadwalSubTask view.
+   ════════════════════════════════════════════════════════════════════════════ *@
 @model JadwalObservasiVm
 @{
     ViewData["Title"] = "Buat Jadwal Observasi";
@@ -16,20 +22,18 @@
     </div>
     <div class="p-6">
 
-        <!-- Info jadwal -->
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-xs text-amber-700 flex gap-2 items-start">
             <span class="mt-0.5 flex-shrink-0">💡</span>
             <p>Jadwal ini akan ditampilkan kepada pemohon secara online melalui halaman lacak permohonan.</p>
         </div>
 
-        <!-- ── POINT 2: NOTE WAJIB MENGINGATKAN ── -->
         <div class="bg-red-50 border border-red-300 rounded-xl p-4 mb-5 flex gap-3 items-start">
             <span class="text-red-500 text-xl flex-shrink-0 mt-0.5">🔔</span>
             <div>
                 <p class="font-bold text-red-700 text-sm">Perhatian Petugas</p>
                 <p class="text-red-600 text-xs mt-1 leading-relaxed">
-                    <strong>Petugas wajib mengingatkan Produsen Data mengenai jadwal observasi ini.</strong>
-                    Pastikan narasumber / PIC yang bersangkutan sudah dikonfirmasi ketersediaannya sebelum jadwal disimpan.
+                    <strong>Petugas wajib mengingatkan PIC mengenai jadwal observasi ini.</strong>
+                    Pastikan narasumber / PIC sudah dikonfirmasi ketersediaannya sebelum jadwal disimpan.
                 </p>
             </div>
         </div>
@@ -51,11 +55,25 @@
                     <span asp-validation-for="WaktuObservasi" class="err"></span>
                 </div>
             </div>
-            <div class="mb-5">
-                <label class="lbl">Nama PIC / Penanggung Jawab <span class="text-red-400">*</span></label>
-                <input asp-for="NamaPIC" class="fld" placeholder="Nama penanggung jawab observasi"/>
-                <span asp-validation-for="NamaPIC" class="err"></span>
+
+            @* ── PIC + Telepon ── *@
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+                <div>
+                    <label class="lbl">Nama PIC / Penanggung Jawab <span class="text-red-400">*</span></label>
+                    <input asp-for="NamaPIC" class="fld" placeholder="Nama penanggung jawab observasi"/>
+                    <span asp-validation-for="NamaPIC" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">No. Telepon PIC</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">📱</span>
+                        <input asp-for="TeleponPIC" type="tel" class="fld pl-8" placeholder="08xxxxxxxxxx"/>
+                    </div>
+                    <span asp-validation-for="TeleponPIC" class="err"></span>
+                    <p class="text-[10px] text-gray-400 mt-1">Untuk konfirmasi & pengingat jadwal</p>
+                </div>
             </div>
+
             <div class="flex gap-3">
                 <a href="/kdi" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
                 <button type="submit" class="flex-grow bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">📅 Simpan Jadwal</button>

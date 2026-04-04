@@ -212,6 +212,8 @@ public class JadwalPPID
     [Column("Tanggal")] public DateOnly? Tanggal { get; set; }
     [Column("Waktu")] public TimeOnly? Waktu { get; set; }
     [Column("NamaPIC")] public string? NamaPIC { get; set; }
+    [Column("TeleponPIC")]
+    public string? TeleponPIC { get; set; }
     [Column("CreatedAt")] public DateTime? CreatedAt { get; set; }
     [Column("UpdatedAt")] public DateTime? UpdatedAt { get; set; }
 
@@ -268,6 +270,9 @@ public class SubTaskPPID
     /// <summary>Nama PIC / narasumber untuk Observasi & Wawancara</summary>
     [Column("NamaPIC")]
     public string? NamaPIC { get; set; }
+
+    [Column("TeleponPIC")]
+    public string? TeleponPIC { get; set; }
 
     [Column("TanggalJadwal")]
     public DateOnly? TanggalJadwal { get; set; }

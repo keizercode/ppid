@@ -1,11 +1,13 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/Kdi/JadwalSubTask.cshtml
+   UPDATE: tambah field TeleponPIC di bawah NamaPIC
+   ════════════════════════════════════════════════════════════════════════════ *@
 @model JadwalSubTaskVm
 @{
     bool isWaw    = Model.JenisTask == "Wawancara";
     string color  = isWaw ? "violet" : "orange";
     string icon   = isWaw ? "🎤" : "🔍";
     string label  = isWaw ? "Wawancara" : "Observasi";
-    string action = isWaw ? "JadwalWawancaraPost" : "JadwalObservasiPost";
-    string route  = isWaw ? "/kdi/jadwal-wawancara" : "/kdi/jadwal";
     ViewData["Title"] = $"Jadwal {label}";
     ViewData["Role"]  = "KDI";
     Layout = "_LayoutAdmin";
@@ -45,7 +47,8 @@
             <div>
                 <p class="font-bold text-red-700 text-sm">Perhatian Petugas — Wajib Konfirmasi</p>
                 <p class="text-red-600 text-xs mt-1 leading-relaxed">
-                    <strong>Petugas wajib mengingatkan dan mengkonfirmasi ketersediaan @(isWaw ? "narasumber" : "PIC observasi") sebelum menyimpan jadwal.</strong>
+                    <strong>Petugas wajib mengingatkan dan mengkonfirmasi ketersediaan
+                    @(isWaw ? "narasumber" : "PIC observasi") sebelum menyimpan jadwal.</strong>
                     Jadwal yang tersimpan langsung ditampilkan kepada pemohon di halaman lacak permohonan.
                 </p>
             </div>
@@ -56,7 +59,7 @@
             <p>Jadwal ini ditampilkan kepada pemohon secara real-time dan menjadi acuan untuk sesi @label.</p>
         </div>
 
-        <form asp-action="@action" asp-controller="Kdi" method="post">
+        <form asp-action="@(isWaw ? "JadwalWawancaraPost" : "JadwalObservasiPost")" asp-controller="Kdi" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="SubTaskID" />
             <input type="hidden" asp-for="PermohonanPPIDID" />
@@ -77,10 +80,27 @@
                 </div>
             </div>
 
-            <div class="mb-4">
-                <label class="lbl">Nama @(isWaw ? "Narasumber" : "PIC / Penanggung Jawab") <span class="text-red-400">*</span></label>
-                <input asp-for="NamaPIC" class="fld" placeholder="@(isWaw ? "Nama narasumber yang diwawancara" : "Nama penanggung jawab observasi")" />
-                <span asp-validation-for="NamaPIC" class="err"></span>
+            @* ── PIC + Telepon (side-by-side) ── *@
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="lbl">
+                        Nama @(isWaw ? "Narasumber" : "PIC / Penanggung Jawab")
+                        <span class="text-red-400">*</span>
+                    </label>
+                    <input asp-for="NamaPIC" class="fld"
+                           placeholder="@(isWaw ? "Nama narasumber yang diwawancara" : "Nama penanggung jawab observasi")" />
+                    <span asp-validation-for="NamaPIC" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">No. Telepon @(isWaw ? "Narasumber" : "PIC")</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">📱</span>
+                        <input asp-for="TeleponPIC" type="tel" class="fld pl-8"
+                               placeholder="08xxxxxxxxxx" />
+                    </div>
+                    <span asp-validation-for="TeleponPIC" class="err"></span>
+                    <p class="text-[10px] text-gray-400 mt-1">Untuk konfirmasi & pengingat jadwal</p>
+                </div>
             </div>
 
             <div class="mb-5">
