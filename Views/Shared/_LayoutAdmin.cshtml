@@ -288,6 +288,7 @@ function toggleTheme() {
 </html>
 
 @* ── Helper: render nav item tanpa duplikasi HTML ── *@
+@using Microsoft.AspNetCore.Html
 @functions {
     IHtmlContent NavItem(string href, string currentPath, string label, string svgPaths, bool exact = true)
     {

@@ -110,14 +110,14 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 
     /// <summary>Redirect ke landing page sesuai role.</summary>
     private static IActionResult RedirectByRole(string role) => role switch
-    {
-        AppRoles.Loket               => Redirect("/petugas-loket"),
-        AppRoles.LoketUmum           => Redirect("/loket-umum"),
-        AppRoles.KasubkelKepegawaian => Redirect("/kasubkel-kepegawaian"),
-        AppRoles.KasubkelKDI         => Redirect("/kasubkel-kdi"),
-        AppRoles.Admin               => Redirect("/petugas-loket"),
-        _                            => Redirect("/petugas-loket")
-    };
+{
+    AppRoles.Loket               => new RedirectResult("/petugas-loket"),
+    AppRoles.LoketUmum           => new RedirectResult("/loket-umum"),
+    AppRoles.KasubkelKepegawaian => new RedirectResult("/kasubkel-kepegawaian"),
+    AppRoles.KasubkelKDI         => new RedirectResult("/kasubkel-kdi"),
+    AppRoles.Admin               => new RedirectResult("/petugas-loket"),
+    _                            => new RedirectResult("/petugas-loket")
+};
 
     // ── Rate limiting ─────────────────────────────────────────────────────
 

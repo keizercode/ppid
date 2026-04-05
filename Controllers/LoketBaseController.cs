@@ -96,7 +96,7 @@ public abstract class LoketBaseController(AppDbContext db, IWebHostEnvironment e
         foreach (var (temp, final) in movers)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(final)!);
-            File.Move(temp, final, overwrite: true);
+            System.IO.File.Move(temp, final, overwrite: true);
         }
     }
 
