@@ -98,12 +98,18 @@
                 <div id="normal-box">
                     <div class="space-y-2.5">
                         @foreach (var (val, lbl, sub) in new[]{
-                            ("PSMDI", "PSMDI (default)", "Peran Serta Masyarakat, Data & Informasi"),
-                            ("BidangTerkait", "Bidang / Unit Terkait", "Pilih dari daftar di bawah"),
+                            ("PSMDI",       "PSMDI (default)",        "Peran Serta Masyarakat, Data & Informasi"),
+                            ("BidangTerkait","Bidang / Unit Terkait", "Pilih dari daftar di bawah"),
                         })
                         {
-                            <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-400 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
-                                <input type="radio" name="DisposisiUnits[0]" value="@val" class="accent-blue-600 mt-0.5 flex-shrink-0"/>
+                            <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 border-gray-200
+                                          cursor-pointer hover:border-blue-400
+                                          has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                                @* Gunakan plain HTML name — bukan asp-for — agar tidak bergantung
+                                   pada property DisposisiUnits sebagai scalar (itu adalah List<string>). *@
+                                <input type="radio" name="DisposisiUnits[0]" value="@val"
+                                       @(val == (Model.DisposisiUnits.FirstOrDefault() ?? "PSMDI") ? "checked" : "")
+                                       class="accent-blue-600 mt-0.5 flex-shrink-0"/>
                                 <div>
                                     <p class="text-sm font-bold text-gray-700">@lbl</p>
                                     <p class="text-xs text-gray-400">@sub</p>
@@ -117,7 +123,23 @@
                         <select id="sel-bidang" class="fld" onchange="onBidangChange()" disabled>
                             <option value="">⏳ Memuat daftar bidang...</option>
                         </select>
-                        <input type="hidden" asp-for="NamaBidangList[0]" id="f-bidang-name"/>
+
+                        @*
+                            BUG FIX — Root Cause HTTP 500:
+                            ================================
+                            Baris asli:
+                                <input type="hidden" asp-for="NamaBidangList[0]" id="f-bidang-name"/>
+
+                            ASP.NET Core InputTagHelper mengevaluasi ekspresi model saat rendering.
+                            Ketika NamaBidangList adalah empty List (dari GET action yang tidak
+                            pre-populate), akses index [0] menyebabkan ArgumentOutOfRangeException
+                            → view rendering gagal → HTTP 500.
+
+                            Solusi: gunakan plain HTML name attribute. Model binding tetap bekerja
+                            karena name="NamaBidangList[0]" di-parse identik oleh MVC model binder.
+                            Nilai diisi oleh JS onBidangChange() saat user memilih bidang.
+                        *@
+                        <input type="hidden" name="NamaBidangList[0]" id="f-bidang-name" value="" />
                     </div>
                 </div>
             </div>
@@ -153,43 +175,54 @@
 @section Scripts {
 <script>
 let _bidang = null;
-const cbObs   = document.querySelector('[name="IsObservasi"]');
-const cbData  = document.querySelector('[name="IsPermintaanData"]');
-const cbWaw   = document.querySelector('[name="IsWawancara"]');
 
-function isWawOnly(){
-    return cbWaw.checked && !cbData.checked && !cbObs.checked;
+// ── Referensi checkbox ──────────────────────────────────────────────────────
+// Gunakan querySelector dengan name persis yang di-generate asp-for
+const cbObs  = document.querySelector('input[name="IsObservasi"][type="checkbox"]');
+const cbData = document.querySelector('input[name="IsPermintaanData"][type="checkbox"]');
+const cbWaw  = document.querySelector('input[name="IsWawancara"][type="checkbox"]');
+
+// ── Helper: apakah hanya wawancara yang dicentang? ─────────────────────────
+function isWawOnly() {
+    return cbWaw?.checked && !cbData?.checked && !cbObs?.checked;
 }
 
-function updateRouting(){
+// ── Update tampilan routing berdasarkan state checkbox ─────────────────────
+function updateRouting() {
     const wawOnly = isWawOnly();
-    document.getElementById('waw-only-box').classList.toggle('hidden',!wawOnly);
-    document.getElementById('normal-box').classList.toggle('hidden',wawOnly);
+    document.getElementById('waw-only-box').classList.toggle('hidden', !wawOnly);
+    document.getElementById('normal-box').classList.toggle('hidden', wawOnly);
 
     const ri = document.getElementById('routing-indicator');
     const rt = document.getElementById('routing-text');
     ri.classList.remove('hidden');
 
-    if(wawOnly){
+    if (wawOnly) {
         rt.textContent = '→ Setelah terbit: langsung ke KDI untuk penjadwalan wawancara (SuratIzinTerbit → WawancaraDijadwalkan)';
     } else {
         rt.textContent = '→ Setelah terbit: disposisi ke KDI (SuratIzinTerbit → Didisposisi)';
     }
 }
 
-[cbObs, cbData, cbWaw].forEach(cb => cb.addEventListener('change', updateRouting));
+// Daftarkan event listener setelah DOM siap
+[cbObs, cbData, cbWaw].forEach(cb => {
+    if (cb) cb.addEventListener('change', updateRouting);
+});
+
+// Jalankan sekali saat halaman dimuat untuk sinkronisasi state awal
 updateRouting();
 
-// Toggle bidang selector when "BidangTerkait" radio selected
-document.querySelectorAll('[name="DisposisiUnits[0]"]').forEach(r => {
-    r.addEventListener('change', async function(){
+// ── Toggle bidang selector saat "BidangTerkait" dipilih ───────────────────
+document.querySelectorAll('input[name="DisposisiUnits[0]"]').forEach(r => {
+    r.addEventListener('change', async function () {
         const isBidang = this.value === 'BidangTerkait';
-        document.getElementById('bidang-wrap').classList.toggle('hidden',!isBidang);
-        if(isBidang && !_bidang) await loadBidang();
+        document.getElementById('bidang-wrap').classList.toggle('hidden', !isBidang);
+        if (isBidang && !_bidang) await loadBidang();
     });
 });
 
-async function loadBidang(){
+// ── Load daftar bidang dari API ────────────────────────────────────────────
+async function loadBidang() {
     try {
         const res = await fetch('/api/bidang');
         _bidang = await res.json();
@@ -197,17 +230,22 @@ async function loadBidang(){
         sel.innerHTML = '<option value="">— Pilih Unit Kerja / Bidang —</option>';
         _bidang.forEach(b => {
             const o = document.createElement('option');
-            o.value = b.id; o.text = b.namaBidang;
+            o.value = b.id;
+            o.text  = b.namaBidang;
             o.dataset.name = b.namaBidang;
             sel.appendChild(o);
         });
         sel.disabled = false;
-    } catch(e) { console.error(e); }
+    } catch (e) {
+        console.error('Gagal memuat daftar bidang:', e);
+    }
 }
 
-function onBidangChange(){
+// ── Saat bidang dipilih, isi hidden input dengan nama bidang ───────────────
+function onBidangChange() {
     const sel = document.getElementById('sel-bidang');
     const opt = sel.options[sel.selectedIndex];
+    // Plain HTML input — di-set langsung via value property
     document.getElementById('f-bidang-name').value = opt?.dataset.name || '';
 }
 </script>
