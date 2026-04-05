@@ -7,11 +7,11 @@ using PermintaanData.Models.ViewModels;
 
 namespace PermintaanData.Controllers;
 
-[Route("kasubkel-umum")]
-[Authorize(Roles = $"{AppRoles.KasubkelUmum},{AppRoles.Admin}")]
-public class KasubkelUmumController(AppDbContext db) : Controller
+[Route("kasubkel-kepegawaian")]
+[Authorize(Roles = $"{AppRoles.KasubkelKepegawaian},{AppRoles.Admin}")]
+public class KasubkelKepegawaianController(AppDbContext db) : Controller
 {
-    private string CurrentUser => User.Identity?.Name ?? AppRoles.KasubkelUmum;
+    private string CurrentUser => User.Identity?.Name ?? AppRoles.KasubkelKepegawaian;
 
     // ── Dashboard ─────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ public class KasubkelUmumController(AppDbContext db) : Controller
     {
         var allStatus = await db.PermohonanPPID
             .AsNoTracking()
-            .Where(p => p.LoketJenis == LoketJenis.Umum)
+            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa")
             .Select(p => p.StatusPPIDID)
             .ToListAsync();
 
@@ -35,10 +35,9 @@ public class KasubkelUmumController(AppDbContext db) : Controller
         ViewData["MenungguVerifikasi"] = await db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .Where(p => p.LoketJenis == LoketJenis.Umum &&
-                       (p.StatusPPIDID == StatusId.MenungguVerifikasi ||
-                        p.StatusPPIDID == StatusId.IdentifikasiAwal   ||
-                        p.StatusPPIDID == StatusId.MenungguSuratIzin))
+            .Include(p => p.Jadwal)
+            .Where(p => p.StatusPPIDID == StatusId.MenungguVerifikasi
+                     || p.StatusPPIDID == StatusId.MenungguSuratIzin)
             .OrderByDescending(p => p.CratedAt)
             .ToListAsync();
 
@@ -53,7 +52,7 @@ public class KasubkelUmumController(AppDbContext db) : Controller
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .Where(p => p.LoketJenis == LoketJenis.Umum)
+            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa")
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
@@ -99,8 +98,8 @@ public class KasubkelUmumController(AppDbContext db) : Controller
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
-        var lama = p.StatusPPIDID;
-        var now  = DateTime.UtcNow;
+        var statusLama = p.StatusPPIDID;
+        var now        = DateTime.UtcNow;
 
         if (vm.Disetujui)
         {
@@ -110,22 +109,22 @@ public class KasubkelUmumController(AppDbContext db) : Controller
             if (vm.DisposisiUnit == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangDisposisi))
                 p.NamaBidang = vm.NamaBidangDisposisi;
 
-            db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.MenungguSuratIzin,
-                $"Verifikasi disetujui Kasubkel Umum. Disposisi: {vm.DisposisiUnit}. Catatan: {vm.CatatanVerifikasi}",
+            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguSuratIzin,
+                $"Verifikasi disetujui oleh Kasubkel Kepegawaian. Disposisi: {vm.DisposisiUnit}. Catatan: {vm.CatatanVerifikasi}",
                 CurrentUser);
 
-            TempData["Success"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> diverifikasi dan diteruskan ke Kepegawaian.";
+            TempData["Success"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> berhasil diverifikasi dan diteruskan ke Kepegawaian.";
         }
         else
         {
             p.StatusPPIDID = StatusId.IdentifikasiAwal;
             p.UpdatedAt    = now;
 
-            db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.IdentifikasiAwal,
-                $"Verifikasi DITOLAK Kasubkel Umum. Alasan: {vm.AlasanDitolak}",
+            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.IdentifikasiAwal,
+                $"Verifikasi DITOLAK oleh Kasubkel Kepegawaian. Alasan: {vm.AlasanDitolak}",
                 CurrentUser);
 
-            TempData["Error"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> dikembalikan. Alasan: {vm.AlasanDitolak}";
+            TempData["Error"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> dikembalikan ke Loket. Alasan: {vm.AlasanDitolak}";
         }
 
         await db.SaveChangesAsync();
