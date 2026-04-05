@@ -13,7 +13,7 @@ namespace PermintaanData.Controllers;
 [Route("auth")]
 public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 {
-    // ── Konfigurasi rate limiting ─────────────────────────────────────────
+    // ── Rate limiting ─────────────────────────────────────────────────────
     private const int MaxFailedAttempts = 5;
     private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
 
@@ -25,7 +25,7 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
         if (User.Identity?.IsAuthenticated == true)
         {
             var role = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
-            return RedirectToLocal(returnUrl) ?? RedirectToRoleHome(role);
+            return RedirectToLocal(returnUrl) ?? RedirectByRole(role);
         }
 
         ViewData["ReturnUrl"] = returnUrl;
@@ -37,12 +37,10 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
     {
         ViewData["ReturnUrl"] = returnUrl;
 
-        if (!ModelState.IsValid)
-            return View("Login", vm);
+        if (!ModelState.IsValid) return View("Login", vm);
 
-        // ── Rate limiting: cek apakah IP sedang di-lockout ────────────────
-        var clientIp  = GetClientIp();
-        var cacheKey  = $"login_attempts:{clientIp}";
+        var clientIp = GetClientIp();
+        var cacheKey = $"login_attempts:{clientIp}";
 
         if (IsLockedOut(cacheKey, out var remainingMinutes))
         {
@@ -51,7 +49,6 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
             return View("Login", vm);
         }
 
-        // ── Verifikasi user ───────────────────────────────────────────────
         var user = await db.AppUsers
             .FirstOrDefaultAsync(u => u.Username == vm.Username && u.IsActive);
 
@@ -62,10 +59,9 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
             return View("Login", vm);
         }
 
-        // Login berhasil — reset counter
         ResetFailedAttempts(cacheKey);
 
-        // ── Upgrade hash lama (SHA256) ke BCrypt secara transparan ────────
+        // Upgrade hash lama (SHA256 → BCrypt) secara transparan
         if (user.IsLegacyHash)
         {
             user.PasswordHash = AppUser.HashPassword(vm.Password);
@@ -73,7 +69,6 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
             await db.SaveChangesAsync();
         }
 
-        // ── Buat session ──────────────────────────────────────────────────
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.AppUserID.ToString()),
@@ -82,8 +77,8 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
             new("Username",                user.Username),
         };
 
-        var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
+        var principal = new ClaimsPrincipal(
+            new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
 
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
@@ -96,7 +91,7 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
                     : DateTimeOffset.UtcNow.AddHours(8)
             });
 
-        return RedirectToLocal(returnUrl) ?? RedirectToRoleHome(user.Role);
+        return RedirectToLocal(returnUrl) ?? RedirectByRole(user.Role);
     }
 
     [HttpPost("logout"), ValidateAntiForgeryToken]
@@ -116,9 +111,7 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
         remainingMinutes = 0;
         if (!cache.TryGetValue(cacheKey, out LoginAttemptInfo? info) || info == null)
             return false;
-
-        if (info.Count < MaxFailedAttempts)
-            return false;
+        if (info.Count < MaxFailedAttempts) return false;
 
         remainingMinutes = (int)Math.Ceiling((info.LockedUntil - DateTime.UtcNow).TotalMinutes);
         return remainingMinutes > 0;
@@ -133,29 +126,29 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
         })!;
 
         info.Count++;
-
         if (info.Count >= MaxFailedAttempts)
             info.LockedUntil = DateTime.UtcNow.Add(LockoutDuration);
 
         cache.Set(cacheKey, info, LockoutDuration);
     }
 
-    private void ResetFailedAttempts(string cacheKey) =>
-        cache.Remove(cacheKey);
+    private void ResetFailedAttempts(string cacheKey) => cache.Remove(cacheKey);
 
     private string GetClientIp() =>
         HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     // ── Redirect helpers ──────────────────────────────────────────────────
 
-    private IActionResult? RedirectToLocal(string? returnUrl)
-    {
-        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-            return Redirect(returnUrl);
-        return null;
-    }
+    private IActionResult? RedirectToLocal(string? returnUrl) =>
+        !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? Redirect(returnUrl)
+            : null;
 
-    private IActionResult RedirectToRoleHome(string role) => role switch
+    /// <summary>
+    /// Redirect ke halaman home sesuai role.
+    /// Admin diarahkan ke Loket Kepegawaian sebagai default landing page.
+    /// </summary>
+    private IActionResult RedirectByRole(string role) => role switch
     {
         AppRoles.Loket               => Redirect("/petugas-loket"),
         AppRoles.LoketUmum           => Redirect("/loket-umum"),
@@ -166,7 +159,7 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
         AppRoles.KasubkelKDI         => Redirect("/kasubkel-kdi"),
         AppRoles.ProdusenData        => Redirect("/produsen-data"),
         AppRoles.Admin               => Redirect("/petugas-loket"),
-        _                            => Redirect("/petugas-loket"),
+        _                            => Redirect("/petugas-loket")
     };
 
     // ── Inner types ───────────────────────────────────────────────────────

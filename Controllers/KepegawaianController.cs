@@ -9,16 +9,12 @@ namespace PermintaanData.Controllers;
 
 [Route("kepegawaian")]
 [Authorize(Roles = $"{AppRoles.Kepegawaian},{AppRoles.Admin}")]
-public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : Controller
+public class KepegawaianController(AppDbContext db, IWebHostEnvironment env)
+    : LoketBaseController(db, env)
 {
-    private string UploadsRoot =>
-        Path.Combine(
-            string.IsNullOrEmpty(env.WebRootPath)
-                ? Path.Combine(env.ContentRootPath, "wwwroot")
-                : env.WebRootPath,
-            "uploads");
-
     private string CurrentUser => User.Identity?.Name ?? AppRoles.Kepegawaian;
+
+    // ── Dashboard ─────────────────────────────────────────────────────────
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
@@ -33,6 +29,8 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
         return View(list);
     }
 
+    // ── Surat Izin ────────────────────────────────────────────────────────
+
     [HttpGet("surat-izin/{id:guid}")]
     public async Task<IActionResult> SuratIzin(Guid id)
     {
@@ -40,7 +38,6 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
             .Include(x => x.Pribadi)
             .Include(x => x.Detail)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-
         if (p == null) return NotFound();
 
         return View(new SuratIzinVm
@@ -63,46 +60,41 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
 
         var now = DateTime.UtcNow;
 
+        // Upload file surat izin jika ada
         if (vm.FileSuratIzin?.Length > 0)
         {
-            var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
-            Directory.CreateDirectory(dir);
-            var fn = $"surat_izin_{vm.FileSuratIzin.FileName}";
-            await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
-            await vm.FileSuratIzin.CopyToAsync(s);
-
-            db.DokumenPPID.Add(new DokumenPPID
+            var error = await UploadDokumen(vm.PermohonanPPIDID, vm.FileSuratIzin,
+                JenisDokumenId.SuratIzin, "Surat Izin", now);
+            if (error != null)
             {
-                PermohonanPPIDID   = vm.PermohonanPPIDID,
-                NamaDokumenPPID    = "Surat Izin",
-                UploadDokumenPPID  = $"/uploads/{vm.PermohonanPPIDID}/{fn}",
-                JenisDokumenPPIDID = JenisDokumenId.SuratIzin,
-                CreatedAt          = now
-            });
+                ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
+                return View("SuratIzin", vm);
+            }
         }
 
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
         var statusLama = p.StatusPPIDID;
-
         p.NoSuratPermohonan = vm.NoSuratIzin;
         p.UpdatedAt         = now;
         p.IsObservasi       = vm.IsObservasi;
         p.IsPermintaanData  = vm.IsPermintaanData;
         p.IsWawancara       = vm.IsWawancara;
 
+        // ── Resolusi disposisi ────────────────────────────────────────────
+        // Wawancara-only → langsung ke Produsen Data (tidak melalui KDI)
+        // Selainnya      → ke KDI; NamaBidang ditentukan dari pilihan disposisi form
         if (vm.IsWawancaraOnly)
         {
             p.StatusPPIDID     = StatusId.WawancaraDijadwalkan;
-            p.NamaProdusenData = vm.NamaProdusenData ?? vm.NamaBidangTerkait;
+            p.NamaProdusenData = vm.NamaProdusenData ?? vm.NamaBidangPrimary;
         }
         else
         {
             p.StatusPPIDID = StatusId.Didisposisi;
-            p.NamaBidang   = vm.DisposisiKe == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangTerkait)
-                ? vm.NamaBidangTerkait
-                : null;
+            // Ambil nama bidang pertama yang bukan PSMDI, jika ada
+            p.NamaBidang = vm.NamaBidangPrimary;
         }
 
         var tujuan = vm.IsWawancaraOnly
@@ -110,12 +102,11 @@ public class KepegawaianController(AppDbContext db, IWebHostEnvironment env) : C
             : $"Surat izin {vm.NoSuratIzin} diterbitkan, didisposisi ke {p.NamaBidang ?? "PSMDI"}";
 
         db.AddAuditLog(vm.PermohonanPPIDID, statusLama, p.StatusPPIDID!.Value, tujuan, CurrentUser);
-
         await db.SaveChangesAsync();
 
         var keterangan = vm.IsWawancaraOnly
             ? "dan diteruskan ke Produsen Data untuk penjadwalan wawancara"
-            : $"dan didisposisi ke {(p.NamaBidang == null ? "PSMDI" : p.NamaBidang)}";
+            : $"dan didisposisi ke {(string.IsNullOrEmpty(p.NamaBidang) ? "PSMDI" : p.NamaBidang)}";
 
         TempData["Success"] = $"Surat izin <strong>{vm.NoSuratIzin}</strong> diterbitkan {keterangan}.";
         return RedirectToAction(nameof(Index));

@@ -8,39 +8,30 @@ using PermintaanData.Models.ViewModels;
 namespace PermintaanData.Controllers;
 
 [Route("petugas-loket")]
-[Authorize(Roles = "Loket,Admin")]
-public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : Controller
+[Authorize(Roles = $"{AppRoles.Loket},{AppRoles.Admin}")]
+public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
+    : LoketBaseController(db, env)
 {
-    private string UploadsRoot =>
-        Path.Combine(
-            string.IsNullOrEmpty(env.WebRootPath)
-                ? Path.Combine(env.ContentRootPath, "wwwroot")
-                : env.WebRootPath,
-            "uploads");
-
-    private string CurrentUser => User.Identity?.Name ?? "Loket";
+    private string CurrentUser => User.Identity?.Name ?? AppRoles.Loket;
 
     // ── DASHBOARD ─────────────────────────────────────────────────────────
 
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q, int? status)
     {
-        // Stats untuk cards
         var allStatus = await db.PermohonanPPID
             .AsNoTracking()
             .Select(p => p.StatusPPIDID)
             .ToListAsync();
 
-        var dashVm = new DashboardVm
+        ViewData["DashVm"] = new DashboardVm
         {
-            Total   = allStatus.Count,
-            Proses  = allStatus.Count(s => StatusId.IsProses(s)),
-            Selesai = allStatus.Count(s => StatusId.IsSelesai(s)),
+            Total        = allStatus.Count,
+            Proses       = allStatus.Count(s => StatusId.IsProses(s)),
+            Selesai      = allStatus.Count(s => StatusId.IsSelesai(s)),
             MonthlyStats = await db.GetMonthlyStats()
         };
-        ViewData["DashVm"] = dashVm;
 
-        // List permohonan (filtered)
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
@@ -50,19 +41,18 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
             query = query.Where(p =>
                 (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
                 (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.NIK != null && p.Pribadi.NIK.Contains(q)));
+                (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.Contains(q)));
 
         if (status.HasValue)
             query = query.Where(p => p.StatusPPIDID == status.Value);
 
-        ViewData["LoketTitle"] = "Semua Permohonan";
-        ViewData["Q"]          = q;
-        ViewData["Status"]     = status;
+        ViewData["Q"]      = q;
+        ViewData["Status"] = status;
 
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
-    // ── SubMenu: Permintaan Data ──────────────────────────────────────────
+    // ── Sub-menu: Permintaan Data ─────────────────────────────────────────
 
     [HttpGet("permintaan-data")]
     public async Task<IActionResult> PermintaanData(string? q)
@@ -78,12 +68,11 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                 (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
                 (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
 
-        ViewData["Q"]          = q;
-        ViewData["SubMenuTitle"] = "Permintaan Data";
+        ViewData["Q"] = q;
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
-    // ── SubMenu: Wawancara ────────────────────────────────────────────────
+    // ── Sub-menu: Wawancara ───────────────────────────────────────────────
 
     [HttpGet("wawancara")]
     public async Task<IActionResult> Wawancara(string? q)
@@ -100,12 +89,11 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                 (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
                 (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
 
-        ViewData["Q"]          = q;
-        ViewData["SubMenuTitle"] = "Wawancara";
+        ViewData["Q"] = q;
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
-    // ── SubMenu: Observasi ────────────────────────────────────────────────
+    // ── Sub-menu: Observasi ───────────────────────────────────────────────
 
     [HttpGet("observasi")]
     public async Task<IActionResult> Observasi(string? q)
@@ -122,8 +110,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                 (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
                 (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
 
-        ViewData["Q"]          = q;
-        ViewData["SubMenuTitle"] = "Observasi";
+        ViewData["Q"] = q;
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
@@ -163,30 +150,30 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         if (!string.IsNullOrEmpty(vm.BidangID))
         {
             if (!Guid.TryParse(vm.BidangID, out var parsed))
+            {
                 ModelState.AddModelError(nameof(vm.BidangID),
                     "Unit kerja yang dipilih tidak valid. Silakan pilih ulang dari daftar.");
+            }
             else
+            {
                 bidangGuid = parsed;
+            }
         }
 
-        if (!ModelState.IsValid)
-            return View("DaftarPemohon", vm);
+        if (!ModelState.IsValid) return View("DaftarPemohon", vm);
 
-        Guid lastId = Guid.Empty;
+        Guid   lastId = Guid.Empty;
         string noPerm = string.Empty;
 
         var strategy = db.Database.CreateExecutionStrategy();
-
-        var tempDir = Path.Combine(Path.GetTempPath(), "ppid_upload_" + Guid.NewGuid());
-        var movers = new List<(string Temp, string Final)>();
+        var tempDir  = Path.Combine(Path.GetTempPath(), $"ppid_upload_{Guid.NewGuid()}");
+        var movers   = new List<(string Temp, string Final)>();
 
         try
         {
             await strategy.ExecuteAsync(async () =>
             {
                 movers.Clear();
-
-                // GenerateNoPermohonan sudah menerima LoketJenis → format MHS/UMM
                 var (generatedNoPerm, nextSeq) = await db.GenerateNoPermohonan(vm.LoketJenis);
 
                 await using var tx = await db.Database.BeginTransactionAsync();
@@ -194,27 +181,19 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                 {
                     var now = DateTime.UtcNow;
 
-                    // ── 1. Pribadi ────────────────────────────────────────
+                    // 1. Pribadi (upsert by NIK)
                     var pribadi = await db.Pribadi.FirstOrDefaultAsync(p => p.NIK == vm.NIK);
                     if (pribadi == null)
                     {
                         pribadi = new Pribadi
                         {
-                            NIK          = vm.NIK,
-                            Nama         = vm.Nama,
-                            Email        = vm.Email,
-                            Telepon      = vm.Telepon,
-                            Alamat       = vm.Alamat,
-                            RT           = vm.RT,
-                            RW           = vm.RW,
-                            KelurahanID  = vm.KelurahanID,
-                            KecamatanID  = vm.KecamatanID,
-                            KabupatenID  = vm.KabupatenID,
-                            NamaKelurahan = vm.NamaKelurahan,
-                            NamaKecamatan = vm.NamaKecamatan,
-                            NamaKabupaten = vm.NamaKabupaten,
-                            CreatedAt    = now,
-                            UpdatedAt    = now
+                            NIK           = vm.NIK,   Nama     = vm.Nama,
+                            Email         = vm.Email,  Telepon  = vm.Telepon,
+                            Alamat        = vm.Alamat, RT       = vm.RT,      RW = vm.RW,
+                            KelurahanID   = vm.KelurahanID,  KecamatanID  = vm.KecamatanID,
+                            KabupatenID   = vm.KabupatenID,  NamaKelurahan = vm.NamaKelurahan,
+                            NamaKecamatan = vm.NamaKecamatan, NamaKabupaten = vm.NamaKabupaten,
+                            CreatedAt     = now, UpdatedAt = now
                         };
                         db.Pribadi.Add(pribadi);
                     }
@@ -227,7 +206,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                     }
                     await db.SaveChangesAsync();
 
-                    // ── 2. PribadiPPID ────────────────────────────────────
+                    // 2. PribadiPPID (upsert)
                     var pribadiPPID = await db.PribadiPPID
                         .FirstOrDefaultAsync(p => p.PribadiID == pribadi.PribadiID);
 
@@ -235,33 +214,27 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                     {
                         db.PribadiPPID.Add(new PribadiPPID
                         {
-                            PribadiID   = pribadi.PribadiID,
-                            ProvinsiID  = vm.ProvinsiID,
-                            NamaProvinsi = vm.NamaProvinsi,
-                            NIM         = vm.NIM,
-                            Lembaga     = vm.Lembaga,
-                            Fakultas    = vm.Fakultas,
-                            Jurusan     = vm.Jurusan,
-                            Pekerjaan   = vm.Pekerjaan,
-                            CreatedAt   = now,
-                            UpdatedAt   = now
+                            PribadiID    = pribadi.PribadiID,
+                            ProvinsiID   = vm.ProvinsiID,  NamaProvinsi = vm.NamaProvinsi,
+                            NIM          = vm.NIM,         Lembaga      = vm.Lembaga,
+                            Fakultas     = vm.Fakultas,    Jurusan      = vm.Jurusan,
+                            Pekerjaan    = vm.Pekerjaan,
+                            CreatedAt    = now, UpdatedAt = now
                         });
                     }
                     else
                     {
-                        pribadiPPID.NIM         = vm.NIM;
-                        pribadiPPID.Lembaga     = vm.Lembaga;
-                        pribadiPPID.Fakultas    = vm.Fakultas;
-                        pribadiPPID.Jurusan     = vm.Jurusan;
-                        pribadiPPID.Pekerjaan   = vm.Pekerjaan;
-                        pribadiPPID.ProvinsiID  = vm.ProvinsiID;
+                        pribadiPPID.NIM          = vm.NIM;
+                        pribadiPPID.Lembaga      = vm.Lembaga;
+                        pribadiPPID.Fakultas     = vm.Fakultas;
+                        pribadiPPID.Jurusan      = vm.Jurusan;
+                        pribadiPPID.Pekerjaan    = vm.Pekerjaan;
+                        pribadiPPID.ProvinsiID   = vm.ProvinsiID;
                         pribadiPPID.NamaProvinsi = vm.NamaProvinsi;
-                        pribadiPPID.UpdatedAt   = now;
+                        pribadiPPID.UpdatedAt    = now;
                     }
 
-                    // ── 3. PermohonanPPID ─────────────────────────────────
-                    var batasWaktu = AppDbContext.HitungBatasWaktu(vm.TanggalPermohonan);
-
+                    // 3. PermohonanPPID
                     var permohonan = new PermohonanPPID
                     {
                         PribadiID         = pribadi.PribadiID,
@@ -270,7 +243,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                         LoketJenis        = vm.LoketJenis,
                         NoSuratPermohonan = vm.NoSuratPermohonan,
                         TanggalPermohonan = vm.TanggalPermohonan,
-                        BatasWaktu        = batasWaktu,
+                        BatasWaktu        = AppDbContext.HitungBatasWaktu(vm.TanggalPermohonan),
                         Pengampu          = vm.Pengampu,
                         JudulPenelitian   = vm.JudulPenelitian,
                         LatarBelakang     = vm.LatarBelakang,
@@ -282,13 +255,12 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                         NamaBidang        = vm.NamaBidang,
                         StatusPPIDID      = StatusId.TerdaftarSistem,
                         Sequance          = nextSeq,
-                        CratedAt          = now,
-                        UpdatedAt         = now
+                        CratedAt          = now, UpdatedAt = now
                     };
                     db.PermohonanPPID.Add(permohonan);
                     await db.SaveChangesAsync();
 
-                    // ── 4. Detail keperluan ───────────────────────────────
+                    // 4. Detail keperluan
                     if (vm.IsObservasi)
                         db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
                         {
@@ -316,14 +288,14 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                             CreatedAt        = now
                         });
 
-                    // ── 5. Upload dokumen ke temp ─────────────────────────
+                    // 5. Upload dokumen ke temp (dicommit setelah DB commit)
                     Directory.CreateDirectory(tempDir);
-                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileKTP,             JenisDokumenId.KTP,             "KTP",             now, tempDir, movers);
-                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now, tempDir, movers);
-                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileProposal,        JenisDokumenId.Proposal,        "Proposal",         now, tempDir, movers);
-                    await StageUploadDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris,     JenisDokumenId.AktaNotaris,     "Akta Notaris",     now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileKTP,             JenisDokumenId.KTP,             "KTP",             now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileProposal,        JenisDokumenId.Proposal,        "Proposal",         now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris,     JenisDokumenId.AktaNotaris,     "Akta Notaris",     now, tempDir, movers);
 
-                    // ── 6. Audit log ──────────────────────────────────────
+                    // 6. Audit log
                     db.AddAuditLog(permohonan.PermohonanPPIDID, null, StatusId.TerdaftarSistem,
                         $"Permohonan didaftarkan loket [{vm.LoketJenis}]. Keperluan: " +
                         $"{(vm.IsObservasi ? "Observasi " : "")}" +
@@ -344,11 +316,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
                 }
             });
 
-            foreach (var (temp, final) in movers)
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(final)!);
-                System.IO.File.Move(temp, final, overwrite: true);
-            }
+            CommitStagedFiles(movers);
         }
         finally
         {
@@ -362,7 +330,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
 
     // ── INPUT IDENTIFIKASI ────────────────────────────────────────────────
 
-    [HttpGet("input-identifikasi/{id}")]
+    [HttpGet("input-identifikasi/{id:guid}")]
     public async Task<IActionResult> InputIdentifikasi(Guid id)
     {
         var p = await db.PermohonanPPID
@@ -373,15 +341,15 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         return View(p);
     }
 
-    [HttpPost("input-identifikasi/{id}"), ValidateAntiForgeryToken]
+    [HttpPost("input-identifikasi/{id:guid}"), ValidateAntiForgeryToken]
     public async Task<IActionResult> InputIdentifikasiPost(Guid id)
     {
         var p = await db.PermohonanPPID.FindAsync(id);
         if (p == null) return NotFound();
 
-        var statusLama   = p.StatusPPIDID;
-        p.StatusPPIDID   = StatusId.IdentifikasiAwal;
-        p.UpdatedAt      = DateTime.UtcNow;
+        var statusLama = p.StatusPPIDID;
+        p.StatusPPIDID = StatusId.IdentifikasiAwal;
+        p.UpdatedAt    = DateTime.UtcNow;
 
         db.AddAuditLog(id, statusLama, StatusId.IdentifikasiAwal,
             "Identifikasi awal diinput oleh petugas loket.", CurrentUser);
@@ -393,7 +361,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
 
     // ── CETAK IDENTIFIKASI ────────────────────────────────────────────────
 
-    [HttpGet("cetak-identifikasi/{id}")]
+    [HttpGet("cetak-identifikasi/{id:guid}")]
     public async Task<IActionResult> CetakIdentifikasi(Guid id)
     {
         var p = await db.PermohonanPPID
@@ -406,7 +374,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
 
     // ── UPLOAD TTD ────────────────────────────────────────────────────────
 
-    [HttpGet("upload-ttd/{id}")]
+    [HttpGet("upload-ttd/{id:guid}")]
     public async Task<IActionResult> UploadTTD(Guid id)
     {
         var p = await db.PermohonanPPID.Include(x => x.Pribadi)
@@ -427,29 +395,34 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
     {
         if (!ModelState.IsValid) return View("UploadTTD", vm);
 
-        var now = DateTime.UtcNow;
-        await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD,
+        var now   = DateTime.UtcNow;
+        var error = await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD,
             JenisDokumenId.IdentifikasiSigned, "Identifikasi TTD", now);
+
+        if (error != null)
+        {
+            ModelState.AddModelError(nameof(vm.FileDokumenTTD), error);
+            return View("UploadTTD", vm);
+        }
 
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p != null)
         {
             var statusLama = p.StatusPPIDID;
-            // Setelah upload TTD → ke Menunggu Verifikasi Kasubkel
             p.StatusPPIDID = StatusId.MenungguVerifikasi;
             p.UpdatedAt    = now;
             db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguVerifikasi,
                 "Dokumen identifikasi TTD diupload, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
         }
-        await db.SaveChangesAsync();
 
+        await db.SaveChangesAsync();
         TempData["Success"] = "Dokumen berhasil diupload. Permohonan diteruskan ke Kasubkel Kepegawaian untuk verifikasi.";
         return RedirectToAction("Index");
     }
 
     // ── DETAIL ────────────────────────────────────────────────────────────
 
-    [HttpGet("detail/{id}")]
+    [HttpGet("detail/{id:guid}")]
     public async Task<IActionResult> Detail(Guid id)
     {
         var p = await db.PermohonanPPID
@@ -460,129 +433,21 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
             .Include(x => x.AuditLog)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
-        var subTasks = await db.SubTaskPPID
+
+        ViewData["SubTasks"] = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == id)
             .OrderBy(t => t.JenisTask)
             .ToListAsync();
-        ViewData["SubTasks"] = subTasks;
+
         return View(p);
     }
 
-    // ── HELPER: Upload langsung ───────────────────────────────────────────
+    // ── EDIT ──────────────────────────────────────────────────────────────
 
-    private async Task UploadDokumen(Guid permohonanId, IFormFile? file,
-        int jenisDokId, string nama, DateTime now)
-    {
-        if (file == null || file.Length == 0) return;
-        var uploadDir = Path.Combine(UploadsRoot, permohonanId.ToString());
-        Directory.CreateDirectory(uploadDir);
-        var fileName = $"{jenisDokId}_{Path.GetFileName(file.FileName)}";
-        var filePath = Path.Combine(uploadDir, fileName);
-        await using var stream = new FileStream(filePath, FileMode.Create);
-        await file.CopyToAsync(stream);
-        db.DokumenPPID.Add(new DokumenPPID
-        {
-            PermohonanPPIDID     = permohonanId,
-            NamaDokumenPPID      = nama,
-            UploadDokumenPPID    = $"/uploads/{permohonanId}/{fileName}",
-            JenisDokumenPPIDID   = jenisDokId,
-            NamaJenisDokumenPPID = nama,
-            CreatedAt            = now
-        });
-    }
-
-    private async Task StageUploadDokumen(Guid permohonanId, IFormFile? file,
-        int jenisDokId, string nama, DateTime now, string tempDir, List<(string Temp, string Final)> movers)
-    {
-        if (file == null || file.Length == 0) return;
-        var fileName  = $"{jenisDokId}_{Path.GetFileName(file.FileName)}";
-        var tempPath  = Path.Combine(tempDir, fileName);
-        var finalPath = Path.Combine(UploadsRoot, permohonanId.ToString(), fileName);
-        await using var stream = new FileStream(tempPath, FileMode.Create);
-        await file.CopyToAsync(stream);
-        movers.Add((tempPath, finalPath));
-        db.DokumenPPID.Add(new DokumenPPID
-        {
-            PermohonanPPIDID     = permohonanId,
-            NamaDokumenPPID      = nama,
-            UploadDokumenPPID    = $"/uploads/{permohonanId}/{fileName}",
-            JenisDokumenPPIDID   = jenisDokId,
-            NamaJenisDokumenPPID = nama,
-            CreatedAt            = now
-        });
-    }
-
-//  ── MENU DATA ─────────────────────────────────────────────────────────
-
-    [HttpGet("data")]
-    public async Task<IActionResult> MenuData(string? q, string? export)
-    {
-        var query = db.PermohonanPPID
-            .Include(p => p.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
-            .Include(p => p.Status)
-            .Include(p => p.Detail).ThenInclude(d => d.Keperluan)
-            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa")
-            .AsQueryable();
-
-        if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
-
-        var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
-
-        if (export == "csv")
-            return ExportCsvKepegawaian(list);
-
-        ViewData["Q"] = q;
-        return View("~/Views/MenuData/Index.cshtml", new MenuDataVm
-        {
-            List       = list,
-            LoketJenis = LoketJenis.Kepegawaian,
-            Judul      = "Data Permohonan — Loket Kepegawaian"
-        });
-    }
-
-    private FileContentResult ExportCsvKepegawaian(List<PermohonanPPID> list)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("No Permohonan,Nama Pemohon,Kategori,NIK,NIM,Lembaga,Fakultas,Jurusan,Tgl Permohonan,Batas Waktu,Status,Tgl Selesai,Pengampu,Keperluan");
-        foreach (var p in list)
-        {
-            var keperluan = string.Join("|", new[] {
-                p.IsObservasi      ? "Observasi"       : null,
-                p.IsPermintaanData ? "Permintaan Data" : null,
-                p.IsWawancara      ? "Wawancara"       : null
-            }.Where(x => x != null));
-            sb.AppendLine(string.Join(",", new[] {
-                Q(p.NoPermohonan), Q(p.Pribadi?.Nama), Q(p.KategoriPemohon),
-                Q(p.Pribadi?.NIK), Q(p.Pribadi?.PribadiPPID?.NIM),
-                Q(p.Pribadi?.PribadiPPID?.Lembaga),
-                Q(p.Pribadi?.PribadiPPID?.Fakultas),
-                Q(p.Pribadi?.PribadiPPID?.Jurusan),
-                p.TanggalPermohonan?.ToString("dd/MM/yyyy"),
-                p.BatasWaktu?.ToString("dd/MM/yyyy"),
-                Q(p.Status?.NamaStatusPPID),
-                p.TanggalSelesai?.ToString("dd/MM/yyyy"),
-                Q(p.Pengampu), Q(keperluan)
-            }));
-        }
-        var bytes = System.Text.Encoding.UTF8.GetPreamble()
-            .Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
-        return File(bytes, "text/csv", $"data_loket_kepegawaian_{DateTime.Now:yyyyMMdd}.csv");
-    }
-
-    private static string Q(string? s) =>
-        s == null ? "" : $"\"{s.Replace("\"", "\"\"")}\"";
-
-    // ── EDIT PERMOHONAN ───────────────────────────────────────────────────
-    // Tambahkan 2 action ini ke PetugasLoketController:
-
-    [HttpGet("edit/{id}")]
+    [HttpGet("edit/{id:guid}")]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var p = await db.PermohonanPPID
-            .Include(x => x.Pribadi)
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
 
@@ -634,5 +499,69 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env) : 
         await db.SaveChangesAsync();
         TempData["Success"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> berhasil diperbarui.";
         return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── MENU DATA ─────────────────────────────────────────────────────────
+
+    [HttpGet("data")]
+    public async Task<IActionResult> MenuData(string? q, string? export)
+    {
+        var query = db.PermohonanPPID
+            .Include(p => p.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
+            .Include(p => p.Status)
+            .Include(p => p.Detail).ThenInclude(d => d.Keperluan)
+            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa")
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+
+        var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
+
+        if (export == "csv") return BuildCsvKepegawaian(list);
+
+        ViewData["Q"] = q;
+        return View("~/Views/MenuData/Index.cshtml", new MenuDataVm
+        {
+            List       = list,
+            LoketJenis = LoketJenis.Kepegawaian,
+            Judul      = "Data Permohonan — Loket Kepegawaian"
+        });
+    }
+
+    private FileContentResult BuildCsvKepegawaian(List<PermohonanPPID> list)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("No Permohonan,Nama Pemohon,Kategori,NIK,NIM,Lembaga,Fakultas,Jurusan,Tgl Permohonan,Batas Waktu,Status,Tgl Selesai,Pengampu,Keperluan");
+
+        foreach (var p in list)
+        {
+            var keperluan = string.Join("|", new[]
+            {
+                p.IsObservasi      ? "Observasi"       : null,
+                p.IsPermintaanData ? "Permintaan Data" : null,
+                p.IsWawancara      ? "Wawancara"       : null
+            }.Where(x => x != null));
+
+            sb.AppendLine(string.Join(",",
+                CsvQuote(p.NoPermohonan),
+                CsvQuote(p.Pribadi?.Nama),
+                CsvQuote(p.KategoriPemohon),
+                CsvQuote(p.Pribadi?.NIK),
+                CsvQuote(p.Pribadi?.PribadiPPID?.NIM),
+                CsvQuote(p.Pribadi?.PribadiPPID?.Lembaga),
+                CsvQuote(p.Pribadi?.PribadiPPID?.Fakultas),
+                CsvQuote(p.Pribadi?.PribadiPPID?.Jurusan),
+                p.TanggalPermohonan?.ToString("dd/MM/yyyy"),
+                p.BatasWaktu?.ToString("dd/MM/yyyy"),
+                CsvQuote(p.Status?.NamaStatusPPID),
+                p.TanggalSelesai?.ToString("dd/MM/yyyy"),
+                CsvQuote(p.Pengampu),
+                CsvQuote(keperluan)));
+        }
+
+        return ToCsvFile(sb.ToString(), "data_loket_kepegawaian");
     }
 }

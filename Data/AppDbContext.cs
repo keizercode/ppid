@@ -5,18 +5,18 @@ namespace PermintaanData.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<Pribadi>               Pribadi               { get; set; }
-    public DbSet<PribadiPPID>           PribadiPPID           { get; set; }
-    public DbSet<PermohonanPPID>        PermohonanPPID        { get; set; }
-    public DbSet<PermohonanPPIDDetail>  PermohonanPPIDDetail  { get; set; }
-    public DbSet<Keperluan>             Keperluan             { get; set; }
-    public DbSet<StatusPPID>            StatusPPID            { get; set; }
-    public DbSet<DokumenPPID>           DokumenPPID           { get; set; }
-    public DbSet<JenisDokumenPPID>      JenisDokumenPPID      { get; set; }
-    public DbSet<JadwalPPID>            JadwalPPID            { get; set; }
-    public DbSet<AuditLogPPID>          AuditLog              { get; set; }
-    public DbSet<AppUser>               AppUsers              { get; set; }
-    public DbSet<SubTaskPPID>           SubTaskPPID           { get; set; }
+    public DbSet<Pribadi>              Pribadi              { get; set; }
+    public DbSet<PribadiPPID>          PribadiPPID          { get; set; }
+    public DbSet<PermohonanPPID>       PermohonanPPID       { get; set; }
+    public DbSet<PermohonanPPIDDetail> PermohonanPPIDDetail { get; set; }
+    public DbSet<Keperluan>            Keperluan            { get; set; }
+    public DbSet<StatusPPID>           StatusPPID           { get; set; }
+    public DbSet<DokumenPPID>          DokumenPPID          { get; set; }
+    public DbSet<JenisDokumenPPID>     JenisDokumenPPID     { get; set; }
+    public DbSet<JadwalPPID>           JadwalPPID           { get; set; }
+    public DbSet<AuditLogPPID>         AuditLog             { get; set; }
+    public DbSet<AppUser>              AppUsers             { get; set; }
+    public DbSet<SubTaskPPID>          SubTaskPPID          { get; set; }
 
     protected override void OnModelCreating(ModelBuilder m)
     {
@@ -29,60 +29,44 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         // ── PermohonanPPID ────────────────────────────────────────────────
         m.Entity<PermohonanPPID>()
-            .HasOne(e => e.Status)
-            .WithMany()
+            .HasOne(e => e.Status).WithMany()
             .HasForeignKey(e => e.StatusPPIDID);
-
         m.Entity<PermohonanPPID>()
-            .HasMany(e => e.Detail)
-            .WithOne(e => e.Permohonan)
+            .HasMany(e => e.Detail).WithOne(e => e.Permohonan)
             .HasForeignKey(e => e.PermohonanPPIDID);
-
         m.Entity<PermohonanPPID>()
-            .HasMany(e => e.Dokumen)
-            .WithOne(e => e.Permohonan)
+            .HasMany(e => e.Dokumen).WithOne(e => e.Permohonan)
             .HasForeignKey(e => e.PermohonanPPIDID);
-
         m.Entity<PermohonanPPID>()
-            .HasMany(e => e.Jadwal)
-            .WithOne(e => e.Permohonan)
+            .HasMany(e => e.Jadwal).WithOne(e => e.Permohonan)
             .HasForeignKey(e => e.PermohonanPPIDID);
-
         m.Entity<PermohonanPPID>()
-            .HasMany(e => e.AuditLog)
-            .WithOne(e => e.Permohonan)
+            .HasMany(e => e.AuditLog).WithOne(e => e.Permohonan)
             .HasForeignKey(e => e.PermohonanPPIDID);
-
         m.Entity<PermohonanPPID>()
-            .HasIndex(e => e.NoPermohonan)
-            .IsUnique();
+            .HasIndex(e => e.NoPermohonan).IsUnique();
 
         // ── SubTaskPPID ───────────────────────────────────────────────────
         m.Entity<SubTaskPPID>()
-            .HasOne(e => e.Permohonan)
-            .WithMany()
+            .HasOne(e => e.Permohonan).WithMany()
             .HasForeignKey(e => e.PermohonanPPIDID)
             .OnDelete(DeleteBehavior.Cascade);
-
         m.Entity<SubTaskPPID>()
             .HasIndex(e => e.PermohonanPPIDID);
-
         m.Entity<SubTaskPPID>()
             .HasIndex(e => new { e.PermohonanPPIDID, e.JenisTask });
 
         // ── AppUser ───────────────────────────────────────────────────────
         m.Entity<AppUser>()
-            .HasIndex(e => e.Username)
-            .IsUnique();
+            .HasIndex(e => e.Username).IsUnique();
 
-        // ── Seed data ─────────────────────────────────────────────────────
         SeedStatusPPID(m);
         SeedKeperluan(m);
         SeedJenisDokumen(m);
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // Seed helpers
+    // SEED DATA
     // ════════════════════════════════════════════════════════════════════════
 
     private static void SeedStatusPPID(ModelBuilder m) =>
@@ -123,9 +107,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         );
 
     // ════════════════════════════════════════════════════════════════════════
-    // NoPermohonan Generator
+    // NOPERMOHONAN GENERATOR
     // ════════════════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Generate nomor permohonan unik secara atomic menggunakan advisory lock PostgreSQL.
+    /// Format: MHS687592/PPID/III/2026 (Kepegawaian) | UMM687592/PPID/III/2026 (Umum)
+    /// </summary>
     public async Task<(string NoPermohonan, int Sequence)> GenerateNoPermohonan(
         string loketJenis = LoketJenis.Kepegawaian)
     {
@@ -137,6 +125,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         await using var tx = await Database.BeginTransactionAsync();
         try
         {
+            // Advisory lock per tahun — mencegah race condition pada counter
             await Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(20250002)");
 
             await Database.ExecuteSqlAsync($"""
@@ -155,16 +144,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .FirstAsync();
 
             const int maxAttempts = 10;
-            string noPermohonan;
+            string noPermohonan = string.Empty;
 
             for (int attempt = 1; ; attempt++)
             {
                 var digits = NoPermohonanToken.GenerateDigits();
                 noPermohonan = $"{prefix}{digits}/PPID/{romanMonth}/{year}";
 
-                bool taken = await PermohonanPPID
-                    .AnyAsync(p => p.NoPermohonan == noPermohonan);
-
+                bool taken = await PermohonanPPID.AnyAsync(p => p.NoPermohonan == noPermohonan);
                 if (!taken) break;
 
                 if (attempt >= maxAttempts)
@@ -183,13 +170,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // Helper methods
+    // HELPER METHODS
     // ════════════════════════════════════════════════════════════════════════
 
+    /// <summary>Batas waktu default: tanggal permohonan + 14 hari kalender.</summary>
     public static DateOnly HitungBatasWaktu(DateOnly tanggalPermohonan) =>
         tanggalPermohonan.AddDays(14);
 
-    public void AddAuditLog(Guid permohonanId, int? statusLama, int statusBaru,
+    /// <summary>Tambahkan entri audit log ke context (belum disimpan ke DB).</summary>
+    public void AddAuditLog(
+        Guid permohonanId, int? statusLama, int statusBaru,
         string keterangan, string operatorName)
     {
         AuditLog.Add(new AuditLogPPID
@@ -204,14 +194,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // SubTask parallel helpers
+    // SUBTASK PARALLEL HELPERS
     // ════════════════════════════════════════════════════════════════════════
 
     /// <summary>
     /// Buat sub-task paralel saat KDI menerima disposisi.
-    /// Idempotent — aman dipanggil ulang; tidak akan membuat duplikat.
+    /// Idempotent — tidak membuat duplikat jika dipanggil ulang.
     /// </summary>
-    public void CreateSubTasks(Guid permohonanId, bool perluData, bool perluObs,
+    public void CreateSubTasks(
+        Guid permohonanId, bool perluData, bool perluObs,
         bool perluWaw, string operatorName)
     {
         var now = DateTime.UtcNow;
@@ -249,7 +240,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     /// <summary>
     /// Cek apakah semua sub-task selesai; jika ya, advance status ke DataSiap.
-    /// Kembalikan true jika berhasil advance — caller wajib SaveChangesAsync() sesudahnya.
+    /// Kembalikan true jika berhasil advance.
+    /// Caller wajib memanggil <see cref="SaveChangesAsync"/> sesudah method ini.
     /// </summary>
     public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
     {
@@ -257,11 +249,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .Where(t => t.PermohonanPPIDID == permohonanId)
             .ToListAsync();
 
-        if (!tasks.Any() || !tasks.All(t => t.StatusTask == Models.SubTaskStatus.Selesai))
+        if (tasks.Count == 0 || !tasks.All(t => t.StatusTask == Models.SubTaskStatus.Selesai))
             return false;
 
         var p = await PermohonanPPID.FindAsync(permohonanId);
-        if (p == null || p.StatusPPIDID >= Models.StatusId.DataSiap)
+        if (p is null || p.StatusPPIDID >= Models.StatusId.DataSiap)
             return false;
 
         var lama       = p.StatusPPIDID;
@@ -278,21 +270,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     /// <summary>Ambil satu SubTask berdasarkan permohonan dan jenis.</summary>
     public async Task<SubTaskPPID?> GetSubTask(Guid permohonanId, string jenisTask) =>
-        await SubTaskPPID
-            .FirstOrDefaultAsync(t =>
-                t.PermohonanPPIDID == permohonanId &&
-                t.JenisTask        == jenisTask);
+        await SubTaskPPID.FirstOrDefaultAsync(t =>
+            t.PermohonanPPIDID == permohonanId &&
+            t.JenisTask        == jenisTask);
 
     // ════════════════════════════════════════════════════════════════════════
-    // Dashboard monthly stats
+    // DASHBOARD MONTHLY STATS
     // ════════════════════════════════════════════════════════════════════════
 
-    public async Task<List<MonthlyStatRow>> GetMonthlyStats(int months = 12)
+    /// <summary>
+    /// Statistik permohonan per bulan untuk 12 bulan terakhir.
+    /// Digunakan oleh semua dashboard role.
+    /// </summary>
+    public async Task<List<MonthlyStatRow>> GetMonthlyStats()
     {
-        var fromDate = new DateTime(
-            DateTime.UtcNow.AddMonths(-(months - 1)).Year,
-            DateTime.UtcNow.AddMonths(-(months - 1)).Month,
-            1, 0, 0, 0, DateTimeKind.Utc);
+        const int months = 12;
+        var from = DateTime.UtcNow.AddMonths(-(months - 1));
+        var fromDate = new DateTime(from.Year, from.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var raw = await PermohonanPPID
             .AsNoTracking()
