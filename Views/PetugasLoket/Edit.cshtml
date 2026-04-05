@@ -49,10 +49,18 @@
                     <input asp-for="TujuanPermohonan" class="fld" />
                     <span asp-validation-for="TujuanPermohonan" class="err"></span>
                 </div>
+
+                <!-- Pengampu + Telepon dalam satu baris -->
                 <div>
                     <label class="lbl">Pengampu / PIC</label>
                     <input asp-for="Pengampu" class="fld" placeholder="Nama petugas pengampu" />
                 </div>
+                <div>
+                    <label class="lbl">No. Telepon Pengampu / PIC</label>
+                    <input asp-for="TeleponPengampu" class="fld" placeholder="08xxxxxxxxxx" />
+                    <span asp-validation-for="TeleponPengampu" class="err"></span>
+                </div>
+
                 <div>
                     <label class="lbl">Batas Waktu</label>
                     <input asp-for="BatasWaktu" type="date" class="fld" />

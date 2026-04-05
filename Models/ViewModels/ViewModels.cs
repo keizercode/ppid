@@ -137,6 +137,10 @@ public class DaftarPemohonVm
     [Display(Name = "Pengampu / PIC")]
     public string? Pengampu { get; set; }
 
+    [Display(Name = "No. Telepon Pengampu / PIC")]
+    [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
+    public string? TeleponPengampu { get; set; }
+
     [Required(ErrorMessage = "Judul penelitian wajib diisi")]
     [Display(Name = "Judul Penelitian")]
     public string JudulPenelitian { get; set; } = string.Empty;
@@ -491,6 +495,10 @@ public class EditPermohonanVm
 
     [Display(Name = "Pengampu / PIC")]
     public string? Pengampu { get; set; }
+
+    [Display(Name = "No. Telepon Pengampu / PIC")]
+    [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
+    public string? TeleponPengampu { get; set; }
 
     [Display(Name = "Batas Waktu")]
     public DateOnly? BatasWaktu { get; set; }

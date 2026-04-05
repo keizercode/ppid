@@ -227,6 +227,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
                         TanggalPermohonan = vm.TanggalPermohonan,
                         BatasWaktu        = AppDbContext.HitungBatasWaktu(vm.TanggalPermohonan),
                         Pengampu          = vm.Pengampu,
+                        TeleponPengampu   = vm.TeleponPengampu,
                         JudulPenelitian   = vm.JudulPenelitian,
                         LatarBelakang     = vm.LatarBelakang,
                         TujuanPermohonan  = vm.TujuanPermohonan,
@@ -458,6 +459,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         p.LatarBelakang    = vm.LatarBelakang;
         p.TujuanPermohonan = vm.TujuanPermohonan;
         p.Pengampu         = vm.Pengampu;
+        p.TeleponPengampu  = vm.TeleponPengampu;
         p.BatasWaktu       = vm.BatasWaktu;
         p.IsObservasi      = vm.IsObservasi;
         p.IsPermintaanData = vm.IsPermintaanData;

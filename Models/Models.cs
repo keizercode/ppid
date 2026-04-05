@@ -68,6 +68,7 @@ public class PermohonanPPID
     [Column("BatasWaktu")]            public DateOnly? BatasWaktu        { get; set; }
     [Column("TanggalSelesai")]        public DateOnly? TanggalSelesai    { get; set; }
     [Column("Pengampu")]              public string?   Pengampu          { get; set; }
+    [Column("TeleponPengampu")]       public string?   TeleponPengampu   { get; set; }
     [Column("JudulPenelitian")]       public string?   JudulPenelitian   { get; set; }
     [Column("LatarBelakang")]         public string?   LatarBelakang     { get; set; }
     [Column("TujuanPermohonan")]      public string?   TujuanPermohonan  { get; set; }

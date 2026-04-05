@@ -137,6 +137,11 @@
                     <input asp-for="Pengampu" class="fld" placeholder="Nama petugas pengampu permohonan ini"/>
                 </div>
                 <div class="md:col-span-2">
+        <label class="lbl">No. Telepon Pengampu / PIC <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+        <input asp-for="TeleponPengampu" class="fld" placeholder="08xxxxxxxxxx" />
+        <span asp-validation-for="TeleponPengampu" class="err"></span>
+    </div>
+                <div class="md:col-span-2">
                     <label class="lbl">Judul Penelitian <span class="req">*</span></label>
                     <input asp-for="JudulPenelitian" class="fld" placeholder="Judul penelitian / tujuan permintaan data"/>
                     <span asp-validation-for="JudulPenelitian" class="err"></span>
