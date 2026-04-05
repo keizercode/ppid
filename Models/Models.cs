@@ -387,13 +387,28 @@ public static class LoketJenis
 
 public static class AppRoles
 {
+    // ── Loket ─────────────────────────────────────────────────────────────
+    /// <summary>Operator Loket Kepegawaian — prefix MHS</summary>
     public const string Loket               = "Loket";
+
+    /// <summary>Operator Loket Umum — prefix UMM</summary>
     public const string LoketUmum           = "LoketUmum";
-    public const string Kepegawaian         = "Kepegawaian";
+
+    // ── Kasubkel ──────────────────────────────────────────────────────────
+    /// <summary>Kasubkel Kepegawaian: verifikasi + surat izin + disposisi</summary>
     public const string KasubkelKepegawaian = "KasubkelKepegawaian";
-    public const string KasubkelUmum        = "KasubkelUmum";
-    public const string KDI                 = "KDI";
+
+    /// <summary>Kasubkel KDI: permintaan data + parallel tasks + jadwal</summary>
     public const string KasubkelKDI         = "KasubkelKDI";
-    public const string ProdusenData        = "ProdusenData";
+
+    // ── Sistem ────────────────────────────────────────────────────────────
     public const string Admin               = "Admin";
+
+    // ── Helper: semua role yang boleh login ───────────────────────────────
+    public static readonly string[] All =
+    [
+        Loket, LoketUmum,
+        KasubkelKepegawaian, KasubkelKDI,
+        Admin
+    ];
 }

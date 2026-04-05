@@ -7,11 +7,24 @@ using PermintaanData.Models.ViewModels;
 
 namespace PermintaanData.Controllers;
 
+/// <summary>
+/// Kasubkel Kepegawaian — digabung dengan Kepegawaian (SuratIzin).
+///
+/// Route map:
+///   GET  /kasubkel-kepegawaian                → Dashboard
+///   GET  /kasubkel-kepegawaian/permohonan     → Daftar permohonan
+///   GET  /kasubkel-kepegawaian/detail/{id}    → Detail
+///   GET/POST /kasubkel-kepegawaian/verifikasi/{id} → Verifikasi identifikasi awal
+///   GET/POST /kasubkel-kepegawaian/surat-izin/{id} → Terbitkan surat izin (was /kepegawaian)
+/// </summary>
 [Route("kasubkel-kepegawaian")]
 [Authorize(Roles = $"{AppRoles.KasubkelKepegawaian},{AppRoles.Admin}")]
-public class KasubkelKepegawaianController(AppDbContext db) : Controller
+public class KasubkelKepegawaianController(
+    AppDbContext db,
+    IWebHostEnvironment env) : LoketBaseController(db, env)
 {
-    private string CurrentUser => User.Identity?.Name ?? AppRoles.KasubkelKepegawaian;
+    private string CurrentUser =>
+        User.Identity?.Name ?? AppRoles.KasubkelKepegawaian;
 
     // ── Dashboard ─────────────────────────────────────────────────────────
 
@@ -35,16 +48,18 @@ public class KasubkelKepegawaianController(AppDbContext db) : Controller
         ViewData["MenungguVerifikasi"] = await db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .Include(p => p.Jadwal)
-            .Where(p => p.StatusPPIDID == StatusId.MenungguVerifikasi
-                     || p.StatusPPIDID == StatusId.MenungguSuratIzin)
+            .Where(p =>
+                (p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa") &&
+                (p.StatusPPIDID == StatusId.MenungguVerifikasi ||
+                 p.StatusPPIDID == StatusId.IdentifikasiAwal   ||
+                 p.StatusPPIDID == StatusId.MenungguSuratIzin))
             .OrderByDescending(p => p.CratedAt)
             .ToListAsync();
 
         return View(vm);
     }
 
-    // ── Daftar permohonan ──────────────────────────────────────────────────
+    // ── Daftar permohonan ─────────────────────────────────────────────────
 
     [HttpGet("permohonan")]
     public async Task<IActionResult> Permohonan(string? q, int? status)
@@ -63,72 +78,9 @@ public class KasubkelKepegawaianController(AppDbContext db) : Controller
         if (status.HasValue)
             query = query.Where(p => p.StatusPPIDID == status.Value);
 
-        ViewData["Q"]     = q;
-        ViewData["Status"]= status;
+        ViewData["Q"]      = q;
+        ViewData["Status"] = status;
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
-    }
-
-    // ── Verifikasi ────────────────────────────────────────────────────────
-
-    [HttpGet("verifikasi/{id:guid}")]
-    public async Task<IActionResult> Verifikasi(Guid id)
-    {
-        var p = await db.PermohonanPPID
-            .Include(x => x.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
-            .Include(x => x.Detail).ThenInclude(d => d.Keperluan)
-            .Include(x => x.Dokumen)
-            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-
-        if (p == null) return NotFound();
-
-        if (!IsVerifikasiAllowed(p.StatusPPIDID))
-        {
-            TempData["Error"] = "Permohonan ini tidak dalam status yang memungkinkan verifikasi.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        return View(BuildVerifikasiVm(p));
-    }
-
-    [HttpPost("verifikasi"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> VerifikasiPost(VerifikasiVm vm)
-    {
-        if (!ModelState.IsValid) return View("Verifikasi", vm);
-
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p == null) return NotFound();
-
-        var statusLama = p.StatusPPIDID;
-        var now        = DateTime.UtcNow;
-
-        if (vm.Disetujui)
-        {
-            p.StatusPPIDID = StatusId.MenungguSuratIzin;
-            p.UpdatedAt    = now;
-
-            if (vm.DisposisiUnit == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangDisposisi))
-                p.NamaBidang = vm.NamaBidangDisposisi;
-
-            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguSuratIzin,
-                $"Verifikasi disetujui oleh Kasubkel Kepegawaian. Disposisi: {vm.DisposisiUnit}. Catatan: {vm.CatatanVerifikasi}",
-                CurrentUser);
-
-            TempData["Success"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> berhasil diverifikasi dan diteruskan ke Kepegawaian.";
-        }
-        else
-        {
-            p.StatusPPIDID = StatusId.IdentifikasiAwal;
-            p.UpdatedAt    = now;
-
-            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.IdentifikasiAwal,
-                $"Verifikasi DITOLAK oleh Kasubkel Kepegawaian. Alasan: {vm.AlasanDitolak}",
-                CurrentUser);
-
-            TempData["Error"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> dikembalikan ke Loket. Alasan: {vm.AlasanDitolak}";
-        }
-
-        await db.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
     }
 
     // ── Detail ────────────────────────────────────────────────────────────
@@ -144,7 +96,7 @@ public class KasubkelKepegawaianController(AppDbContext db) : Controller
             .Include(x => x.AuditLog)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
 
-        if (p == null) return NotFound();
+        if (p is null) return NotFound();
 
         ViewData["SubTasks"] = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == id)
@@ -154,10 +106,165 @@ public class KasubkelKepegawaianController(AppDbContext db) : Controller
         return View(p);
     }
 
+    // ── Verifikasi identifikasi awal ──────────────────────────────────────
+
+    [HttpGet("verifikasi/{id:guid}")]
+    public async Task<IActionResult> Verifikasi(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
+            .Include(x => x.Detail).ThenInclude(d => d.Keperluan)
+            .Include(x => x.Dokumen)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        if (!IsVerifikasiAllowed(p.StatusPPIDID))
+        {
+            TempData["Error"] = "Permohonan ini tidak dalam status yang dapat diverifikasi.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(BuildVerifikasiVm(p));
+    }
+
+    [HttpPost("verifikasi"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> VerifikasiPost(VerifikasiVm vm)
+    {
+        if (!ModelState.IsValid) return View("Verifikasi", vm);
+
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is null) return NotFound();
+
+        var statusLama = p.StatusPPIDID;
+        var now        = DateTime.UtcNow;
+
+        if (vm.Disetujui)
+        {
+            p.StatusPPIDID = StatusId.MenungguSuratIzin;
+            p.UpdatedAt    = now;
+
+            if (vm.DisposisiUnit == "BidangTerkait" &&
+                !string.IsNullOrEmpty(vm.NamaBidangDisposisi))
+                p.NamaBidang = vm.NamaBidangDisposisi;
+
+            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguSuratIzin,
+                $"Verifikasi disetujui. Disposisi: {vm.DisposisiUnit}. Catatan: {vm.CatatanVerifikasi}",
+                CurrentUser);
+
+            TempData["Success"] =
+                $"Permohonan <strong>{vm.NoPermohonan}</strong> diverifikasi — siap surat izin.";
+        }
+        else
+        {
+            p.StatusPPIDID = StatusId.IdentifikasiAwal;
+            p.UpdatedAt    = now;
+
+            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.IdentifikasiAwal,
+                $"Verifikasi DITOLAK. Alasan: {vm.AlasanDitolak}", CurrentUser);
+
+            TempData["Error"] =
+                $"Permohonan <strong>{vm.NoPermohonan}</strong> dikembalikan. Alasan: {vm.AlasanDitolak}";
+        }
+
+        await db.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ── Surat Izin (merged dari KepegawaianController) ────────────────────
+
+    [HttpGet("surat-izin/{id:guid}")]
+    public async Task<IActionResult> SuratIzin(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Detail)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        if (p.StatusPPIDID != StatusId.MenungguSuratIzin)
+        {
+            TempData["Error"] = "Surat izin hanya dapat diterbitkan pada status Menunggu Surat Izin.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(new SuratIzinVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
+            Kategori         = p.KategoriPemohon ?? string.Empty,
+            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+            IsObservasi      = p.IsObservasi,
+            IsPermintaanData = p.IsPermintaanData,
+            IsWawancara      = p.IsWawancara,
+        });
+    }
+
+    [HttpPost("surat-izin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SuratIzinPost(SuratIzinVm vm)
+    {
+        if (!ModelState.IsValid) return View("SuratIzin", vm);
+
+        var now = DateTime.UtcNow;
+
+        if (vm.FileSuratIzin?.Length > 0)
+        {
+            var error = await UploadDokumen(
+                vm.PermohonanPPIDID, vm.FileSuratIzin,
+                JenisDokumenId.SuratIzin, "Surat Izin", now);
+
+            if (error is not null)
+            {
+                ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
+                return View("SuratIzin", vm);
+            }
+        }
+
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is null) return NotFound();
+
+        var statusLama = p.StatusPPIDID;
+        p.NoSuratPermohonan = vm.NoSuratIzin;
+        p.IsObservasi       = vm.IsObservasi;
+        p.IsPermintaanData  = vm.IsPermintaanData;
+        p.IsWawancara       = vm.IsWawancara;
+        p.UpdatedAt         = now;
+
+        // Routing: wawancara-only langsung ke WawancaraDijadwalkan,
+        // selainnya ke KDI via Didisposisi.
+        if (vm.IsWawancaraOnly)
+        {
+            p.StatusPPIDID     = StatusId.WawancaraDijadwalkan;
+            p.NamaProdusenData = vm.NamaProdusenData ?? vm.NamaBidangPrimary;
+        }
+        else
+        {
+            p.StatusPPIDID = StatusId.Didisposisi;
+            p.NamaBidang   = vm.NamaBidangPrimary;
+        }
+
+        var tujuan = vm.IsWawancaraOnly
+            ? $"Surat izin {vm.NoSuratIzin} terbit → Produsen Data (wawancara)"
+            : $"Surat izin {vm.NoSuratIzin} terbit → KDI, disposisi: {p.NamaBidang ?? "PSMDI"}";
+
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, p.StatusPPIDID!.Value, tujuan, CurrentUser);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = vm.IsWawancaraOnly
+            ? $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit, diteruskan ke KDI untuk penjadwalan wawancara."
+            : $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit, didisposisi ke {(string.IsNullOrEmpty(p.NamaBidang) ? "PSMDI" : p.NamaBidang)}.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────
 
     private static bool IsVerifikasiAllowed(int? statusId) =>
-        statusId is StatusId.MenungguVerifikasi or StatusId.IdentifikasiAwal or StatusId.MenungguSuratIzin;
+        statusId is StatusId.MenungguVerifikasi
+                 or StatusId.IdentifikasiAwal
+                 or StatusId.MenungguSuratIzin;
 
     private static VerifikasiVm BuildVerifikasiVm(PermohonanPPID p) => new()
     {

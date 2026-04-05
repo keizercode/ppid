@@ -13,9 +13,8 @@ namespace PermintaanData.Controllers;
 [Route("auth")]
 public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 {
-    // ── Rate limiting ─────────────────────────────────────────────────────
-    private const int MaxFailedAttempts = 5;
-    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    private const int MaxFailedAttempts                  = 5;
+    private static readonly TimeSpan LockoutDuration    = TimeSpan.FromMinutes(15);
 
     // ── Login ─────────────────────────────────────────────────────────────
 
@@ -23,10 +22,7 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
     public IActionResult Login(string? returnUrl)
     {
         if (User.Identity?.IsAuthenticated == true)
-        {
-            var role = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
-            return RedirectToLocal(returnUrl) ?? RedirectByRole(role);
-        }
+            return RedirectToLocal(returnUrl) ?? RedirectByRole(CurrentRole);
 
         ViewData["ReturnUrl"] = returnUrl;
         return View(new LoginVm());
@@ -36,21 +32,20 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
     public async Task<IActionResult> LoginPost(LoginVm vm, string? returnUrl)
     {
         ViewData["ReturnUrl"] = returnUrl;
-
         if (!ModelState.IsValid) return View("Login", vm);
 
         var clientIp = GetClientIp();
         var cacheKey = $"login_attempts:{clientIp}";
 
-        if (IsLockedOut(cacheKey, out var remainingMinutes))
+        if (IsLockedOut(cacheKey, out var remaining))
         {
             ModelState.AddModelError(string.Empty,
-                $"Terlalu banyak percobaan login gagal. Coba lagi dalam {remainingMinutes} menit.");
+                $"Terlalu banyak percobaan login. Coba lagi dalam {remaining} menit.");
             return View("Login", vm);
         }
 
-        var user = await db.AppUsers
-            .FirstOrDefaultAsync(u => u.Username == vm.Username && u.IsActive);
+        var user = await db.AppUsers.FirstOrDefaultAsync(
+            u => u.Username == vm.Username && u.IsActive);
 
         if (user == null || !user.VerifyPassword(vm.Password))
         {
@@ -69,6 +64,27 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
             await db.SaveChangesAsync();
         }
 
+        await SignInUser(user, vm.RememberMe);
+        return RedirectToLocal(returnUrl) ?? RedirectByRole(user.Role);
+    }
+
+    [HttpPost("logout"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return RedirectToAction(nameof(Login));
+    }
+
+    [HttpGet("akses-ditolak")]
+    public IActionResult AksesDitolak() => View();
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private string CurrentRole =>
+        User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+
+    private async Task SignInUser(AppUser user, bool rememberMe)
+    {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.AppUserID.ToString()),
@@ -85,84 +101,56 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
             principal,
             new AuthenticationProperties
             {
-                IsPersistent = vm.RememberMe,
-                ExpiresUtc   = vm.RememberMe
+                IsPersistent = rememberMe,
+                ExpiresUtc   = rememberMe
                     ? DateTimeOffset.UtcNow.AddDays(7)
                     : DateTimeOffset.UtcNow.AddHours(8)
             });
-
-        return RedirectToLocal(returnUrl) ?? RedirectByRole(user.Role);
     }
 
-    [HttpPost("logout"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Logout()
-    {
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return RedirectToAction(nameof(Login));
-    }
-
-    [HttpGet("akses-ditolak")]
-    public IActionResult AksesDitolak() => View();
-
-    // ── Rate limiting helpers ─────────────────────────────────────────────
-
-    private bool IsLockedOut(string cacheKey, out int remainingMinutes)
-    {
-        remainingMinutes = 0;
-        if (!cache.TryGetValue(cacheKey, out LoginAttemptInfo? info) || info == null)
-            return false;
-        if (info.Count < MaxFailedAttempts) return false;
-
-        remainingMinutes = (int)Math.Ceiling((info.LockedUntil - DateTime.UtcNow).TotalMinutes);
-        return remainingMinutes > 0;
-    }
-
-    private void RecordFailedAttempt(string cacheKey)
-    {
-        var info = cache.GetOrCreate(cacheKey, entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = LockoutDuration;
-            return new LoginAttemptInfo();
-        })!;
-
-        info.Count++;
-        if (info.Count >= MaxFailedAttempts)
-            info.LockedUntil = DateTime.UtcNow.Add(LockoutDuration);
-
-        cache.Set(cacheKey, info, LockoutDuration);
-    }
-
-    private void ResetFailedAttempts(string cacheKey) => cache.Remove(cacheKey);
-
-    private string GetClientIp() =>
-        HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-    // ── Redirect helpers ──────────────────────────────────────────────────
-
-    private IActionResult? RedirectToLocal(string? returnUrl) =>
-        !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
-            ? Redirect(returnUrl)
-            : null;
-
-    /// <summary>
-    /// Redirect ke halaman home sesuai role.
-    /// Admin diarahkan ke Loket Kepegawaian sebagai default landing page.
-    /// </summary>
-    private IActionResult RedirectByRole(string role) => role switch
+    /// <summary>Redirect ke landing page sesuai role.</summary>
+    private static IActionResult RedirectByRole(string role) => role switch
     {
         AppRoles.Loket               => Redirect("/petugas-loket"),
         AppRoles.LoketUmum           => Redirect("/loket-umum"),
-        AppRoles.Kepegawaian         => Redirect("/kepegawaian"),
         AppRoles.KasubkelKepegawaian => Redirect("/kasubkel-kepegawaian"),
-        AppRoles.KasubkelUmum        => Redirect("/kasubkel-umum"),
-        AppRoles.KDI                 => Redirect("/kdi"),
         AppRoles.KasubkelKDI         => Redirect("/kasubkel-kdi"),
-        AppRoles.ProdusenData        => Redirect("/produsen-data"),
         AppRoles.Admin               => Redirect("/petugas-loket"),
         _                            => Redirect("/petugas-loket")
     };
 
-    // ── Inner types ───────────────────────────────────────────────────────
+    // ── Rate limiting ─────────────────────────────────────────────────────
+
+    private bool IsLockedOut(string key, out int remainingMinutes)
+    {
+        remainingMinutes = 0;
+        if (!cache.TryGetValue(key, out LoginAttemptInfo? info) || info is null) return false;
+        if (info.Count < MaxFailedAttempts) return false;
+        remainingMinutes = (int)Math.Ceiling((info.LockedUntil - DateTime.UtcNow).TotalMinutes);
+        return remainingMinutes > 0;
+    }
+
+    private void RecordFailedAttempt(string key)
+    {
+        var info = cache.GetOrCreate(key, e =>
+        {
+            e.AbsoluteExpirationRelativeToNow = LockoutDuration;
+            return new LoginAttemptInfo();
+        })!;
+
+        if (++info.Count >= MaxFailedAttempts)
+            info.LockedUntil = DateTime.UtcNow.Add(LockoutDuration);
+
+        cache.Set(key, info, LockoutDuration);
+    }
+
+    private void ResetFailedAttempts(string key) => cache.Remove(key);
+
+    private string GetClientIp() =>
+        HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    private IActionResult? RedirectToLocal(string? url) =>
+        !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? Redirect(url) : null;
 
     private sealed class LoginAttemptInfo
     {

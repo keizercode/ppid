@@ -70,74 +70,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxWZXJpZmlrYXNpLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Detail.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXERldGFpbC5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Index.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXEluZGV4LmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Permohonan.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXFBlcm1vaG9uYW4uY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelUmum/Verifikasi.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxVbXVtXFZlcmlmaWthc2kuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Bidang.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEJpZGFuZy5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Index.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEluZGV4LmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/JadwalObservasi.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbE9ic2VydmFzaS5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/JadwalSubTask.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbFN1YlRhc2suY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/JadwalWawancara.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXEphZHdhbFdhd2FuY2FyYS5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/Psmdi.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFBzbWRpLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/SelesaiObservasi.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFNlbGVzYWlPYnNlcnZhc2kuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/SelesaiSubTask.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFNlbGVzYWlTdWJUYXNrLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/SubTasks.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFN1YlRhc2tzLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/TerimaDisposisi.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFRlcmltYURpc3Bvc2lzaS5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kdi/UploadData.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2RpXFVwbG9hZERhdGEuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kepegawaian/Index.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2VwZWdhd2FpYW5cSW5kZXguY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/Kepegawaian/SuratIzin.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2VwZWdhd2FpYW5cU3VyYXRJemluLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
 [D:/ProjectDotnet/baru/PermintaanData/Views/LoketUmum/DaftarPemohon.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rZXRVbXVtXERhZnRhclBlbW9ob24uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -212,18 +144,6 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/PetugasLoket/Wawancara.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc0xva2V0XFdhd2FuY2FyYS5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/ProdusenData/Index.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVzZW5EYXRhXEluZGV4LmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/ProdusenData/JadwalWawancara.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVzZW5EYXRhXEphZHdhbFdhd2FuY2FyYS5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/ProjectDotnet/baru/PermintaanData/Views/ProdusenData/SelesaiWawancara.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVzZW5EYXRhXFNlbGVzYWlXYXdhbmNhcmEuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/Shared/Partials/Empty.cshtml]
