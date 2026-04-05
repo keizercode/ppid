@@ -65,24 +65,96 @@
     </div>
 
     <!-- Sub-task Cards -->
+<!-- Sub-task Cards -->
     <div class="grid grid-cols-1 md:grid-cols-@(Model.TotalTasks == 1 ? "1" : Model.TotalTasks == 2 ? "2" : "3") gap-4 mb-4">
-
-        @* ── Permintaan Data ── *@
-        @if (p.IsPermintaanData && stData != null)
+        @foreach (var st in Model.SubTasks)
         {
-            @SubTaskCard(stData, p.PermohonanPPIDID, p.NoPermohonan ?? "", pr?.Nama ?? "", p.JudulPenelitian ?? "")
-        }
+            string jenis    = st.JenisTask;
+            string jenisLbl = JenisTask.GetLabel(jenis);
+            string icon     = JenisTask.GetIcon(jenis);
+            bool   done     = st.IsSelesai;
+            bool   inProg   = st.IsInProgress;
 
-        @* ── Observasi ── *@
-        @if (p.IsObservasi && stObs != null)
-        {
-            @SubTaskCard(stObs, p.PermohonanPPIDID, p.NoPermohonan ?? "", pr?.Nama ?? "", p.JudulPenelitian ?? "")
-        }
+            string cardBorder = done   ? "border-emerald-200" :
+                                inProg ? "border-amber-200"   : "border-gray-200";
+            string badgeBg    = done   ? "bg-emerald-100 text-emerald-800" :
+                                inProg ? "bg-amber-100 text-amber-800"     : "bg-gray-100 text-gray-500";
 
-        @* ── Wawancara ── *@
-        @if (p.IsWawancara && stWaw != null)
-        {
-            @SubTaskCard(stWaw, p.PermohonanPPIDID, p.NoPermohonan ?? "", pr?.Nama ?? "", p.JudulPenelitian ?? "")
+            string actionUrl = jenis switch
+            {
+                JenisTask.PermintaanData => $"/kasubkel-kdi/upload-data/{p.PermohonanPPIDID}",
+                JenisTask.Observasi      => done
+                    ? $"/kasubkel-kdi/selesai-observasi/{p.PermohonanPPIDID}"
+                    : $"/kasubkel-kdi/jadwal-observasi/{p.PermohonanPPIDID}",
+                JenisTask.Wawancara      => done
+                    ? $"/kasubkel-kdi/selesai-wawancara/{p.PermohonanPPIDID}"
+                    : $"/kasubkel-kdi/jadwal-wawancara/{p.PermohonanPPIDID}",
+                _                        => "#"
+            };
+
+            string actionLabel = done ? "Lihat Hasil" :
+                jenis == JenisTask.PermintaanData ? "Upload Data" :
+                inProg ? "Konfirmasi Selesai →" : "Buat Jadwal →";
+
+            <div class="bg-white rounded-2xl border @cardBorder shadow-sm p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-2xl">@icon</span>
+                        <p class="font-bold text-gray-800 text-sm">@jenisLbl</p>
+                    </div>
+                    <span class="text-[11px] @badgeBg px-2.5 py-0.5 rounded-full font-semibold">
+                        @SubTaskStatus.GetLabel(st.StatusTask)
+                    </span>
+                </div>
+
+                @if (st.TanggalJadwal.HasValue)
+                {
+                    <div class="bg-gray-50 rounded-xl p-3 mb-3">
+                        <p class="text-xs text-gray-500">
+                            📅 <strong>@st.TanggalJadwal.Value.ToString("dd MMM yyyy")</strong>
+                            pukul @(st.WaktuJadwal?.ToString("HH:mm") ?? "—")
+                        </p>
+                        @if (!string.IsNullOrEmpty(st.NamaPIC))
+                        {
+                            <p class="text-xs text-gray-500 mt-0.5">PIC: <strong>@st.NamaPIC</strong></p>
+                        }
+                        @if (!string.IsNullOrEmpty(st.TeleponPIC))
+                        {
+                            <a href="tel:@st.TeleponPIC" class="text-xs text-blue-500 hover:underline">📱 @st.TeleponPIC</a>
+                        }
+                    </div>
+                }
+
+                @if (st.HasFile)
+                {
+                    <div class="bg-emerald-50 rounded-xl p-3 mb-3">
+                        <p class="text-xs text-emerald-700">📎 @(st.NamaFile ?? "File tersedia")</p>
+                        @if (!string.IsNullOrEmpty(st.FilePath))
+                        {
+                            <a href="@st.FilePath" target="_blank" class="text-xs text-blue-500 hover:underline mt-0.5 block">Lihat file →</a>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(st.Catatan))
+                {
+                    <p class="text-xs text-gray-500 mb-3 italic">📝 @st.Catatan</p>
+                }
+
+                @if (!done)
+                {
+                    <a href="@actionUrl"
+                       class="w-full flex items-center justify-center gap-2 @(inProg ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#002d7a] hover:bg-blue-900") text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                        @actionLabel
+                    </a>
+                }
+                else
+                {
+                    <div class="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold">
+                        <span>✓ Selesai @st.SelesaiAt?.ToLocalTime().ToString("dd MMM HH:mm")</span>
+                    </div>
+                }
+            </div>
         }
     </div>
 
@@ -220,72 +292,4 @@
     </a>
 </div>
 
-@functions {
-    IHtmlContent SubTaskCard(SubTaskPPID st, Guid pId, string noPerm, string nama, string judul)
-    {
-        string jenis    = st.JenisTask;
-        string jenisLbl = JenisTask.GetLabel(jenis);
-        string icon     = JenisTask.GetIcon(jenis);
-        bool done       = st.IsSelesai;
-        bool inProgress = st.IsInProgress;
-        bool pending    = st.IsPending;
 
-        string cardBorder = done ? "border-emerald-200" : inProgress ? "border-amber-200" : "border-gray-200";
-        string badgeBg    = done ? "bg-emerald-100 text-emerald-800" : inProgress ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-500";
-
-        string actionUrl = jenis switch
-        {
-            JenisTask.PermintaanData => $"/kasubkel-kdi/upload-data/{pId}",
-            JenisTask.Observasi      => done
-                ? $"/kasubkel-kdi/selesai-observasi/{pId}"
-                : $"/kasubkel-kdi/jadwal-observasi/{pId}",
-            JenisTask.Wawancara      => done
-                ? $"/kasubkel-kdi/selesai-wawancara/{pId}"
-                : $"/kasubkel-kdi/jadwal-wawancara/{pId}",
-            _                        => "#"
-        };
-
-        string actionLabel = done ? "Lihat Hasil" :
-            jenis == JenisTask.PermintaanData ? "Upload Data" :
-            inProgress ? "Konfirmasi Selesai →" : "Buat Jadwal →";
-
-        var html = $@"
-<div class='bg-white rounded-2xl border {cardBorder} shadow-sm p-5'>
-    <div class='flex items-center justify-between mb-3'>
-        <div class='flex items-center gap-2.5'>
-            <span class='text-2xl'>{icon}</span>
-            <p class='font-bold text-gray-800 text-sm'>{jenisLbl}</p>
-        </div>
-        <span class='text-[11px] {badgeBg} px-2.5 py-0.5 rounded-full font-semibold'>
-            {SubTaskStatus.GetLabel(st.StatusTask)}
-        </span>
-    </div>
-
-    {(st.TanggalJadwal.HasValue ? $@"
-    <div class='bg-gray-50 rounded-xl p-3 mb-3'>
-        <p class='text-xs text-gray-500'>📅 <strong>{st.TanggalJadwal.Value:dd MMM yyyy}</strong> pukul {st.WaktuJadwal?.ToString("HH:mm") ?? "—"}</p>
-        {(!string.IsNullOrEmpty(st.NamaPIC) ? $"<p class='text-xs text-gray-500 mt-0.5'>PIC: <strong>{st.NamaPIC}</strong></p>" : "")}
-        {(!string.IsNullOrEmpty(st.TeleponPIC) ? $"<a href='tel:{st.TeleponPIC}' class='text-xs text-blue-500 hover:underline'>📱 {st.TeleponPIC}</a>" : "")}
-    </div>" : "")}
-
-    {(st.HasFile ? $@"
-    <div class='bg-emerald-50 rounded-xl p-3 mb-3'>
-        <p class='text-xs text-emerald-700'>📎 {st.NamaFile ?? "File tersedia"}</p>
-        {(!string.IsNullOrEmpty(st.FilePath) ? $"<a href='{st.FilePath}' target='_blank' class='text-xs text-blue-500 hover:underline mt-0.5 block'>Lihat file →</a>" : "")}
-    </div>" : "")}
-
-    {(!string.IsNullOrEmpty(st.Catatan) ? $@"
-    <p class='text-xs text-gray-500 mb-3 italic'>📝 {st.Catatan}</p>" : "")}
-
-    {(!done ? $@"
-    <a href='{actionUrl}' class='w-full flex items-center justify-center gap-2 {(inProgress ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#002d7a] hover:bg-blue-900")} text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors'>
-        {actionLabel}
-    </a>" : $@"
-    <div class='flex items-center gap-1.5 text-emerald-600 text-xs font-semibold'>
-        <span>✓ Selesai {st.SelesaiAt?.ToLocalTime().ToString("dd MMM HH:mm")}</span>
-    </div>")}
-</div>";
-
-        return new HtmlString(html);
-    }
-}
