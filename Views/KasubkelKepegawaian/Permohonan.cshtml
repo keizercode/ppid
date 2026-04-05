@@ -1,3 +1,7 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/KasubkelKepegawaian/Permohonan.cshtml — FIXED
+   Perubahan: tombol aksi per status (Verifikasi vs Surat Izin vs -)
+════════════════════════════════════════════════════════════════════════════ *@
 @model List<PermohonanPPID>
 @{
     ViewData["Title"] = "Permohonan Baru — Kasubkel Kepegawaian";
@@ -42,9 +46,7 @@
         <div class="text-center py-20">
             <div class="text-4xl mb-3">📋</div>
             <p class="text-gray-400 text-sm font-medium">
-                @(string.IsNullOrEmpty(q) && !status.HasValue
-                    ? "Belum ada permohonan"
-                    : $"Tidak ada hasil yang cocok")
+                @(string.IsNullOrEmpty(q) && !status.HasValue ? "Belum ada permohonan" : "Tidak ada hasil yang cocok")
             </p>
         </div>
     }
@@ -69,10 +71,23 @@
                 <tbody class="divide-y divide-gray-50">
                     @foreach (var item in Model)
                     {
-                        bool overdue      = item.IsOverdue;
+                        bool overdue = item.IsOverdue;
+
+                        // ── Per-status action resolution ─────────────────────────────────
                         bool bisaVerif    = item.StatusPPIDID == StatusId.MenungguVerifikasi
-                                        || item.StatusPPIDID == StatusId.IdentifikasiAwal
-                                        || item.StatusPPIDID == StatusId.MenungguSuratIzin;
+                                         || item.StatusPPIDID == StatusId.IdentifikasiAwal;
+                        bool bisaSuratIzin = item.StatusPPIDID == StatusId.MenungguSuratIzin;
+
+                        string badgeCls = item.StatusPPIDID switch
+                        {
+                            StatusId.Selesai            => "bg-emerald-100 text-emerald-800",
+                            StatusId.DataSiap           => "bg-emerald-50 text-emerald-700",
+                            StatusId.MenungguSuratIzin  => "bg-blue-50 text-blue-700",
+                            StatusId.MenungguVerifikasi => "bg-violet-50 text-violet-700",
+                            StatusId.TerdaftarSistem    => "bg-gray-100 text-gray-500",
+                            _                           => "bg-amber-50 text-amber-700"
+                        };
+
                         <tr class="hover:bg-blue-50/30 transition-colors group @(overdue ? "bg-red-50/20" : "")">
 
                             <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold whitespace-nowrap">
@@ -118,16 +133,6 @@
                             </td>
 
                             <td class="px-4 py-3">
-                                @{
-                                    string badgeCls = item.StatusPPIDID switch
-                                    {
-                                        StatusId.Selesai           => "bg-emerald-100 text-emerald-800",
-                                        StatusId.DataSiap          => "bg-emerald-50 text-emerald-700",
-                                        StatusId.MenungguVerifikasi => "bg-violet-50 text-violet-700",
-                                        StatusId.TerdaftarSistem   => "bg-gray-100 text-gray-500",
-                                        _                          => "bg-amber-50 text-amber-700"
-                                    };
-                                }
                                 <span class="text-[11px] @badgeCls px-2.5 py-0.5 rounded-full font-medium">
                                     @item.Status?.NamaStatusPPID
                                 </span>
@@ -145,10 +150,17 @@
                                 <div class="flex gap-1.5 flex-wrap opacity-80 group-hover:opacity-100 transition-opacity">
                                     <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID"
                                        class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a>
+
                                     @if (bisaVerif)
                                     {
                                         <a href="/kasubkel-kepegawaian/verifikasi/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-semibold">Verifikasi</a>
+                                           class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-semibold">✅ Verifikasi</a>
+                                    }
+
+                                    @if (bisaSuratIzin)
+                                    {
+                                        <a href="/kasubkel-kepegawaian/surat-izin/@item.PermohonanPPIDID"
+                                           class="text-[11px] bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg font-semibold">📄 Surat Izin</a>
                                     }
                                 </div>
                             </td>

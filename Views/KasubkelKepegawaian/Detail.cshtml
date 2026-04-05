@@ -1,9 +1,7 @@
 @* ════════════════════════════════════════════════════════════════════════════
-   Views/KasubkelKepegawaian/Detail.cshtml  — FULL REPLACEMENT
-   UPDATE: tambah _WorkflowTimeline di sidebar kanan
-   Controller perlu ditambah:
-     ViewData["SubTasks"] = await db.SubTaskPPID.Where(t => t.PermohonanPPIDID == id).ToListAsync();
-   ════════════════════════════════════════════════════════════════════════════ *@
+   Views/KasubkelKepegawaian/Detail.cshtml  — FIXED
+   Perubahan: action buttons sekarang status-aware (Verifikasi vs Surat Izin vs info)
+════════════════════════════════════════════════════════════════════════════ *@
 @model PermohonanPPID
 @{
     ViewData["Title"] = $"Detail {Model.NoPermohonan}";
@@ -13,13 +11,20 @@
     var pr   = Model.Pribadi;
     var ppid = pr?.PribadiPPID;
 
-    string statusColor = Model.StatusPPIDID >= StatusId.DataSiap
-        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    string statusColor = Model.StatusPPIDID == StatusId.MenungguSuratIzin
+        ? "bg-blue-50 text-blue-700 border-blue-200"
         : Model.StatusPPIDID == StatusId.MenungguVerifikasi
             ? "bg-violet-50 text-violet-700 border-violet-200"
-            : Model.StatusPPIDID == StatusId.TerdaftarSistem
-                ? "bg-gray-100 text-gray-500 border-gray-200"
-                : "bg-amber-50 text-amber-700 border-amber-200";
+            : Model.StatusPPIDID >= StatusId.DataSiap
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : Model.StatusPPIDID == StatusId.TerdaftarSistem
+                    ? "bg-gray-100 text-gray-500 border-gray-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200";
+
+    string statusDot = Model.StatusPPIDID == StatusId.MenungguSuratIzin ? "bg-blue-400" :
+                       Model.StatusPPIDID == StatusId.MenungguVerifikasi ? "bg-violet-400" :
+                       Model.StatusPPIDID >= StatusId.DataSiap ? "bg-emerald-400" :
+                       Model.StatusPPIDID == StatusId.TerdaftarSistem ? "bg-gray-400" : "bg-amber-400";
 }
 
 <div class="max-w-5xl mx-auto">
@@ -46,19 +51,16 @@
             </div>
         </div>
         <div class="flex items-center gap-2 border @statusColor rounded-full px-4 py-2 self-start sm:self-center">
-            <span class="w-2 h-2 rounded-full @(Model.StatusPPIDID >= StatusId.DataSiap ? "bg-emerald-400" : Model.StatusPPIDID == StatusId.MenungguVerifikasi ? "bg-violet-400" : "bg-amber-400") flex-shrink-0"></span>
+            <span class="w-2 h-2 rounded-full @statusDot flex-shrink-0"></span>
             <span class="text-sm font-semibold">@(Model.Status?.NamaStatusPPID ?? "—")</span>
         </div>
     </div>
 
-    @* ── LAYOUT: Kiri (detail) + Kanan (timeline) ── *@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
-
-        @* Kiri: detail permohonan *@
         <div class="xl:col-span-2 space-y-4">
 
-            <!-- Data Pribadi + Permohonan -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Data Pribadi -->
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Data Pribadi</p>
                     <dl class="space-y-3">
@@ -88,6 +90,7 @@
                     </dl>
                 </div>
 
+                <!-- Data Permohonan -->
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Data Permohonan</p>
                     <dl class="space-y-3">
@@ -100,22 +103,16 @@
                             </dd>
                         </div>
                         @if (!string.IsNullOrEmpty(Model.Pengampu)) {
-                            <div><dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Pengampu</dt><dd class="text-gray-700 text-sm mt-0.5">@Model.Pengampu</dd></div>
+                            <div>
+                                <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Pengampu / PIC</dt>
+                                <dd class="text-gray-700 text-sm mt-0.5">
+                                    @Model.Pengampu
+                                    @if (!string.IsNullOrEmpty(Model.TeleponPengampu)) {
+                                        <a href="tel:@Model.TeleponPengampu" class="ml-2 text-blue-500 hover:underline text-xs">📱 @Model.TeleponPengampu</a>
+                                    }
+                                </dd>
+                            </div>
                         }
-                        @if (!string.IsNullOrEmpty(Model.Pengampu)) {
-        <div>
-            <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Pengampu / PIC</dt>
-            <dd class="text-gray-700 text-sm mt-0.5">
-                @Model.Pengampu
-                @if (!string.IsNullOrEmpty(Model.TeleponPengampu)) {
-                    <a href="tel:@Model.TeleponPengampu"
-                       class="ml-2 text-blue-500 hover:text-blue-700 text-xs font-medium hover:underline">
-                        📱 @Model.TeleponPengampu
-                    </a>
-                }
-            </dd>
-        </div>
-    }
                         <div><dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Judul</dt><dd class="text-gray-700 text-sm mt-0.5 leading-snug">@Model.JudulPenelitian</dd></div>
                         <div>
                             <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-1">Keperluan</dt>
@@ -194,25 +191,83 @@
                 </div>
             }
 
-            <!-- Action -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap gap-2.5">
-                @if (Model.StatusPPIDID == StatusId.MenungguVerifikasi
-                  || Model.StatusPPIDID == StatusId.IdentifikasiAwal
-                  || Model.StatusPPIDID == StatusId.MenungguSuratIzin)
+            <!-- ══ STATUS-AWARE ACTION PIPELINE ══ -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Tindak Lanjut</p>
+
+                @if (Model.StatusPPIDID == StatusId.IdentifikasiAwal
+                  || Model.StatusPPIDID == StatusId.MenungguVerifikasi)
                 {
+                    <div class="bg-violet-50 border border-violet-200 rounded-xl p-3 mb-3 flex gap-2 items-start text-xs text-violet-700">
+                        <span class="mt-0.5 flex-shrink-0">📋</span>
+                        <p>Form identifikasi ditandatangani pemohon. Langkah selanjutnya: verifikasi form dan disposisi ke unit kerja terkait.</p>
+                    </div>
                     <a href="/kasubkel-kepegawaian/verifikasi/@Model.PermohonanPPIDID"
-                       class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-colors">
-                        ✅ Verifikasi Permohonan
+                       class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors">
+                        ✅ Verifikasi Form Identifikasi →
                     </a>
                 }
-                <a href="/kasubkel-kepegawaian/permohonan"
-                   class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                    ← Kembali ke Daftar
-                </a>
+                else if (Model.StatusPPIDID == StatusId.MenungguSuratIzin)
+                {
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 flex gap-2 items-start text-xs text-blue-700">
+                        <span class="mt-0.5 flex-shrink-0">📄</span>
+                        <p>
+                            Form identifikasi sudah <strong>diverifikasi dan disetujui</strong>. Langkah selanjutnya:
+                            terbitkan surat izin penelitian, pilih keperluan yang disetujui, dan disposisi ke unit terkait.
+                        </p>
+                    </div>
+                    <a href="/kasubkel-kepegawaian/surat-izin/@Model.PermohonanPPIDID"
+                       class="inline-flex items-center gap-2 bg-[#002d7a] hover:bg-blue-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors">
+                        📄 Terbitkan Surat Izin & Disposisi →
+                    </a>
+                }
+                else if (Model.StatusPPIDID == StatusId.SuratIzinTerbit
+                      || Model.StatusPPIDID == StatusId.Didisposisi)
+                {
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex gap-2 items-start text-xs text-emerald-700">
+                        <span class="mt-0.5 flex-shrink-0">✅</span>
+                        <p>Surat izin sudah terbit dan permohonan sudah diteruskan ke Kasubkel KDI untuk diproses lebih lanjut. Tidak ada tindakan dari Kepegawaian.</p>
+                    </div>
+                }
+                else if (Model.StatusPPIDID >= StatusId.DiProses && Model.StatusPPIDID < StatusId.DataSiap)
+                {
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2 items-start text-xs text-amber-700">
+                        <span class="mt-0.5 flex-shrink-0">⚙️</span>
+                        <p>Permohonan sedang diproses secara paralel oleh KDI (permintaan data / observasi / wawancara). Pantau melalui riwayat aktivitas di atas.</p>
+                    </div>
+                }
+                else if (Model.StatusPPIDID == StatusId.DataSiap || Model.StatusPPIDID == StatusId.FeedbackPemohon)
+                {
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2 items-start text-xs text-blue-700">
+                        <span class="mt-0.5 flex-shrink-0">📦</span>
+                        <p>Data sudah siap. Menunggu kuesioner kepuasan dari pemohon sebelum status menjadi Selesai.</p>
+                    </div>
+                }
+                else if (Model.StatusPPIDID == StatusId.Selesai)
+                {
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex gap-2 items-start text-xs text-emerald-700">
+                        <span class="mt-0.5 flex-shrink-0">🏁</span>
+                        <p>Permohonan selesai pada <strong>@(Model.TanggalSelesai?.ToString("dd MMMM yyyy") ?? "—")</strong>.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex gap-2 items-start text-xs text-gray-500">
+                        <span class="mt-0.5 flex-shrink-0">ℹ️</span>
+                        <p>Status: <strong>@(Model.Status?.NamaStatusPPID ?? "—")</strong>. Tidak ada tindakan dari Kepegawaian pada status ini.</p>
+                    </div>
+                }
+
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <a href="/kasubkel-kepegawaian/permohonan"
+                       class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                        ← Kembali ke Daftar
+                    </a>
+                </div>
             </div>
         </div>
 
-        @* Kanan: Workflow Timeline *@
+        <!-- Kanan: Workflow Timeline -->
         <div class="xl:col-span-1">
             <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Alur Permohonan</p>
             <partial name="Partials/_WorkflowTimeline" model="Model" />

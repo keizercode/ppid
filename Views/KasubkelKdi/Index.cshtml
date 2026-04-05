@@ -1,10 +1,59 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/KasubkelKdi/Index.cshtml — FIXED
+   Perubahan utama: tambah antrian disposisi baru (ViewData["DisposisiAktif"])
+   yang di-populate controller tapi tidak pernah di-render di view lama.
+════════════════════════════════════════════════════════════════════════════ *@
 @model DashboardVm
 @{
     ViewData["Title"] = "Dashboard Kasubkel KDI";
     ViewData["Role"]  = "Kasubkel KDI";
     Layout = "_LayoutAdmin";
+
     int pctProses  = Model.Total > 0 ? (int)Math.Round(Model.Proses  * 100.0 / Model.Total) : 0;
     int pctSelesai = Model.Total > 0 ? (int)Math.Round(Model.Selesai * 100.0 / Model.Total) : 0;
+
+    var disposisiAktif = ViewData["DisposisiAktif"] as List<PermohonanPPID> ?? new();
+    var subTaskMap     = ViewData["SubTaskMap"] as Dictionary<Guid, List<SubTaskPPID>> ?? new();
+
+    // Pisah berdasarkan stage agar KDI tahu apa yang perlu dilakukan
+    var baru       = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.Didisposisi).ToList();
+    var diProses   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.DiProses
+                                             || p.StatusPPIDID == StatusId.ObservasiDijadwalkan
+                                             || p.StatusPPIDID == StatusId.ObservasiSelesai
+                                             || p.StatusPPIDID == StatusId.WawancaraDijadwalkan
+                                             || p.StatusPPIDID == StatusId.WawancaraSelesai).ToList();
+    var dataSiap   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.DataSiap
+                                             || p.StatusPPIDID == StatusId.FeedbackPemohon).ToList();
+}
+
+<!-- ══ ALERT: disposisi baru menunggu diterima ══ -->
+@if (baru.Any())
+{
+    <div class="bg-cyan-50 border border-cyan-300 rounded-2xl p-4 mb-5 flex items-start gap-3">
+        <div class="w-8 h-8 bg-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span class="text-white text-sm">📥</span>
+        </div>
+        <div class="flex-1">
+            <p class="font-bold text-cyan-800 text-sm">@baru.Count disposisi baru menunggu diterima</p>
+            <p class="text-cyan-600 text-xs mt-0.5">Setelah diterima, sub-tugas paralel akan dibuat secara otomatis.</p>
+            <div class="flex flex-wrap gap-2 mt-2">
+                @foreach (var p in baru.Take(4))
+                {
+                    <a href="/kasubkel-kdi/terima/@p.PermohonanPPIDID"
+                       class="inline-flex items-center gap-1.5 text-xs font-bold bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                        📥 @p.NoPermohonan
+                    </a>
+                }
+                @if (baru.Count > 4)
+                {
+                    <a href="/kasubkel-kdi/permintaan-data?status=6"
+                       class="text-xs font-semibold text-cyan-600 hover:underline self-center">
+                        + @(baru.Count - 4) lainnya →
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
 }
 
 <!-- ══ STAT CARDS ══ -->
@@ -38,13 +87,158 @@
     </div>
 </div>
 
+<!-- ══ ANTRIAN DISPOSISI ══ -->
+@if (disposisiAktif.Any())
+{
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+            <div>
+                <p class="font-bold text-gray-700 text-sm">Antrian Aktif</p>
+                <p class="text-xs text-gray-400 mt-0.5">Disposisi yang perlu diterima atau sedang dalam proses</p>
+            </div>
+            <div class="flex items-center gap-2">
+                @if (baru.Any())       { <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2.5 py-1 rounded-full">@baru.Count baru</span> }
+                @if (diProses.Any())   { <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">@diProses.Count diproses</span> }
+                @if (dataSiap.Any())   { <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">@dataSiap.Count siap</span> }
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-50">
+                        <th class="col-th">No Permohonan</th>
+                        <th class="col-th">Pemohon</th>
+                        <th class="col-th">Keperluan</th>
+                        <th class="col-th">Batas Waktu</th>
+                        <th class="col-th">Status</th>
+                        <th class="col-th">Progress Sub-Tugas</th>
+                        <th class="col-th">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var p in disposisiAktif)
+                    {
+                        bool isNew      = p.StatusPPIDID == StatusId.Didisposisi;
+                        bool isFeedback = p.StatusPPIDID == StatusId.FeedbackPemohon;
+                        bool isDataSiap = p.StatusPPIDID == StatusId.DataSiap;
+
+                        subTaskMap.TryGetValue(p.PermohonanPPIDID, out var tasks);
+                        int done  = tasks?.Count(t => t.StatusTask == SubTaskStatus.Selesai) ?? 0;
+                        int total = tasks?.Count ?? 0;
+
+                        string rowBg = isNew ? "bg-cyan-50/60" : "";
+                        string badgeCls = p.StatusPPIDID switch
+                        {
+                            StatusId.Didisposisi          => "bg-cyan-50 text-cyan-700",
+                            StatusId.DiProses             => "bg-amber-50 text-amber-700",
+                            StatusId.ObservasiDijadwalkan => "bg-orange-50 text-orange-700",
+                            StatusId.ObservasiSelesai     => "bg-orange-100 text-orange-800",
+                            StatusId.WawancaraDijadwalkan => "bg-violet-50 text-violet-700",
+                            StatusId.WawancaraSelesai     => "bg-violet-100 text-violet-800",
+                            StatusId.DataSiap             => "bg-emerald-50 text-emerald-700",
+                            StatusId.FeedbackPemohon      => "bg-amber-50 text-amber-700",
+                            _                             => "bg-gray-100 text-gray-500"
+                        };
+
+                        <tr class="hover:bg-blue-50/20 transition-colors group @rowBg">
+                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">
+                                @p.NoPermohonan
+                                @if (isNew) { <span class="ml-1 text-[10px] bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded font-bold">BARU</span> }
+                            </td>
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-gray-800 text-sm">@p.Pribadi?.Nama</p>
+                                <p class="text-[10px] text-gray-400 mt-0.5">@p.KategoriPemohon</p>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex flex-wrap gap-1">
+                                    @if (p.IsPermintaanData) { <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-full">Data</span> }
+                                    @if (p.IsObservasi)      { <span class="text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-1.5 py-0.5 rounded-full">Obs</span> }
+                                    @if (p.IsWawancara)      { <span class="text-[10px] bg-violet-50 text-violet-700 border border-violet-100 px-1.5 py-0.5 rounded-full">Waw</span> }
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-xs @(p.IsOverdue ? "text-red-600 font-semibold" : "text-gray-500")">
+                                @(p.BatasWaktu?.ToString("dd MMM yyyy") ?? "—")
+                                @if (p.IsOverdue) { <span class="block text-[10px] text-red-400">⚠ Lewat @Math.Abs(p.HariSisa??0) hari</span> }
+                                else if (p.HariSisa.HasValue && p.HariSisa <= 3) { <span class="block text-[10px] text-amber-500">Sisa @p.HariSisa hari</span> }
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-[11px] @badgeCls px-2 py-0.5 rounded-full font-medium">
+                                    @p.Status?.NamaStatusPPID
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if (isNew)
+                                {
+                                    <span class="text-[11px] text-gray-400 italic">Belum diterima</span>
+                                }
+                                else if (total > 0)
+                                {
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-20 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="@(done==total?"bg-emerald-500":"bg-blue-500") h-full rounded-full"
+                                                 style="width:@(total > 0 ? done*100/total : 0)%"></div>
+                                        </div>
+                                        <span class="text-[11px] font-semibold @(done==total?"text-emerald-600":"text-gray-500")">@done/@total</span>
+                                    </div>
+                                }
+                                else if (isDataSiap || isFeedback)
+                                {
+                                    <span class="text-[11px] text-emerald-600 font-semibold">✓ Semua selesai</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex gap-1.5 opacity-80 group-hover:opacity-100 flex-wrap">
+                                    @if (isNew)
+                                    {
+                                        <a href="/kasubkel-kdi/terima/@p.PermohonanPPIDID"
+                                           class="text-[11px] bg-cyan-600 hover:bg-cyan-700 text-white px-2.5 py-1 rounded-lg font-bold">📥 Terima</a>
+                                    }
+                                    else if (isDataSiap)
+                                    {
+                                        <a href="/kasubkel-kdi/minta-feedback/@p.PermohonanPPIDID"
+                                           class="text-[11px] bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-lg font-bold">📨 Minta Feedback</a>
+                                    }
+                                    else if (isFeedback)
+                                    {
+                                        <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
+                                           class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">⏳ Tunggu Kuesioner</a>
+                                    }
+                                    else
+                                    {
+                                        <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
+                                           class="text-[11px] bg-[#002d7a] hover:bg-blue-900 text-white px-2.5 py-1 rounded-lg font-bold">⚙️ Kelola Tugas</a>
+                                    }
+                                    <a href="/kasubkel-kdi/detail/@p.PermohonanPPIDID"
+                                       class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
 <!-- Quick Link -->
 <div class="flex gap-3">
     <a href="/kasubkel-kdi/permintaan-data"
        class="inline-flex items-center gap-2 bg-[#002d7a] hover:bg-blue-900 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-colors">
         📊 Lihat Semua Permintaan Data →
     </a>
+    @if (baru.Any())
+    {
+        <a href="/kasubkel-kdi/permintaan-data?status=6"
+           class="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-colors">
+            📥 @baru.Count Disposisi Baru →
+        </a>
+    }
 </div>
+
+<style>
+    .col-th { padding: 12px 16px; text-align:left; font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em; }
+</style>
 
 @section Scripts {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
