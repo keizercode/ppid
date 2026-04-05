@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
@@ -6,7 +7,10 @@ using PermintaanData.Models.ViewModels;
 
 namespace PermintaanData.Controllers;
 
-public class HomeController(AppDbContext db) : Controller
+public class HomeController(
+    AppDbContext db,
+    ILogger<HomeController> logger,
+    IWebHostEnvironment env) : Controller
 {
     public IActionResult Index() => View(new LacakViewModel());
 
@@ -42,12 +46,12 @@ public class HomeController(AppDbContext db) : Controller
 
         var vm = new DetailLacakViewModel
         {
-            Permohonan = permohonan,
-            Pribadi    = pribadi!,
+            Permohonan  = permohonan,
+            Pribadi     = pribadi!,
             PribadiPPID = pribadi?.PribadiPPID,
-            Detail     = permohonan.Detail.ToList(),
-            Jadwal     = permohonan.Jadwal.OrderBy(j => j.Tanggal).ToList(),
-            Riwayat    = BuildRiwayat(permohonan)
+            Detail      = permohonan.Detail.ToList(),
+            Jadwal      = permohonan.Jadwal.OrderBy(j => j.Tanggal).ToList(),
+            Riwayat     = BuildRiwayat(permohonan)
         };
 
         return View("Detail", vm);
@@ -73,7 +77,19 @@ public class HomeController(AppDbContext db) : Controller
     {
         var p = await db.PermohonanPPID.FindAsync(id);
         if (p == null) return NotFound();
-        return View(new KuesionerVm { PermohonanPPIDID = id, NoPermohonan = p.NoPermohonan! });
+
+        // Kuesioner hanya bisa diisi jika status >= FeedbackPemohon (atau DataSiap sebagai fallback)
+        if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
+        {
+            TempData["Error"] = "Kuesioner tidak tersedia untuk status permohonan ini.";
+            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+        }
+
+        return View(new KuesionerVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan!
+        });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -82,7 +98,7 @@ public class HomeController(AppDbContext db) : Controller
         if (!ModelState.IsValid) return View("Kuesioner", model);
 
         var p = await db.PermohonanPPID.FindAsync(model.PermohonanPPIDID);
-        if (p != null)
+        if (p != null && p.StatusPPIDID != StatusId.Selesai)
         {
             var statusLama   = p.StatusPPIDID;
             p.StatusPPIDID   = StatusId.Selesai;
@@ -107,21 +123,60 @@ public class HomeController(AppDbContext db) : Controller
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // ERROR HANDLER
+    // ERROR HANDLER — professional exception capture
     // ════════════════════════════════════════════════════════════════════════
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
         Response.StatusCode = 500;
+
+        var exFeature = HttpContext.Features.Get<IExceptionHandlerPathFeature>();
+        var ex        = exFeature?.Error;
+        var path      = exFeature?.Path ?? HttpContext.Request.Path;
+
+        // Log exception dengan konteks lengkap
+        if (ex is not null)
+        {
+            logger.LogError(ex,
+                "Unhandled exception | Path: {Path} | User: {User} | IP: {IP}",
+                path,
+                User.Identity?.Name ?? "anonymous",
+                HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        }
+
+        // Development: tampilkan detail teknis
+        if (env.IsDevelopment() && ex is not null)
+        {
+            var detail = $"""
+                [DEV MODE — tidak ditampilkan di production]
+
+                Exception: {ex.GetType().FullName}
+                Message  : {ex.Message}
+                Path     : {path}
+                Time     : {DateTime.UtcNow:O}
+
+                Stack Trace:
+                {ex.StackTrace}
+
+                Inner Exception:
+                {ex.InnerException?.Message ?? "(none)"}
+                """;
+
+            return Content(detail, "text/plain; charset=utf-8");
+        }
+
+        // Production: pesan ramah tanpa bocoran teknis
         return Content(
-            "Terjadi kesalahan pada sistem. Silakan kembali ke halaman sebelumnya dan coba lagi.",
+            "Terjadi kesalahan pada sistem. " +
+            "Silakan kembali ke halaman sebelumnya dan coba lagi. " +
+            $"Jika masalah berlanjut, hubungi administrator. " +
+            $"(Ref: {DateTime.UtcNow:yyyyMMddHHmmss})",
             "text/plain; charset=utf-8");
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // TIMELINE BUILDER — mendukung 9 step sesuai requirements, termasuk
-    // status baru: MenungguVerifikasi (14) dan FeedbackPemohon (15)
+    // TIMELINE BUILDER
     // ════════════════════════════════════════════════════════════════════════
 
     private static List<RiwayatStatusVm> BuildRiwayat(PermohonanPPID p)
@@ -130,7 +185,6 @@ public class HomeController(AppDbContext db) : Controller
         var steps      = GetSteps(p);
         int currentIdx = steps.FindIndex(s => s.StatusId == current);
 
-        // Fallback: jika current tidak ada di steps, cari step terdekat (nilai ≤ current)
         if (currentIdx < 0) currentIdx = FindNearestIdx(steps, current);
 
         return steps.Select((s, i) => new RiwayatStatusVm
@@ -142,33 +196,17 @@ public class HomeController(AppDbContext db) : Controller
         }).ToList();
     }
 
-    /// <summary>
-    /// Bangun daftar step timeline sesuai keperluan permohonan.
-    ///
-    /// 9 step sesuai requirements:
-    ///   1. Permohonan
-    ///   2. Tanda Tangan Form Identifikasi Awal
-    ///   3. Verifikasi Form Identifikasi Awal (Kasubkel + Disposisi Unit)
-    ///   4. Pembuatan Surat Izin
-    ///   5. Surat Izin Terbit
-    ///   6. Pembuatan Jadwal / Pemrosesan Data
-    ///   7. Observasi/Wawancara / Data Tersedia
-    ///   8. Pengisian Feedback Pemohon
-    ///   9. Selesai
-    /// </summary>
     private static List<(int StatusId, string Label)> GetSteps(PermohonanPPID p)
     {
-        // ── Base steps — selalu ada ───────────────────────────────────────
         var steps = new List<(int, string)>
         {
-            (StatusId.TerdaftarSistem,     "1. Permohonan Terdaftar"),
-            (StatusId.IdentifikasiAwal,    "2. Tanda Tangan Identifikasi Awal"),
-            (StatusId.MenungguVerifikasi,  "3. Verifikasi Kasubkel & Disposisi Unit"),
-            (StatusId.MenungguSuratIzin,   "4. Pembuatan Surat Izin"),
-            (StatusId.SuratIzinTerbit,     "5. Surat Izin Terbit"),
+            (StatusId.TerdaftarSistem,    "1. Permohonan Terdaftar"),
+            (StatusId.IdentifikasiAwal,   "2. Tanda Tangan Identifikasi Awal"),
+            (StatusId.MenungguVerifikasi, "3. Verifikasi Kasubkel & Disposisi Unit"),
+            (StatusId.MenungguSuratIzin,  "4. Pembuatan Surat Izin"),
+            (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit"),
         };
 
-        // ── Step 6 & 7 — bervariasi berdasar jenis keperluan ─────────────
         bool isWawancaraOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
 
         if (isWawancaraOnly)
@@ -195,7 +233,6 @@ public class HomeController(AppDbContext db) : Controller
             steps.Add((StatusId.DataSiap, "7. Data Tersedia"));
         }
 
-        // ── Step 8 & 9 — selalu ada ───────────────────────────────────────
         steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback Pemohon"));
         steps.Add((StatusId.Selesai,         "9. Selesai"));
 

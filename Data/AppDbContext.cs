@@ -60,13 +60,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         m.Entity<AppUser>()
             .HasIndex(e => e.Username).IsUnique();
 
+        // ── SEED DATA ─────────────────────────────────────────────────────
+        // CATATAN PENTING: HasData() di sini HARUS SYNC dengan migration snapshot.
+        // Jangan tambah/ubah seed di sini tanpa membuat migration baru.
+        // Gunakan migration SQL ON CONFLICT DO NOTHING untuk data operasional.
         SeedStatusPPID(m);
         SeedKeperluan(m);
         SeedJenisDokumen(m);
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // SEED DATA
+    // SEED DATA — dikelola via EF Core migrations
     // ════════════════════════════════════════════════════════════════════════
 
     private static void SeedStatusPPID(ModelBuilder m) =>
@@ -144,11 +148,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .FirstAsync();
 
             const int maxAttempts = 10;
-            string noPermohonan = string.Empty;
+            string noPermohonan   = string.Empty;
 
             for (int attempt = 1; ; attempt++)
             {
-                var digits = NoPermohonanToken.GenerateDigits();
+                var digits   = NoPermohonanToken.GenerateDigits();
                 noPermohonan = $"{prefix}{digits}/PPID/{romanMonth}/{year}";
 
                 bool taken = await PermohonanPPID.AnyAsync(p => p.NoPermohonan == noPermohonan);
@@ -241,7 +245,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     /// <summary>
     /// Cek apakah semua sub-task selesai; jika ya, advance status ke DataSiap.
     /// Kembalikan true jika berhasil advance.
-    /// Caller wajib memanggil <see cref="SaveChangesAsync"/> sesudah method ini.
     /// </summary>
     public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
     {
@@ -278,15 +281,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // DASHBOARD MONTHLY STATS
     // ════════════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Statistik permohonan per bulan untuk 12 bulan terakhir.
-    /// Digunakan oleh semua dashboard role.
-    /// </summary>
     public async Task<List<MonthlyStatRow>> GetMonthlyStats()
     {
         const int months = 12;
-        var from = DateTime.UtcNow.AddMonths(-(months - 1));
-        var fromDate = new DateTime(from.Year, from.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var from         = DateTime.UtcNow.AddMonths(-(months - 1));
+        var fromDate     = new DateTime(from.Year, from.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var raw = await PermohonanPPID
             .AsNoTracking()
