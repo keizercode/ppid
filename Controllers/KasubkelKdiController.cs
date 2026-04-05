@@ -640,4 +640,101 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
 
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
+
+    // ── GET /kasubkel-kdi/minta-feedback/{id} ─────────────────────────────
+[HttpGet("minta-feedback/{id:guid}")]
+public async Task<IActionResult> MintaFeedback(Guid id)
+{
+    var p = await db.PermohonanPPID
+        .Include(x => x.Pribadi)
+        .Include(x => x.Dokumen)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+    if (p is null) return NotFound();
+
+    if (p.StatusPPIDID != StatusId.DataSiap)
+    {
+        TempData["Error"] = "Status harus Data Siap sebelum meminta feedback pemohon.";
+        return RedirectToAction(nameof(SubTasks), new { id });
+    }
+
+    ViewData["NoPermohonan"] = p.NoPermohonan;
+    ViewData["NamaPemohon"]  = p.Pribadi?.Nama;
+    ViewData["HasData"]      = p.Dokumen.Any(d => d.JenisDokumenPPIDID == JenisDokumenId.DataHasil);
+
+    return View(p);
+}
+
+// ── POST /kasubkel-kdi/minta-feedback ────────────────────────────────
+[HttpPost("minta-feedback"), ValidateAntiForgeryToken]
+public async Task<IActionResult> MintaFeedbackPost([FromForm] Guid permohonanId)
+{
+    var p = await db.PermohonanPPID.FindAsync(permohonanId);
+    if (p is null) return NotFound();
+
+    if (p.StatusPPIDID != StatusId.DataSiap)
+    {
+        TempData["Error"] = "Status sudah berubah. Refresh halaman.";
+        return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+    }
+
+    var lama    = p.StatusPPIDID;
+    var now     = DateTime.UtcNow;
+    p.StatusPPIDID = StatusId.FeedbackPemohon;
+    p.UpdatedAt    = now;
+
+    db.AddAuditLog(permohonanId, lama, StatusId.FeedbackPemohon,
+        "Data siap. Pemohon diminta mengisi kuesioner kepuasan layanan via portal publik.",
+        CurrentUser);
+
+    await db.SaveChangesAsync();
+
+    TempData["Success"] =
+        $"Status diperbarui ke <strong>Feedback Pemohon</strong>. " +
+        $"Pemohon dapat mengisi kuesioner di portal publik dengan nomor " +
+        $"permohonan mereka.";
+
+    return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+}
+
+// ── POST /kasubkel-kdi/tandai-selesai ────────────────────────────────
+// Manual override: jika pemohon tidak kunjung mengisi kuesioner,
+// KDI dapat force-close permohonan.
+[HttpPost("tandai-selesai"), ValidateAntiForgeryToken]
+public async Task<IActionResult> TandaiSelesai([FromForm] Guid permohonanId)
+{
+    var p = await db.PermohonanPPID.FindAsync(permohonanId);
+    if (p is null) return NotFound();
+
+    // Boleh dari DataSiap (10) atau FeedbackPemohon (15)
+    if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
+    {
+        TempData["Error"] = "Tidak dapat ditandai selesai pada status ini.";
+        return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+    }
+
+    var lama    = p.StatusPPIDID;
+    var now     = DateTime.UtcNow;
+    p.StatusPPIDID   = StatusId.Selesai;
+    p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
+    p.UpdatedAt      = now;
+
+    db.AddAuditLog(permohonanId, lama, StatusId.Selesai,
+        "Permohonan ditandai selesai secara manual oleh KDI (tanpa kuesioner pemohon).",
+        CurrentUser);
+
+    await db.SaveChangesAsync();
+
+    TempData["Success"] = "Permohonan berhasil ditandai <strong>Selesai</strong>.";
+    return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+}
+
+// ── FIX: HomeController.KuesionerPost ────────────────────────────────
+// Kuesioner sudah bisa diisi dari DataSiap (10) atau FeedbackPemohon (15).
+// Audit log sekarang mencatat dari status mana pemohon mengisi.
+// (Tidak ada perubahan logic, hanya perjelas audit trail)
+//
+// Kuesioner bisa diisi kapanpun statusPPIDID >= DataSiap (sebelum Selesai).
+// HomeController sudah handle ini dengan benar, tidak perlu diubah.
+// Yang perlu: FeedbackPemohon harus di-set dulu oleh KDI (action di atas).
 }

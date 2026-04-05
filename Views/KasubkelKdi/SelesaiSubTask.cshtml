@@ -1,0 +1,95 @@
+@* ══════════════════════════════════════════════════════════════════════
+   Views/KasubkelKdi/SelesaiSubTask.cshtml
+   Digunakan untuk: SelesaiObservasi, SelesaiWawancara
+══════════════════════════════════════════════════════════════════════ *@
+@model SelesaiSubTaskVm
+@{
+    bool isWaw = Model.JenisTask == JenisTask.Wawancara;
+    ViewData["Title"] = $"Konfirmasi {(isWaw ? "Wawancara" : "Observasi")} Selesai";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+    string icon    = isWaw ? "🎤" : "🔍";
+    string postUrl = isWaw ? "/kasubkel-kdi/selesai-wawancara" : "/kasubkel-kdi/selesai-observasi";
+    string color   = isWaw ? "violet" : "orange";
+}
+
+<div class="max-w-xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl">@icon ✓</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Konfirmasi @(isWaw ? "Wawancara" : "Observasi") Selesai</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        <!-- Info Jadwal -->
+        @if (Model.TanggalJadwal.HasValue)
+        {
+            <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-4">
+                <p class="text-[10px] text-emerald-600 uppercase font-bold mb-2">Info Jadwal</p>
+                <p class="text-sm font-semibold text-emerald-800">
+                    @Model.TanggalJadwal.Value.ToString("dddd, dd MMMM yyyy")
+                    pukul @(Model.WaktuJadwal?.ToString("HH:mm") ?? "—") WIB
+                </p>
+                @if (!string.IsNullOrEmpty(Model.NamaPIC))
+                {
+                    <p class="text-xs text-emerald-600 mt-1">PIC: @Model.NamaPIC
+                        @if (!string.IsNullOrEmpty(Model.TeleponPIC)) {
+                            <a href="tel:@Model.TeleponPIC" class="ml-1 underline">@Model.TeleponPIC</a>
+                        }
+                    </p>
+                }
+            </div>
+        }
+
+        <form action="@postUrl" asp-controller="KasubkelKdi" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="SubTaskID" />
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="JenisTask" />
+
+            <!-- Upload Hasil (opsional) -->
+            <div class="mb-4">
+                <label class="lbl">Upload Dokumen Hasil <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                <input asp-for="FileHasil" type="file" accept=".pdf,.docx,.xlsx,.zip" class="file-fld" />
+                <p class="text-xs text-gray-400 mt-1">PDF, Word, Excel, ZIP — maks 50 MB</p>
+            </div>
+
+            <!-- Catatan -->
+            <div class="mb-5">
+                <label class="lbl">Catatan Hasil</label>
+                <textarea asp-for="Catatan" rows="3" class="fld resize-none"
+                          placeholder="Ringkasan hasil @(isWaw ? "wawancara" : "observasi"), temuan utama..."></textarea>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex gap-2 items-start">
+                <span class="text-amber-500 flex-shrink-0">⚠️</span>
+                <p class="text-xs text-amber-700 leading-relaxed">
+                    Setelah dikonfirmasi, sub-tugas ini tidak dapat diubah kembali. Jika ini adalah
+                    tugas terakhir, status permohonan akan otomatis menjadi <strong>Data Siap</strong>.
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
+                <button type="submit" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
+                    ✓ Konfirmasi Selesai →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #10b981;border-color:transparent;background:white}
+    .file-fld{width:100%;font-size:12px;color:#6b7280;border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px;background:#fafafa}
+    .file-fld::file-selector-button{margin-right:8px;padding:4px 10px;border-radius:6px;border:none;font-size:11px;font-weight:700;background:#ecfdf5;color:#065f46;cursor:pointer}
+</style>

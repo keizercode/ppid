@@ -203,61 +203,75 @@ public class KasubkelKepegawaianController(
     }
 
     [HttpPost("surat-izin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> SuratIzinPost(SuratIzinVm vm)
+public async Task<IActionResult> SuratIzinPost(SuratIzinVm vm)
+{
+    if (!ModelState.IsValid) return View("SuratIzin", vm);
+
+    var now = DateTime.UtcNow;
+
+    // Upload surat izin (jika ada file)
+    if (vm.FileSuratIzin?.Length > 0)
     {
-        if (!ModelState.IsValid) return View("SuratIzin", vm);
+        var error = await UploadDokumen(
+            vm.PermohonanPPIDID, vm.FileSuratIzin,
+            JenisDokumenId.SuratIzin, "Surat Izin", now);
 
-        var now = DateTime.UtcNow;
-
-        if (vm.FileSuratIzin?.Length > 0)
+        if (error is not null)
         {
-            var error = await UploadDokumen(
-                vm.PermohonanPPIDID, vm.FileSuratIzin,
-                JenisDokumenId.SuratIzin, "Surat Izin", now);
-
-            if (error is not null)
-            {
-                ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
-                return View("SuratIzin", vm);
-            }
+            ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
+            return View("SuratIzin", vm);
         }
-
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p is null) return NotFound();
-
-        var statusLama = p.StatusPPIDID;
-        p.NoSuratPermohonan = vm.NoSuratIzin;
-        p.IsObservasi       = vm.IsObservasi;
-        p.IsPermintaanData  = vm.IsPermintaanData;
-        p.IsWawancara       = vm.IsWawancara;
-        p.UpdatedAt         = now;
-
-        // Routing: wawancara-only langsung ke WawancaraDijadwalkan,
-        // selainnya ke KDI via Didisposisi.
-        if (vm.IsWawancaraOnly)
-        {
-            p.StatusPPIDID     = StatusId.WawancaraDijadwalkan;
-            p.NamaProdusenData = vm.NamaProdusenData ?? vm.NamaBidangPrimary;
-        }
-        else
-        {
-            p.StatusPPIDID = StatusId.Didisposisi;
-            p.NamaBidang   = vm.NamaBidangPrimary;
-        }
-
-        var tujuan = vm.IsWawancaraOnly
-            ? $"Surat izin {vm.NoSuratIzin} terbit → Produsen Data (wawancara)"
-            : $"Surat izin {vm.NoSuratIzin} terbit → KDI, disposisi: {p.NamaBidang ?? "PSMDI"}";
-
-        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, p.StatusPPIDID!.Value, tujuan, CurrentUser);
-        await db.SaveChangesAsync();
-
-        TempData["Success"] = vm.IsWawancaraOnly
-            ? $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit, diteruskan ke KDI untuk penjadwalan wawancara."
-            : $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit, didisposisi ke {(string.IsNullOrEmpty(p.NamaBidang) ? "PSMDI" : p.NamaBidang)}.";
-
-        return RedirectToAction(nameof(Index));
     }
+
+    var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (p is null) return NotFound();
+
+    var statusAwal = p.StatusPPIDID;
+
+    // ── Step 1: Tandai SuratIzinTerbit (5) ────────────────────────────
+    p.NoSuratPermohonan = vm.NoSuratIzin;
+    p.IsObservasi        = vm.IsObservasi;
+    p.IsPermintaanData   = vm.IsPermintaanData;
+    p.IsWawancara        = vm.IsWawancara;
+    p.StatusPPIDID       = StatusId.SuratIzinTerbit;
+    p.UpdatedAt          = now;
+
+    db.AddAuditLog(vm.PermohonanPPIDID, statusAwal, StatusId.SuratIzinTerbit,
+        $"Surat izin diterbitkan: {vm.NoSuratIzin}.",
+        CurrentUser);
+
+    // ── Step 2: Auto-route ke tujuan ──────────────────────────────────
+    int statusTujuan;
+    string routeKet;
+
+    if (vm.IsWawancaraOnly)
+    {
+        // Wawancara-only → langsung ke KDI untuk penjadwalan
+        p.StatusPPIDID     = StatusId.WawancaraDijadwalkan;
+        p.NamaProdusenData = vm.NamaProdusenData ?? vm.NamaBidangPrimary;
+        statusTujuan       = StatusId.WawancaraDijadwalkan;
+        routeKet           = $"Auto-route → KDI (wawancara-only, produsen: {p.NamaProdusenData ?? "PSMDI"}).";
+    }
+    else
+    {
+        // Data / Observasi → disposisi ke KDI
+        p.StatusPPIDID = StatusId.Didisposisi;
+        p.NamaBidang   = vm.NamaBidangPrimary;
+        statusTujuan   = StatusId.Didisposisi;
+        routeKet       = $"Auto-route → KDI, bidang: {p.NamaBidang ?? "PSMDI"}.";
+    }
+
+    db.AddAuditLog(vm.PermohonanPPIDID, StatusId.SuratIzinTerbit, statusTujuan,
+        routeKet, CurrentUser);
+
+    await db.SaveChangesAsync();
+
+    TempData["Success"] = vm.IsWawancaraOnly
+        ? $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. Diteruskan KDI untuk penjadwalan wawancara."
+        : $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. Didisposisi ke {(string.IsNullOrEmpty(p.NamaBidang) ? "PSMDI" : p.NamaBidang)}.";
+
+    return RedirectToAction(nameof(Index));
+}
 
     // ── Private helpers ───────────────────────────────────────────────────
 

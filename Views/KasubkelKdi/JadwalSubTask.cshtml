@@ -1,0 +1,96 @@
+@* ══════════════════════════════════════════════════════════════════════
+   Views/KasubkelKdi/JadwalSubTask.cshtml
+   Digunakan untuk: JadwalObservasi, JadwalWawancara
+══════════════════════════════════════════════════════════════════════ *@
+@model JadwalSubTaskVm
+@{
+    bool isWaw = Model.JenisTask == JenisTask.Wawancara;
+    ViewData["Title"] = $"Jadwal {(isWaw ? "Wawancara" : "Observasi")}";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+    string icon      = isWaw ? "🎤" : "🔍";
+    string color     = isWaw ? "violet" : "orange";
+    string postUrl   = isWaw ? "/kasubkel-kdi/jadwal-wawancara" : "/kasubkel-kdi/jadwal-observasi";
+}
+
+<div class="max-w-xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-@color-100 rounded-xl flex items-center justify-center text-xl">@icon</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Buat Jadwal @(isWaw ? "Wawancara" : "Observasi")</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        @if (!string.IsNullOrEmpty(Model.DetailKeperluan))
+        {
+            <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4">
+                <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Detail Keperluan Pemohon</p>
+                <p class="text-sm text-gray-700 leading-relaxed">@Model.DetailKeperluan</p>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.NamaBidangTerkait))
+        {
+            <div class="bg-@color-50 border border-@color-100 rounded-xl p-3 mb-4">
+                <p class="text-xs text-@color-700">Unit terkait: <strong>@Model.NamaBidangTerkait</strong></p>
+            </div>
+        }
+
+        <form action="@postUrl" asp-controller="KasubkelKdi" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="SubTaskID" />
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="JenisTask" />
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="lbl">Tanggal <span class="req">*</span></label>
+                    <input asp-for="Tanggal" type="date" class="fld" />
+                    <span asp-validation-for="Tanggal" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Jam <span class="req">*</span></label>
+                    <input asp-for="Waktu" type="time" class="fld" />
+                    <span asp-validation-for="Waktu" class="err"></span>
+                </div>
+                <div class="col-span-2">
+                    <label class="lbl">Nama PIC / @(isWaw ? "Narasumber" : "Koordinator") <span class="req">*</span></label>
+                    <input asp-for="NamaPIC" class="fld" placeholder="Nama narasumber atau koordinator" />
+                    <span asp-validation-for="NamaPIC" class="err"></span>
+                </div>
+                <div class="col-span-2">
+                    <label class="lbl">No. Telepon PIC</label>
+                    <input asp-for="TeleponPIC" class="fld" placeholder="08xxxxxxxxxx" />
+                    <span asp-validation-for="TeleponPIC" class="err"></span>
+                </div>
+                <div class="col-span-2">
+                    <label class="lbl">Lokasi / Platform</label>
+                    <input asp-for="Lokasi" class="fld" placeholder="Ruang Rapat A / Google Meet" />
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
+                <button type="submit" class="flex-grow bg-@color-600 hover:bg-@color-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
+                    📅 Simpan Jadwal →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #8b5cf6;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>

@@ -1,0 +1,108 @@
+@* ══════════════════════════════════════════════════════════════════════
+   Views/KasubkelKdi/UploadData.cshtml
+══════════════════════════════════════════════════════════════════════ *@
+@model UploadDataSubTaskVm
+@{
+    ViewData["Title"] = "Upload Data Hasil";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📊</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Upload Data Hasil Permintaan</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
+            <p class="text-xs text-blue-700 leading-relaxed">
+                Upload file data yang diminta pemohon. File ini akan tersedia untuk diunduh oleh pemohon
+                di portal publik setelah semua tugas selesai dan status menjadi <strong>Data Siap</strong>.
+            </p>
+            <p class="text-xs font-bold text-blue-800 mt-2">Judul: @Model.JudulPenelitian</p>
+        </div>
+
+        <form asp-action="UploadDataPost" asp-controller="KasubkelKdi" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="SubTaskID" />
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="JudulPenelitian" />
+
+            <!-- Dropzone Upload -->
+            <div class="mb-4">
+                <label class="lbl">File Data <span class="req">*</span></label>
+                <div id="dropzone"
+                     class="border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-xl p-8 text-center transition-all cursor-pointer bg-gray-50 hover:bg-blue-50 group">
+                    <div class="text-3xl mb-2">📂</div>
+                    <p class="text-sm font-semibold text-gray-600 group-hover:text-blue-700">Klik atau drag file ke sini</p>
+                    <p class="text-xs text-gray-400 mt-1">PDF, Excel, CSV, Word, ZIP — maks. 50 MB</p>
+                    <input asp-for="FileData" type="file" id="fileData"
+                           accept=".pdf,.xlsx,.xls,.csv,.docx,.doc,.zip" class="hidden" />
+                    <p id="fileName" class="text-xs text-blue-600 mt-2.5 font-semibold hidden"></p>
+                </div>
+                <span asp-validation-for="FileData" class="err"></span>
+            </div>
+
+            <div class="mb-5">
+                <label class="lbl">Catatan untuk Pemohon</label>
+                <textarea asp-for="Catatan" rows="3" class="fld resize-none"
+                          placeholder="Penjelasan isi data, catatan keterbatasan, panduan penggunaan..."></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
+                <button type="submit" class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
+                    ⬆ Upload & Selesaikan Tugas →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #3b82f6;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>
+
+@section Scripts {
+<script>
+const dz   = document.getElementById('dropzone');
+const fi   = document.getElementById('fileData');
+const fnEl = document.getElementById('fileName');
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-blue-400','bg-blue-50'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('border-blue-400','bg-blue-50'));
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        fi.files = dt.files;
+        showFile(e.dataTransfer.files[0].name);
+    }
+});
+fi.addEventListener('change', function() { if (this.files[0]) showFile(this.files[0].name); });
+function showFile(name) {
+    fnEl.textContent = '✓ ' + name;
+    fnEl.classList.remove('hidden');
+    dz.classList.add('border-blue-400','bg-blue-50');
+}
+</script>
+}
+
+@* ══════════════════════════════════════════════════════════════════════
+   Views/KasubkelKdi/MintaFeedback.cshtml
+══════════════════════════════════════════════════════════════════════ *@

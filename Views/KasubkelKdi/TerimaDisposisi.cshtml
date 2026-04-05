@@ -1,0 +1,94 @@
+@model TerimaDisposisiVm
+@{
+    ViewData["Title"] = "Terima Disposisi";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-2xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-cyan-100 rounded-xl flex items-center justify-center text-xl">📥</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Terima Disposisi KDI</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        <!-- Info Permohonan -->
+        <div class="bg-cyan-50 border border-cyan-100 rounded-xl p-4 mb-5">
+            <div class="grid grid-cols-1 gap-3 text-sm">
+                <div>
+                    <span class="text-[10px] text-cyan-500 uppercase font-bold block">Judul</span>
+                    <p class="text-cyan-800 font-medium">@Model.JudulPenelitian</p>
+                </div>
+                <div>
+                    <span class="text-[10px] text-cyan-500 uppercase font-bold block">Latar Belakang</span>
+                    <p class="text-cyan-700 text-xs leading-relaxed line-clamp-4">@Model.LatarBelakang</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    @if (Model.PerluObservasi)   { <span class="bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">🔍 Observasi</span> }
+                    @if (Model.PerluWawancara)   { <span class="bg-violet-100 text-violet-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">🎤 Wawancara</span> }
+                    @if (!Model.PerluObservasi && !Model.PerluWawancara) {
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">📊 Permintaan Data</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Info sub-task yang akan dibuat -->
+        <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5">
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Sub-tugas yang akan dibuat</p>
+            <div class="space-y-2">
+                <div class="flex items-center gap-2 text-sm text-gray-700">
+                    <span class="w-5 h-5 bg-blue-100 text-blue-700 rounded flex items-center justify-center text-xs">📊</span>
+                    Permintaan Data — upload file hasil
+                </div>
+                @if (Model.PerluObservasi) {
+                    <div class="flex items-center gap-2 text-sm text-gray-700">
+                        <span class="w-5 h-5 bg-orange-100 text-orange-700 rounded flex items-center justify-center text-xs">🔍</span>
+                        Observasi — jadwal + konfirmasi selesai
+                    </div>
+                }
+                @if (Model.PerluWawancara) {
+                    <div class="flex items-center gap-2 text-sm text-gray-700">
+                        <span class="w-5 h-5 bg-violet-100 text-violet-700 rounded flex items-center justify-center text-xs">🎤</span>
+                        Wawancara — jadwal + konfirmasi selesai
+                    </div>
+                }
+            </div>
+        </div>
+
+        <form asp-action="TerimaDisposisiPost" asp-controller="KasubkelKdi" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="PerluObservasi" />
+            <input type="hidden" asp-for="PerluWawancara" />
+
+            <div class="mb-5">
+                <label class="lbl">Catatan Penerimaan</label>
+                <textarea asp-for="Catatan" rows="2" class="fld resize-none"
+                          placeholder="Catatan internal (opsional)..."></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit" class="flex-grow bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">
+                    ✓ Terima & Buat Sub-tugas Paralel →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #06b6d4;border-color:transparent;background:white}
+</style>

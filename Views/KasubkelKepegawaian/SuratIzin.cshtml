@@ -1,0 +1,214 @@
+@model SuratIzinVm
+@{
+    ViewData["Title"] = "Terbitkan Surat Izin";
+    ViewData["Role"]  = "Kasubkel Kepegawaian";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-2xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📄</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Terbitkan Surat Izin</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        <!-- Ringkasan -->
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5">
+            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3">Ringkasan Permohonan</p>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><span class="text-[10px] text-blue-400 uppercase font-semibold block">Kategori</span><p class="text-blue-700 font-medium">@Model.Kategori</p></div>
+                <div><span class="text-[10px] text-blue-400 uppercase font-semibold block">No. Permohonan</span><p class="text-blue-700 font-mono font-bold">@Model.NoPermohonan</p></div>
+                <div class="col-span-2"><span class="text-[10px] text-blue-400 uppercase font-semibold block">Judul Penelitian</span><p class="text-blue-700 leading-snug">@Model.JudulPenelitian</p></div>
+                <div class="col-span-2">
+                    <span class="text-[10px] text-blue-400 uppercase font-semibold block mb-1">Keperluan</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        @if (Model.IsObservasi)      { <span class="bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">🔍 Observasi</span> }
+                        @if (Model.IsPermintaanData) { <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">📊 Permintaan Data</span> }
+                        @if (Model.IsWawancara)      { <span class="bg-violet-100 text-violet-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">🎤 Wawancara</span> }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="SuratIzinPost" asp-controller="KasubkelKepegawaian" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="Kategori" />
+
+            <!-- Nomor Surat -->
+            <div class="mb-4">
+                <label class="lbl">No. Surat Izin <span class="req">*</span></label>
+                <input asp-for="NoSuratIzin" class="fld font-mono" placeholder="Contoh: 070/DLH.1/-1.842.2/III/2026" />
+                <span asp-validation-for="NoSuratIzin" class="err"></span>
+            </div>
+
+            <!-- Tanggal Surat -->
+            <div class="mb-4">
+                <label class="lbl">Tanggal Surat <span class="req">*</span></label>
+                <input asp-for="TanggalSurat" type="date" class="fld" />
+                <span asp-validation-for="TanggalSurat" class="err"></span>
+            </div>
+
+            <!-- Upload File -->
+            <div class="mb-5">
+                <label class="lbl">Upload Surat Izin (PDF) <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                <input asp-for="FileSuratIzin" type="file" accept=".pdf" class="file-fld" />
+            </div>
+
+            <!-- Verifikasi Keperluan -->
+            <div class="mb-5">
+                <p class="lbl mb-3">Konfirmasi Keperluan yang Disetujui</p>
+                <div class="space-y-2 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input asp-for="IsObservasi" type="checkbox" class="w-4 h-4 rounded accent-orange-500"/>
+                        <span class="text-sm font-semibold text-gray-700">🔍 Observasi</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input asp-for="IsPermintaanData" type="checkbox" class="w-4 h-4 rounded accent-blue-500"/>
+                        <span class="text-sm font-semibold text-gray-700">📊 Permintaan Data</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input asp-for="IsWawancara" type="checkbox" class="w-4 h-4 rounded accent-violet-500"/>
+                        <span class="text-sm font-semibold text-gray-700">🎤 Wawancara</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Routing: Wawancara Only / KDI -->
+            <div id="section-bidang" class="mb-5">
+                <p class="lbl mb-3">Disposisi Unit Kerja</p>
+
+                <!-- Wawancara-only: langsung ke produsen data -->
+                <div id="waw-only-box" class="hidden bg-violet-50 border border-violet-200 rounded-xl p-4 mb-3">
+                    <p class="text-xs font-bold text-violet-700 mb-2">⚠ Wawancara Only — langsung ke KDI tanpa melalui PSMDI</p>
+                    <label class="lbl">Nama Produsen Data / Unit Wawancara</label>
+                    <input asp-for="NamaProdusenData" id="f-produsen" class="fld"
+                           placeholder="Misal: Bidang Pemantauan Lingkungan Hidup"/>
+                </div>
+
+                <!-- Normal: disposisi ke KDI / bidang -->
+                <div id="normal-box">
+                    <div class="space-y-2.5">
+                        @foreach (var (val, lbl, sub) in new[]{
+                            ("PSMDI", "PSMDI (default)", "Peran Serta Masyarakat, Data & Informasi"),
+                            ("BidangTerkait", "Bidang / Unit Terkait", "Pilih dari daftar di bawah"),
+                        })
+                        {
+                            <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-400 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                                <input type="radio" name="DisposisiUnits[0]" value="@val" class="accent-blue-600 mt-0.5 flex-shrink-0"/>
+                                <div>
+                                    <p class="text-sm font-bold text-gray-700">@lbl</p>
+                                    <p class="text-xs text-gray-400">@sub</p>
+                                </div>
+                            </label>
+                        }
+                    </div>
+
+                    <div id="bidang-wrap" class="mt-3 hidden">
+                        <label class="lbl">Pilih Unit Bidang</label>
+                        <select id="sel-bidang" class="fld" onchange="onBidangChange()" disabled>
+                            <option value="">⏳ Memuat daftar bidang...</option>
+                        </select>
+                        <input type="hidden" asp-for="NamaBidangList[0]" id="f-bidang-name"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Routing indicator -->
+            <div id="routing-indicator" class="mb-5 bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-500 hidden">
+                <span id="routing-text"></span>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kepegawaian" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
+                <button type="submit" class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">
+                    Terbitkan Surat Izin →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #3b82f6;border-color:transparent;background:white}
+    select.fld{appearance:none;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");background-repeat:no-repeat;background-position:right 10px center;background-size:16px;padding-right:2.5rem}
+    select.fld:disabled{background-color:#f3f4f6;color:#9ca3af}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+    .file-fld{width:100%;font-size:12px;color:#6b7280;border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px;background:#fafafa}
+    .file-fld::file-selector-button{margin-right:8px;padding:4px 10px;border-radius:6px;border:none;font-size:11px;font-weight:700;background:#eff6ff;color:#1d4ed8;cursor:pointer}
+</style>
+
+@section Scripts {
+<script>
+let _bidang = null;
+const cbObs   = document.querySelector('[name="IsObservasi"]');
+const cbData  = document.querySelector('[name="IsPermintaanData"]');
+const cbWaw   = document.querySelector('[name="IsWawancara"]');
+
+function isWawOnly(){
+    return cbWaw.checked && !cbData.checked && !cbObs.checked;
+}
+
+function updateRouting(){
+    const wawOnly = isWawOnly();
+    document.getElementById('waw-only-box').classList.toggle('hidden',!wawOnly);
+    document.getElementById('normal-box').classList.toggle('hidden',wawOnly);
+
+    const ri = document.getElementById('routing-indicator');
+    const rt = document.getElementById('routing-text');
+    ri.classList.remove('hidden');
+
+    if(wawOnly){
+        rt.textContent = '→ Setelah terbit: langsung ke KDI untuk penjadwalan wawancara (SuratIzinTerbit → WawancaraDijadwalkan)';
+    } else {
+        rt.textContent = '→ Setelah terbit: disposisi ke KDI (SuratIzinTerbit → Didisposisi)';
+    }
+}
+
+[cbObs, cbData, cbWaw].forEach(cb => cb.addEventListener('change', updateRouting));
+updateRouting();
+
+// Toggle bidang selector when "BidangTerkait" radio selected
+document.querySelectorAll('[name="DisposisiUnits[0]"]').forEach(r => {
+    r.addEventListener('change', async function(){
+        const isBidang = this.value === 'BidangTerkait';
+        document.getElementById('bidang-wrap').classList.toggle('hidden',!isBidang);
+        if(isBidang && !_bidang) await loadBidang();
+    });
+});
+
+async function loadBidang(){
+    try {
+        const res = await fetch('/api/bidang');
+        _bidang = await res.json();
+        const sel = document.getElementById('sel-bidang');
+        sel.innerHTML = '<option value="">— Pilih Unit Kerja / Bidang —</option>';
+        _bidang.forEach(b => {
+            const o = document.createElement('option');
+            o.value = b.id; o.text = b.namaBidang;
+            o.dataset.name = b.namaBidang;
+            sel.appendChild(o);
+        });
+        sel.disabled = false;
+    } catch(e) { console.error(e); }
+}
+
+function onBidangChange(){
+    const sel = document.getElementById('sel-bidang');
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('f-bidang-name').value = opt?.dataset.name || '';
+}
+</script>
+}

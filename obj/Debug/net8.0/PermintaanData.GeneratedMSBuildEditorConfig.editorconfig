@@ -50,8 +50,32 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/JadwalSubTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcSmFkd2FsU3ViVGFzay5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/MintaFeedback.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcTWludGFGZWVkYmFjay5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/PermintaanData.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcUGVybWludGFhbkRhdGEuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/SelesaiSubTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcU2VsZXNhaVN1YlRhc2suY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/SubTasks.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcU3ViVGFza3MuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/TerimaDisposisi.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcVGVyaW1hRGlzcG9zaXNpLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/UploadData.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcVXBsb2FkRGF0YS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Detail.cshtml]
@@ -64,6 +88,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Permohonan.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxQZXJtb2hvbmFuLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/SuratIzin.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxTdXJhdEl6aW4uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Verifikasi.cshtml]
