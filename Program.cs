@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
-using PermintaanData.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,8 +58,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddMemoryCache();
 
 // ── 7. Health Checks ──────────────────────────────────────────────────────────
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>("database");
+// Membutuhkan: dotnet add package Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore
+builder.Services.AddHealthChecks();
 
 // ── 8. Build ──────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -71,6 +70,7 @@ await RunStartupMigrationsAsync(app);
 // ── 10. Exception Handler ─────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
+    // Development: tampilkan detail teknis lengkap (YSOD)
     app.UseDeveloperExceptionPage();
 }
 else
@@ -79,8 +79,8 @@ else
     {
         errorApp.Run(async context =>
         {
-            var exFeature  = context.Features.Get<IExceptionHandlerPathFeature>();
-            var logger     = context.RequestServices
+            var exFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+            var logger    = context.RequestServices
                 .GetRequiredService<ILogger<Program>>();
 
             if (exFeature?.Error is not null)
@@ -91,7 +91,7 @@ else
 
             context.Response.StatusCode  = 500;
             context.Response.ContentType = "text/html; charset=utf-8";
-            await context.Response.WriteAsync(BuildErrorHtml(exFeature?.Error));
+            await context.Response.WriteAsync(BuildErrorHtml());
         });
     });
     app.UseHsts();
@@ -134,27 +134,25 @@ app.Run();
 
 static async Task RunStartupMigrationsAsync(WebApplication app)
 {
-    using var scope  = app.Services.CreateScope();
-    var services     = scope.ServiceProvider;
-    var logger       = services.GetRequiredService<ILogger<Program>>();
-    var env          = services.GetRequiredService<IWebHostEnvironment>();
+    using var scope = app.Services.CreateScope();
+    var services    = scope.ServiceProvider;
+    var logger      = services.GetRequiredService<ILogger<Program>>();
+    var env         = services.GetRequiredService<IWebHostEnvironment>();
 
     try
     {
         var db = services.GetRequiredService<AppDbContext>();
 
-        // Uji koneksi sebelum migrate
         var canConnect = await db.Database.CanConnectAsync();
         if (!canConnect)
         {
             logger.LogCritical(
                 "Tidak dapat terhubung ke database. Periksa connection string di appsettings.");
-            if (!env.IsDevelopment()) throw new InvalidOperationException(
-                "Database connection failed on startup.");
+            if (!env.IsDevelopment())
+                throw new InvalidOperationException("Database connection failed on startup.");
             return;
         }
 
-        // Terapkan semua pending migrations secara otomatis
         var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
         if (pending.Count > 0)
         {
@@ -170,51 +168,49 @@ static async Task RunStartupMigrationsAsync(WebApplication app)
             logger.LogDebug("Tidak ada pending migration.");
         }
 
-        // Validasi tabel kritis ada
         await ValidateCriticalTablesAsync(db, logger);
     }
     catch (Exception ex) when (ex is not InvalidOperationException)
     {
         logger.LogCritical(ex, "Startup database migration gagal.");
-
-        // Di production: crash agar orchestrator restart
         if (!env.IsDevelopment()) throw;
     }
 }
 
 static async Task ValidateCriticalTablesAsync(AppDbContext db, ILogger logger)
 {
-    // Pastikan counter table ada (dibuat di migration NoPermohonanCounter)
     try
     {
-        var exists = await db.Database.ExecuteSqlRawAsync(
+        await db.Database.ExecuteSqlRawAsync(
             "SELECT 1 FROM information_schema.tables " +
             "WHERE table_schema = 'public' " +
             "AND table_name = 'NoPermohonanCounter'");
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "Validasi tabel NoPermohonanCounter gagal — " +
-            "pastikan migration sudah dijalankan.");
+        logger.LogWarning(ex,
+            "Validasi tabel NoPermohonanCounter gagal — pastikan migration sudah dijalankan.");
     }
 
-    // Pastikan AppUser minimal punya satu row (sistem tidak bisa login kalau kosong)
     var userCount = await db.AppUsers.CountAsync();
     if (userCount == 0)
-    {
         logger.LogWarning(
-            "Tabel AppUser kosong! Seed user default belum ada. " +
-            "Jalankan migration atau seed manual.");
-    }
+            "Tabel AppUser kosong! Seed user default belum ada. Jalankan migration atau seed manual.");
     else
-    {
         logger.LogDebug("AppUser count: {Count}", userCount);
-    }
 }
 
 // ── HTML builder untuk error pages ───────────────────────────────────────────
+// CATATAN: Gunakan {{ dan }} untuk literal brace di dalam $"""..."""
+// karena { } di-parse sebagai ekspresi interpolasi C#.
 
-static string BuildErrorHtml(Exception? ex) => $"""
+static string BuildErrorHtml()
+{
+    var refCode = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+    var year    = DateTime.Now.Year;
+
+    // Tidak menggunakan $""" agar CSS { } tidak perlu di-escape
+    return $$"""
     <!DOCTYPE html>
     <html lang="id">
     <head>
@@ -234,7 +230,7 @@ static string BuildErrorHtml(Exception? ex) => $"""
           Silakan coba kembali atau hubungi administrator.
         </p>
         <p class="text-gray-400 text-xs mb-6">
-          Referensi: {DateTime.UtcNow:yyyyMMddHHmmss} · PPID DLH Jakarta
+          Referensi: {{refCode}} · PPID DLH Jakarta
         </p>
         <div class="flex gap-3 justify-center flex-wrap">
           <a href="javascript:history.back()"
@@ -250,11 +246,12 @@ static string BuildErrorHtml(Exception? ex) => $"""
             🩺 Cek Status
           </a>
         </div>
-        <p class="text-gray-300 text-xs mt-8">© {DateTime.Now.Year} PPID Dinas Lingkungan Hidup DKI Jakarta</p>
+        <p class="text-gray-300 text-xs mt-8">© {{year}} PPID Dinas Lingkungan Hidup DKI Jakarta</p>
       </div>
     </body>
     </html>
     """;
+}
 
 static string Build404Html() => """
     <!DOCTYPE html>
