@@ -189,15 +189,8 @@ public class KasubkelKepegawaianController(
             return RedirectToAction(nameof(Index));
         }
 
-        // ── KRITIS: NamaBidangList dan DisposisiUnits WAJIB di-pre-populate ──
-        //
-        // View SuratIzin.cshtml menggunakan asp-for="NamaBidangList[0]" pada
-        // hidden input. ASP.NET Core InputTagHelper mengevaluasi ekspresi model
-        // secara runtime saat rendering — akses index [0] pada List<string> kosong
-        // menyebabkan ArgumentOutOfRangeException → HTTP 500.
-        //
-        // Solusi: inisialisasi dengan satu elemen string.Empty agar index [0]
-        // selalu valid. JS di view akan mengisi nilai aktualnya via onBidangChange().
+        // Keperluan, NamaBidangList, DisposisiUnits di-pre-populate dari data DB
+        // agar view dapat menampilkan read-only summary tanpa IndexOutOfRangeException
         return View(new SuratIzinVm
         {
             PermohonanPPIDID = id,
@@ -208,30 +201,34 @@ public class KasubkelKepegawaianController(
             IsObservasi      = p.IsObservasi,
             IsPermintaanData = p.IsPermintaanData,
             IsWawancara      = p.IsWawancara,
-            NamaBidangList   = [string.Empty],   // pre-init: cegah IndexOutOfRange saat render
-            DisposisiUnits   = ["PSMDI"],         // default: PSMDI sebagai pilihan awal
+            NamaBidangList   = [string.Empty],  // pre-init: cegah IndexOutOfRange saat render
+            DisposisiUnits   = ["PSMDI"],        // default: selalu PSMDI
         });
     }
 
     [HttpPost("surat-izin"), ValidateAntiForgeryToken]
     public async Task<IActionResult> SuratIzinPost(SuratIzinVm vm)
     {
+        // ── Validasi file wajib ────────────────────────────────────────────
+        if (vm.FileSuratIzin == null || vm.FileSuratIzin.Length == 0)
+        {
+            ModelState.AddModelError(nameof(vm.FileSuratIzin),
+                "File surat izin wajib diupload dalam format PDF.");
+        }
+
         if (!ModelState.IsValid) return View("SuratIzin", vm);
 
         var now = DateTime.UtcNow;
 
-        // Upload surat izin (jika ada file)
-        if (vm.FileSuratIzin?.Length > 0)
-        {
-            var error = await UploadDokumen(
-                vm.PermohonanPPIDID, vm.FileSuratIzin,
-                JenisDokumenId.SuratIzin, "Surat Izin", now);
+        // Upload surat izin
+        var error = await UploadDokumen(
+            vm.PermohonanPPIDID, vm.FileSuratIzin,
+            JenisDokumenId.SuratIzin, "Surat Izin", now);
 
-            if (error is not null)
-            {
-                ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
-                return View("SuratIzin", vm);
-            }
+        if (error is not null)
+        {
+            ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
+            return View("SuratIzin", vm);
         }
 
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
@@ -239,7 +236,8 @@ public class KasubkelKepegawaianController(
 
         var statusAwal = p.StatusPPIDID;
 
-        // ── Step 1: Tandai SuratIzinTerbit (5) ────────────────────────────
+        // ── Keperluan diambil dari form (hidden inputs yang sudah terisi dari DB GET)
+        //    Tidak ada perubahan keperluan di tahap ini — dikunci saat pendaftaran
         p.NoSuratPermohonan = vm.NoSuratIzin;
         p.IsObservasi        = vm.IsObservasi;
         p.IsPermintaanData   = vm.IsPermintaanData;
@@ -251,7 +249,7 @@ public class KasubkelKepegawaianController(
             $"Surat izin diterbitkan: {vm.NoSuratIzin}.",
             CurrentUser);
 
-        // ── Step 2: Auto-route ke tujuan ──────────────────────────────────
+        // ── Auto-route berdasarkan jenis keperluan ────────────────────────
         int statusTujuan;
         string routeKet;
 
@@ -259,15 +257,15 @@ public class KasubkelKepegawaianController(
         {
             // Wawancara-only → langsung ke KDI untuk penjadwalan
             p.StatusPPIDID     = StatusId.WawancaraDijadwalkan;
-            p.NamaProdusenData = vm.NamaProdusenData ?? vm.NamaBidangPrimary;
+            p.NamaProdusenData = vm.NamaProdusenData ?? "PSMDI";
             statusTujuan       = StatusId.WawancaraDijadwalkan;
-            routeKet           = $"Auto-route → KDI (wawancara-only, produsen: {p.NamaProdusenData ?? "PSMDI"}).";
+            routeKet           = $"Auto-route → KDI (wawancara-only, produsen: {p.NamaProdusenData}).";
         }
         else
         {
-            // Data / Observasi → disposisi ke KDI
+            // Data / Observasi → disposisi ke KDI (selalu PSMDI default)
             p.StatusPPIDID = StatusId.Didisposisi;
-            p.NamaBidang   = vm.NamaBidangPrimary;
+            p.NamaBidang   = vm.NamaBidangPrimary; // null/empty = PSMDI
             statusTujuan   = StatusId.Didisposisi;
             routeKet       = $"Auto-route → KDI, bidang: {p.NamaBidang ?? "PSMDI"}.";
         }

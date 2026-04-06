@@ -9,7 +9,6 @@
     var ppid      = pr?.PribadiPPID;
     var current   = p.StatusPPIDID ?? StatusId.TerdaftarSistem;
 
-    // Sub-task lookup helpers
     var stData = Model.GetTask(JenisTask.PermintaanData);
     var stObs  = Model.GetTask(JenisTask.Observasi);
     var stWaw  = Model.GetTask(JenisTask.Wawancara);
@@ -65,7 +64,6 @@
     </div>
 
     <!-- Sub-task Cards -->
-<!-- Sub-task Cards -->
     <div class="grid grid-cols-1 md:grid-cols-@(Model.TotalTasks == 1 ? "1" : Model.TotalTasks == 2 ? "2" : "3") gap-4 mb-4">
         @foreach (var st in Model.SubTasks)
         {
@@ -80,13 +78,15 @@
             string badgeBg    = done   ? "bg-emerald-100 text-emerald-800" :
                                 inProg ? "bg-amber-100 text-amber-800"     : "bg-gray-100 text-gray-500";
 
+            // ── BUGFIX: InProgress (dijadwalkan) → konfirmasi selesai
+            //           Pending (belum jadwal)   → buat jadwal
             string actionUrl = jenis switch
             {
                 JenisTask.PermintaanData => $"/kasubkel-kdi/upload-data/{p.PermohonanPPIDID}",
-                JenisTask.Observasi      => done
+                JenisTask.Observasi      => inProg
                     ? $"/kasubkel-kdi/selesai-observasi/{p.PermohonanPPIDID}"
                     : $"/kasubkel-kdi/jadwal-observasi/{p.PermohonanPPIDID}",
-                JenisTask.Wawancara      => done
+                JenisTask.Wawancara      => inProg
                     ? $"/kasubkel-kdi/selesai-wawancara/{p.PermohonanPPIDID}"
                     : $"/kasubkel-kdi/jadwal-wawancara/{p.PermohonanPPIDID}",
                 _                        => "#"
@@ -166,7 +166,6 @@
 
             @if (isDataSiap)
             {
-                <!-- DataSiap → Minta Feedback -->
                 <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                     <div class="flex items-start gap-3">
                         <span class="text-2xl">📨</span>
@@ -187,7 +186,6 @@
             }
             else if (isFeedback)
             {
-                <!-- FeedbackPemohon: menunggu kuesioner -->
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
                     <div class="flex items-start gap-3">
                         <span class="text-2xl">⏳</span>
@@ -201,7 +199,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Link publik untuk dikirim ke pemohon -->
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 text-xs text-gray-600">
                     <p class="font-bold mb-1">Link lacak untuk dikirim ke pemohon:</p>
                     <code class="text-blue-600">@(Context.Request.Scheme)://@(Context.Request.Host)/Lacak?noPermohonan=@Uri.EscapeDataString(p.NoPermohonan ?? "")</code>
@@ -210,7 +207,6 @@
 
             @if (canForceClose)
             {
-                <!-- Manual force-close -->
                 <div class="mt-4 pt-4 border-t border-gray-100">
                     <p class="text-xs text-gray-400 mb-2">Atau tandai selesai secara manual (jika pemohon tidak merespons):</p>
                     <form asp-action="TandaiSelesai" asp-controller="KasubkelKdi" method="post"
@@ -228,7 +224,6 @@
     }
     else
     {
-        <!-- Selesai indicator -->
         <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-4 flex items-center gap-4">
             <div class="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white text-2xl flex-shrink-0">🏁</div>
             <div>
@@ -285,11 +280,8 @@
         </div>
     </div>
 
-    <!-- Link Detail -->
     <a href="/kasubkel-kdi/detail/@p.PermohonanPPIDID"
        class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
         📋 Lihat Detail Lengkap & Audit Log
     </a>
 </div>
-
-

@@ -9,6 +9,7 @@
     ViewData["Role"]  = "Kasubkel KDI";
     Layout = "_LayoutAdmin";
     string icon    = isWaw ? "🎤" : "🔍";
+    // URL ditentukan oleh route attribute di controller — tidak perlu asp-controller
     string postUrl = isWaw ? "/kasubkel-kdi/selesai-wawancara" : "/kasubkel-kdi/selesai-observasi";
     string color   = isWaw ? "violet" : "orange";
 }
@@ -46,7 +47,9 @@
             </div>
         }
 
-        <form action="@postUrl" asp-controller="KasubkelKdi" method="post" enctype="multipart/form-data">
+        @* PENTING: gunakan action="..." langsung tanpa asp-controller agar tidak terjadi
+           konflik antara tag helper dan atribut action yang sudah ditentukan secara eksplisit *@
+        <form action="@postUrl" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="SubTaskID" />
             <input type="hidden" asp-for="PermohonanPPIDID" />
@@ -76,8 +79,10 @@
             </div>
 
             <div class="flex gap-3">
-                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
-                <button type="submit" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
+                <button type="submit"
+                        class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
                     ✓ Konfirmasi Selesai →
                 </button>
             </div>
