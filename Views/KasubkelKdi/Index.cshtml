@@ -159,7 +159,7 @@
                             </td>
                             <td class="px-4 py-3 text-xs @(p.IsOverdue ? "text-red-600 font-semibold" : "text-gray-500")">
                                 @(p.BatasWaktu?.ToString("dd MMM yyyy") ?? "—")
-                                @if (p.IsOverdue) { <span class="block text-[10px] text-red-400">⚠ Lewat @Math.Abs(p.HariSisa??0) hari</span> }
+                                @if (p.IsOverdue) { <span class="block text-[10px] text-red-400">⚠ Terlambat @Math.Abs(p.HariSisa??0) hari</span> }
                                 else if (p.HariSisa.HasValue && p.HariSisa <= 3) { <span class="block text-[10px] text-amber-500">Sisa @p.HariSisa hari</span> }
                             </td>
                             <td class="px-4 py-3">

@@ -124,7 +124,7 @@
                                         @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
                                         {
                                             <span class="block text-[10px] @(overdue ? "text-red-400" : "text-gray-400")">
-                                                @(overdue ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
+                                                @(overdue ? $"Terlambat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
                                             </span>
                                         }
                                     </span>

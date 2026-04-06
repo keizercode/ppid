@@ -91,10 +91,12 @@
         <!-- Brand -->
         <div class="px-4 py-4" style="border-bottom:1px solid var(--border-sidebar)">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#1e40af">
-                    <svg viewBox="0 0 40 20" class="w-8 h-4">
-                        <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="white" font-family="Plus Jakarta Sans,sans-serif">PPID</text>
-                    </svg>
+                <div class="rounded-xl flex items-center justify-center flex-shrink-0 px-2.5 py-2" style="background:#1B3B6F">
+                    <img src="https://ppid.jakarta.go.id/assets/home/ppidNew/images/logo/logo-ppid-email.png"
+                         alt="Logo PPID Jakarta" class="h-6 w-auto object-contain"
+                         id="sb-logo"
+                         onerror="this.style.display='none';document.getElementById('sb-fallback').style.display='inline'" />
+                    <span id="sb-fallback" class="text-white font-black text-[10px] tracking-widest" style="display:none">PPID</span>
                 </div>
                 <div>
                     <p style="color:var(--brand-sub)" class="text-[9px] uppercase tracking-widest leading-none font-semibold">PPID DLH Jakarta</p>

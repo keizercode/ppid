@@ -17,7 +17,7 @@
     </div>
 
     <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-        <p class="text-[10px] font-bold uppercase tracking-[.15em] text-gray-400">Sedang Proses</p>
+        <p class="text-[10px] font-bold uppercase tracking-[.15em] text-gray-400">Sedang Diproses</p>
         <p class="text-4xl font-black text-amber-500 leading-none mt-1">@Model.Proses</p>
     </div>
 
@@ -27,7 +27,7 @@
     </div>
 
     <div class="bg-white rounded-2xl p-4 border border-red-100 shadow-sm">
-        <p class="text-[10px] font-bold uppercase tracking-[.15em] text-red-400">Overdue ⚠</p>
+        <p class="text-[10px] font-bold uppercase tracking-[.15em] text-red-400">Melewati Batas Waktu</p>
         <p class="text-4xl font-black text-red-500 leading-none mt-1">@Model.Overdue</p>
     </div>
 </div>
@@ -37,7 +37,7 @@
 
     <!-- Keperluan breakdown -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 col-span-2 md:col-span-1">
-        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Breakdown Keperluan</p>
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Jenis Keperluan</p>
         <div class="space-y-3">
             @{
                 void RenderBar(string label, string color, int val, int total)
@@ -74,7 +74,7 @@
         <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Aksi Cepat</p>
         <a href="@baseUrl/data?export=csv@(!string.IsNullOrEmpty(q) ? $"&q={q}" : "")"
            class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-            ⬇ Export CSV
+            Unduh CSV
         </a>
         <a href="@baseUrl/identifikasi"
            class="flex items-center gap-2 bg-[#002d7a] hover:bg-blue-900 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
@@ -82,7 +82,7 @@
         </a>
         <a href="@baseUrl"
            class="flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-            ← Dashboard
+            &larr; Dashboard
         </a>
     </div>
 </div>
@@ -130,14 +130,14 @@
                         <th class="col-th">Status</th>
                         <th class="col-th">Tgl Selesai</th>
                         <th class="col-th">Pengampu</th>
-                        <th class="col-th">Action</th>
+                        <th class="col-th">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @foreach (var item in Model.List)
                     {
-                        bool overdue = item.IsOverdue;
-                        <tr class="hover:bg-blue-50/30 transition-colors group @(overdue ? "bg-red-50/20" : "")">
+                        bool terlambat = item.IsOverdue;
+                        <tr class="hover:bg-blue-50/30 transition-colors group @(terlambat ? "bg-red-50/20" : "")">
 
                             <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold whitespace-nowrap">
                                 @item.NoPermohonan
@@ -153,7 +153,7 @@
 
                             <td class="px-4 py-3">
                                 <span class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
-                                    @(item.KategoriPemohon == "Mahasiswa" ? "🎓" : "🏢") @item.KategoriPemohon
+                                    @(item.KategoriPemohon == "Mahasiswa" ? "Mahasiswa" : "Organisasi/LSM")
                                 </span>
                             </td>
 
@@ -176,12 +176,12 @@
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if (item.BatasWaktu.HasValue)
                                 {
-                                    <span class="text-xs @(overdue ? "text-red-600 font-semibold" : item.HariSisa <= 3 ? "text-amber-600 font-medium" : "text-gray-500")">
-                                        @(overdue ? "⚠ " : "")@item.BatasWaktu.Value.ToString("dd MMM yyyy")
+                                    <span class="text-xs @(terlambat ? "text-red-600 font-semibold" : item.HariSisa <= 3 ? "text-amber-600 font-medium" : "text-gray-500")">
+                                        @(terlambat ? "Lewat " : "")@item.BatasWaktu.Value.ToString("dd MMM yyyy")
                                         @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
                                         {
-                                            <span class="block text-[10px] @(overdue ? "text-red-400" : "text-gray-400")">
-                                                @(overdue ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
+                                            <span class="block text-[10px] @(terlambat ? "text-red-400" : "text-gray-400")">
+                                                @(terlambat ? $"Terlambat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
                                             </span>
                                         }
                                     </span>

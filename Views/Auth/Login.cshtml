@@ -14,21 +14,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>* { font-family:'Plus Jakarta Sans',sans-serif; }</style>
 </head>
-<body class="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4 py-10">
+<body class="min-h-screen bg-[#F0F4FA] flex items-center justify-center px-4 py-10">
 
 <div class="w-full max-w-sm">
 
     <!-- Brand -->
     <div class="text-center mb-8">
-        <div class="w-14 h-14 bg-[#1B3B6F] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-            <svg viewBox="0 0 40 20" class="w-8 h-4">
-                <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle"
-                      font-size="12" font-weight="700" fill="white"
-                      font-family="Plus Jakarta Sans,sans-serif">PPID</text>
-            </svg>
+        <div class="flex items-center justify-center mb-4">
+            <div class="bg-[#1B3B6F] rounded-2xl px-4 py-3 shadow-lg flex items-center gap-3">
+                <img src="https://ppid.jakarta.go.id/assets/home/ppidNew/images/logo/logo-ppid-email.png"
+                     alt="Logo PPID Jakarta"
+                     class="h-9 w-auto object-contain"
+                     id="login-logo"
+                     onerror="this.style.display='none';document.getElementById('login-logo-fallback').style.display='flex'" />
+                <div id="login-logo-fallback"
+                     class="text-white font-black text-xl tracking-widest"
+                     style="display:none">PPID</div>
+                <div class="border-l border-white/20 pl-3">
+                    <p class="text-white/60 text-[9px] uppercase tracking-widest leading-none font-semibold">Dinas Lingkungan Hidup</p>
+                    <p class="text-white font-bold text-sm leading-tight mt-0.5">DKI Jakarta</p>
+                </div>
+            </div>
         </div>
-        <h1 class="text-xl font-extrabold text-gray-900">PPID DLH Jakarta</h1>
-        <p class="text-gray-400 text-sm mt-1">Masuk ke panel admin</p>
+        <h1 class="text-lg font-extrabold text-gray-900">Portal Admin PPID</h1>
+        <p class="text-gray-400 text-sm mt-1">Masuk ke panel pengelolaan permohonan</p>
     </div>
 
     <!-- Card Login -->
@@ -60,38 +69,39 @@
                     <input asp-for="Password" type="password" id="Password"
                            class="fld pr-10" placeholder="••••••••" autocomplete="current-password" />
                     <button type="button" onclick="togglePwd()"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">👁</button>
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <svg id="eye-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                    </button>
                 </div>
                 <span asp-validation-for="Password" class="err"></span>
             </div>
 
             <label class="flex items-center gap-2.5 mb-5 cursor-pointer">
                 <input asp-for="RememberMe" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
-                <span class="text-sm text-gray-600 font-medium">Ingat saya</span>
+                <span class="text-sm text-gray-600 font-medium">Ingat saya selama 7 hari</span>
             </label>
 
             <button type="submit"
-                    class="w-full bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 rounded-xl transition-colors shadow-sm text-sm">
-                Masuk →
+                    class="w-full bg-[#1B3B6F] hover:bg-[#122850] text-white font-bold py-3 rounded-xl transition-colors shadow-sm text-sm">
+                Masuk ke Sistem
             </button>
         </form>
     </div>
 
     <!-- Akun Testing -->
     <div class="mt-4 bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Akun Testing</p>
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Akun Pengujian</p>
 
         @{
-            // Akun sesuai AppRoles yang aktif setelah refactor
-            var accounts = new (string User, string Role, string Pass, string Color, string Dot)[]
+            var accounts = new (string User, string Role, string Pass, string Color, string DotColor)[]
             {
-                // ── Loket ──────────────────────────────────────────────────
                 ("loket",      "Loket Kepegawaian",    "loket123",      "text-blue-700",   "bg-blue-400"),
                 ("loketumum",  "Loket Umum",           "loketumum123",  "text-emerald-700","bg-emerald-400"),
-                // ── Kasubkel ───────────────────────────────────────────────
                 ("kasubkepeg", "Kasubkel Kepegawaian", "kasubkepeg123", "text-violet-700", "bg-violet-400"),
                 ("kasubkdi",   "Kasubkel KDI",         "kasubkdi123",   "text-cyan-700",   "bg-cyan-400"),
-                // ── Admin ──────────────────────────────────────────────────
                 ("admin",      "Administrator",        "admin123",      "text-red-700",    "bg-red-400"),
             };
         }
@@ -109,9 +119,8 @@
             }
         </div>
 
-        <!-- Separator + akun lama (legacy, tidak direkomendasikan) -->
         <div class="mt-3 pt-3 border-t border-gray-100">
-            <p class="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-2">(role lama — tidak berfungsi)</p>
+            <p class="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-2">(role lama — tidak aktif)</p>
             @{
                 var legacy = new (string User, string Pass)[]
                 {
@@ -124,7 +133,7 @@
                 @foreach (var (u, p) in legacy)
                 {
                     <button type="button" onclick="fillLogin('@u','@p')"
-                            class="w-full flex items-center gap-2.5 py-1 px-2 rounded-lg hover:bg-gray-50 transition-colors text-left opacity-50">
+                            class="w-full flex items-center gap-2.5 py-1 px-2 rounded-lg hover:bg-gray-50 transition-colors text-left opacity-40">
                         <span class="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
                         <span class="font-mono font-bold text-xs text-gray-400 w-28 flex-shrink-0">@u</span>
                         <span class="font-mono text-gray-300 text-[11px]">@p</span>
@@ -135,7 +144,7 @@
     </div>
 
     <p class="text-center text-xs text-gray-300 mt-6">
-        &copy; @DateTime.Now.Year · PPID DLH DKI Jakarta
+        &copy; @DateTime.Now.Year &middot; PPID Dinas Lingkungan Hidup DKI Jakarta
     </p>
 </div>
 

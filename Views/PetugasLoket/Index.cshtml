@@ -38,7 +38,7 @@
             <span class="text-2xl">🔔</span>
             <div>
                 <p class="font-bold text-amber-800">Perlu Perhatian — @totalReminder item</p>
-                <p class="text-xs text-amber-600 mt-0.5">Jadwal dalam 3 hari ke depan dan permohonan overdue</p>
+                <p class="text-xs text-amber-600 mt-0.5">Jadwal dalam 3 hari ke depan dan permohonan yang melewati batas waktu</p>
             </div>
         </div>
 
@@ -105,7 +105,7 @@
         @if (overduePerm.Any())
         {
             <div>
-                <p class="text-xs font-bold text-red-700 uppercase tracking-wide mb-2">⚠ Permohonan Overdue (@overduePerm.Count)</p>
+                <p class="text-xs font-bold text-red-700 uppercase tracking-wide mb-2">⚠ Permohonan Terlambat (@overduePerm.Count)</p>
                 <div class="space-y-2">
                     @foreach (var p in overduePerm.Take(5))
                     {
@@ -127,7 +127,7 @@
                     }
                     @if (overduePerm.Count > 5)
                     {
-                        <p class="text-xs text-red-500 text-center">+ @(overduePerm.Count - 5) permohonan overdue lainnya</p>
+                        <p class="text-xs text-red-500 text-center">+ @(overduePerm.Count - 5) permohonan yang melewati batas waktu lainnya</p>
                     }
                 </div>
             </div>
