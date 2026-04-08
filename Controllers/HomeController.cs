@@ -44,18 +44,15 @@ public class HomeController(
             .Include(p => p.PribadiPPID)
             .FirstOrDefaultAsync(p => p.PribadiID == permohonan.PribadiID);
 
-        // ── Load SubTasks untuk info paralel di timeline ──────────────────
         var subTasks = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == permohonan.PermohonanPPIDID)
             .OrderBy(t => t.JenisTask)
             .ToListAsync();
 
-        // ── Jadwal aktif per jenis (termasuk info reschedule) ────────────
         var jadwalAktif = await db.JadwalPPID
             .Where(j => j.PermohonanPPIDID == permohonan.PermohonanPPIDID && j.IsAktif)
             .ToListAsync();
 
-        // ── Hitung lastChangedAt (untuk badge "BARU" di realtime check) ──
         var subTaskLastUpdate = subTasks.Any()
             ? subTasks.Max(t => t.UpdatedAt ?? t.CreatedAt)
             : (DateTime?)null;
@@ -96,8 +93,6 @@ public class HomeController(
 
     // ════════════════════════════════════════════════════════════════════════
     // CEK STATUS (REALTIME POLLING API)
-    // Digunakan oleh Detail.cshtml untuk polling setiap 30 detik.
-    // Return JSON ringan: statusId + lastChangedAt (ISO 8601).
     // ════════════════════════════════════════════════════════════════════════
 
     [HttpGet("cek-status")]
@@ -118,7 +113,6 @@ public class HomeController(
 
         if (p is null) return Json(null);
 
-        // Ambil waktu update subtask & jadwal terbaru
         var stUpdate = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == p.PermohonanPPIDID)
             .Select(t => (DateTime?)t.UpdatedAt)
@@ -138,7 +132,7 @@ public class HomeController(
         return Json(new
         {
             statusId      = p.StatusPPIDID,
-            lastChangedAt = allDates.ToString("O")   // ISO 8601 for JS comparison
+            lastChangedAt = allDates.ToString("O")
         });
     }
 
@@ -246,7 +240,7 @@ public class HomeController(
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // TIMELINE BUILDER — 9-step + sub-step informatif
+    // TIMELINE BUILDER
     // ════════════════════════════════════════════════════════════════════════
 
     private static List<RiwayatStatusVm> BuildRiwayat(PermohonanPPID p)
@@ -271,54 +265,82 @@ public class HomeController(
     {
         var steps = new List<(int, string, string?)>
         {
-            (StatusId.TerdaftarSistem,    "1. Permohonan Terdaftar",                  null),
-            (StatusId.IdentifikasiAwal,   "2. Tanda Tangan Identifikasi Awal",        null),
-            (StatusId.MenungguVerifikasi, "3. Verifikasi Kasubkel & Disposisi Unit",  null),
-            (StatusId.MenungguSuratIzin,  "4. Pembuatan Surat Izin",                  null),
-            (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit",                     null),
+            (StatusId.TerdaftarSistem,    "1. Permohonan Terdaftar",                 null),
+            (StatusId.IdentifikasiAwal,   "2. Tanda Tangan Identifikasi Awal",       null),
+            (StatusId.MenungguVerifikasi, "3. Verifikasi Kasubkel & Disposisi Unit", null),
+            (StatusId.MenungguSuratIzin,  "4. Pembuatan Surat Izin",                 null),
+            (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit",                    null),
         };
 
-        bool isWawancaraOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
+        // ── Step 6: SELALU satu step, tanpa branch wawancara-only ──────────
+        // Detail jadwal/progress ditampilkan di panel sub-tugas di dalam step ini.
+        // Status intermediate (WawancaraDijadwalkan 12, ObservasiDijadwalkan 8, dsb.)
+        // semuanya dipetakan ke posisi workflow 5 oleh GetWorkflowOrder sehingga
+        // FindNearestIdx tetap menunjuk step 6 dengan benar, bukan step 9.
+        var keperluanList = new List<string>();
+        if (p.IsPermintaanData) keperluanList.Add("Permintaan Data");
+        if (p.IsObservasi)      keperluanList.Add("Observasi");
+        if (p.IsWawancara)      keperluanList.Add("Wawancara");
 
-        if (isWawancaraOnly)
-        {
-            // Wawancara-only: step 6 langsung jadwal wawancara
-            steps.Add((StatusId.WawancaraDijadwalkan, "6. Jadwal Wawancara Dibuat",
-                p.NamaProdusenData != null ? $"PIC: {p.NamaProdusenData}" : null));
-        }
-        else
-        {
-            // Parallel mode (data / observasi / wawancara):
-            // SATU step 6 saja — detail progress ditampilkan di panel sub-tugas
-            var keperluanList = new List<string>();
-            if (p.IsPermintaanData) keperluanList.Add("Permintaan Data");
-            if (p.IsObservasi)      keperluanList.Add("Observasi");
-            if (p.IsWawancara)      keperluanList.Add("Wawancara");
+        steps.Add((StatusId.Didisposisi, "6. Pembuatan Jadwal / Pemrosesan Data",
+            keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null));
 
-            steps.Add((StatusId.Didisposisi, "6. Pembuatan Jadwal / Pemrosesan Data",
-                keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null));
-        }
-
-        // Step 7 & 8 tetap sama
-        steps.Add((StatusId.DataSiap,       "7. Data Tersedia",                  null));
+        steps.Add((StatusId.DataSiap,        "7. Data Tersedia",                       null));
         steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Upload Laporan", null));
-        steps.Add((StatusId.Selesai,          "9. Selesai",                       null));
+        steps.Add((StatusId.Selesai,         "9. Selesai",                             null));
 
         return steps;
     }
 
-    private static int FindNearestIdx(List<(int StatusId, string Label, string? SubLabel)> steps, int current)
+    /// <summary>
+    /// Posisi ordinal workflow aktual — BUKAN nilai StatusId.
+    ///
+    /// StatusId 12-15 ditambahkan setelah DataSiap(10)/Selesai(11) sehingga
+    /// perbandingan numerik ID tidak mencerminkan urutan proses.
+    /// Contoh bug lama: WawancaraDijadwalkan(12) &gt; Selesai(11) numeris,
+    /// sehingga FindNearestIdx lama mengira permohonan sudah di step Selesai
+    /// padahal masih di tahap penjadwalan wawancara.
+    ///
+    /// Dengan fungsi ini semua status di tahap "diproses" mendapat order=5
+    /// (sama dengan Didisposisi), sehingga step 6 selalu aktif selama proses
+    /// berlangsung dan step 9 (Selesai, order=8) tidak pernah "aktif" prematur.
+    /// </summary>
+    private static int GetWorkflowOrder(int statusId) => statusId switch
     {
-        int best = -1;
+        StatusId.TerdaftarSistem                                          => 1,
+        StatusId.IdentifikasiAwal                                         => 2,
+        StatusId.MenungguVerifikasi or StatusId.MenungguSuratIzin         => 3,
+        StatusId.SuratIzinTerbit                                          => 4,
+        // Semua status proses (termasuk yang ID-nya 12-15 secara numerik
+        // lebih besar dari DataSiap/Selesai) berada di posisi 5:
+        StatusId.Didisposisi or StatusId.DiProses
+            or StatusId.ObservasiDijadwalkan or StatusId.ObservasiSelesai
+            or StatusId.WawancaraDijadwalkan or StatusId.WawancaraSelesai => 5,
+        StatusId.DataSiap                                                 => 6,
+        StatusId.FeedbackPemohon                                          => 7,
+        StatusId.Selesai                                                  => 8,
+        _                                                                 => 0
+    };
+
+    private static int FindNearestIdx(
+        List<(int StatusId, string Label, string? SubLabel)> steps,
+        int current)
+    {
+        int currentOrder = GetWorkflowOrder(current);
+        int best         = -1;
+
         for (int i = 0; i < steps.Count; i++)
-            if (steps[i].StatusId <= current) best = i;
+        {
+            // Gunakan workflow order, bukan nilai StatusId numerik
+            if (GetWorkflowOrder(steps[i].StatusId) <= currentOrder)
+                best = i;
+        }
+
         return best >= 0 ? best : steps.Count - 1;
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // UPLOAD TUGAS / LAPORAN FINAL PEMOHON
-    // Pemohon mengunggah hasil akhir penelitian setelah data diterima.
-    // Accessible secara publik (tanpa autentikasi) sama seperti Lacak.
     // ════════════════════════════════════════════════════════════════════════
 
     [HttpGet("upload-tugas/{id:guid}")]
@@ -331,7 +353,6 @@ public class HomeController(
 
         if (p is null) return NotFound();
 
-        // Hanya izinkan upload jika data sudah siap
         if (p.StatusPPIDID < StatusId.DataSiap)
         {
             TempData["Error"] = "Laporan hanya dapat diunggah setelah data tersedia.";
@@ -363,7 +384,6 @@ public class HomeController(
 
         if (!ModelState.IsValid)
         {
-            // Re-load existing uploads
             var pReload = await db.PermohonanPPID
                 .Include(x => x.Dokumen)
                 .FirstOrDefaultAsync(x => x.PermohonanPPIDID == vm.PermohonanPPIDID);
@@ -385,7 +405,6 @@ public class HomeController(
 
         var now = DateTime.UtcNow;
 
-        // Simpan file
         var uploadsDir = Path.Combine(
             string.IsNullOrEmpty(env.WebRootPath)
                 ? Path.Combine(env.ContentRootPath, "wwwroot")

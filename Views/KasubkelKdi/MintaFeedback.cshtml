@@ -1,6 +1,8 @@
 @* ══════════════════════════════════════════════════════════════════════
    Views/KasubkelKdi/MintaFeedback.cshtml
-   FIX: lacakUrl menggunakan Url.Action agar benar di semua environment
+   FIX: Url.Action menghasilkan URL dengan %2F untuk slash di NoPermohonan.
+   Solusi: tampilkan instruksi + nomor permohonan yang mudah disalin,
+   bukan URL mentah yang membingungkan karena encoding %2F.
 ══════════════════════════════════════════════════════════════════════ *@
 @model PermohonanPPID
 @{
@@ -11,10 +13,8 @@
     var pr       = Model.Pribadi;
     bool hasData = ViewData["HasData"] as bool? ?? false;
 
-    @* FIX: gunakan Url.Action — /Lacak saja tidak valid dengan routing default *@
-    var lacakUrl = Url.Action("Lacak", "Home",
-        new { noPermohonan = Model.NoPermohonan },
-        Context.Request.Scheme)!;
+    // URL halaman lacak publik (Home/Index) — pemohon tinggal masukkan nomor di sana
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
 }
 
 <div class="max-w-xl mx-auto">
@@ -30,7 +30,7 @@
 
     <div class="p-6">
 
-        <!-- Checklist sebelum minta feedback -->
+        <!-- Checklist -->
         <div class="mb-5">
             <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Checklist Sebelum Lanjut</p>
             <div class="space-y-2">
@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <!-- Apa yang terjadi -->
+        <!-- Yang terjadi -->
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
             <p class="font-bold text-amber-800 text-sm mb-2">Yang akan terjadi:</p>
             <ul class="space-y-1.5 text-xs text-amber-700">
@@ -66,18 +66,47 @@
             </ul>
         </div>
 
-        <!-- Link untuk dikirim ke pemohon -->
+        @* ── Panduan untuk pemohon ────────────────────────────────────────────
+           Tampilkan INSTRUKSI + NOMOR PERMOHONAN yang mudah dicopy,
+           bukan URL mentah dengan %2F yang membingungkan.
+           Pemohon cukup buka halaman utama dan masukkan nomor.
+        *@
         <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5">
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Link Portal Publik (kirim ke pemohon)</p>
-            <div class="flex items-center gap-2">
-                <code class="text-xs text-blue-600 flex-1 break-all">@lacakUrl</code>
-                <button type="button" onclick="copyLink('@lacakUrl')"
-                        class="flex-shrink-0 text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2.5 py-1.5 rounded-lg font-medium transition-colors"
-                        id="copyBtn">
+            <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mb-2">
+                Instruksi untuk Pemohon
+            </p>
+            <ol class="space-y-2 text-xs text-gray-600 mb-3">
+                <li class="flex items-start gap-2">
+                    <span class="w-4 h-4 bg-gray-300 text-white rounded-full flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 font-bold">1</span>
+                    <span>Buka portal PPID DLH:
+                        <a href="@baseUrl" target="_blank"
+                           class="text-blue-600 font-mono font-semibold hover:underline">
+                            @baseUrl
+                        </a>
+                    </span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="w-4 h-4 bg-gray-300 text-white rounded-full flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 font-bold">2</span>
+                    <span>Masukkan nomor permohonan di kolom "Lacak Status Permohonan"</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="w-4 h-4 bg-gray-300 text-white rounded-full flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 font-bold">3</span>
+                    <span>Klik tombol "Isi Kuesioner Kepuasan" dan unggah laporan jika sudah selesai</span>
+                </li>
+            </ol>
+
+            @* Nomor permohonan — inilah yang paling penting dikirim ke pemohon *@
+            <div class="bg-white border-2 border-dashed border-blue-300 rounded-xl p-3 flex items-center gap-3">
+                <div class="flex-1">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Nomor Permohonan</p>
+                    <p id="noPerm" class="font-mono font-extrabold text-blue-700 text-lg tracking-widest">@Model.NoPermohonan</p>
+                </div>
+                <button type="button" id="copyNoBtn"
+                        onclick="copyNomor('@Model.NoPermohonan')"
+                        class="flex-shrink-0 text-xs font-bold bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition-colors">
                     Salin
                 </button>
             </div>
-            <p class="text-[10px] text-gray-400 mt-1">Pemohon cukup memasukkan nomor <strong>@Model.NoPermohonan</strong> di portal.</p>
         </div>
 
         @if (!hasData)
@@ -106,17 +135,24 @@
 
 @section Scripts {
 <script>
-function copyLink(url) {
-    navigator.clipboard.writeText(url).then(() => {
-        const btn = document.getElementById('copyBtn');
-        btn.textContent = '✓ Disalin!';
-        btn.classList.replace('bg-gray-100','bg-emerald-100');
-        btn.classList.replace('text-gray-600','text-emerald-700');
+function copyNomor(nomor) {
+    navigator.clipboard.writeText(nomor).then(() => {
+        const btn = document.getElementById('copyNoBtn');
+        btn.textContent = '✓ Tersalin!';
+        btn.classList.replace('bg-blue-100', 'bg-emerald-100');
+        btn.classList.replace('text-blue-700', 'text-emerald-700');
         setTimeout(() => {
             btn.textContent = 'Salin';
-            btn.classList.replace('bg-emerald-100','bg-gray-100');
-            btn.classList.replace('text-emerald-700','text-gray-600');
-        }, 2000);
+            btn.classList.replace('bg-emerald-100', 'bg-blue-100');
+            btn.classList.replace('text-emerald-700', 'text-blue-700');
+        }, 2500);
+    }).catch(() => {
+        // Fallback: select the text
+        const el = document.getElementById('noPerm');
+        const range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
     });
 }
 </script>

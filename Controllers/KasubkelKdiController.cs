@@ -211,7 +211,16 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             .OrderBy(t => t.JenisTask)
             .ToListAsync();
 
+        // Laporan/tugas final yang sudah diunggah pemohon
+        var tugasDocs = await db.DokumenPPID
+            .Where(d => d.PermohonanPPIDID == id
+                     && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync();
+
         ViewData["SubTasks"] = tasks;
+        ViewData["TugasDocs"] = tugasDocs;
+
         return View(new ParallelTasksVm { Permohonan = p, SubTasks = tasks });
     }
 

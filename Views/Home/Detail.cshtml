@@ -1,11 +1,10 @@
 @* ════════════════════════════════════════════════════════════════════════════
-   Views/Home/Detail.cshtml — FULL REPLACEMENT
+   Views/Home/Detail.cshtml
    PERUBAHAN:
-   1. Realtime polling (30 detik) → banner "Status diperbarui"
-   2. Timeline informatif dengan sub-step jadwal/reschedule/PIC
-   3. Badge "BARU" jika jadwal atau PIC baru diperbarui
-   4. Per-subtask detail di step aktif (reschedule count, PIC, jam)
-   5. Refresh otomatis jika status atau data berubah
+   1. Step 6 unified — tidak ada branch wawancara-only (HomeController sudah handle)
+   2. Step 9 tidak pernah tampilkan "Sedang dalam proses"
+   3. Realtime polling 30 detik
+   4. Badge BARU, reschedule count, PIC info di panel sub-tugas
 ════════════════════════════════════════════════════════════════════════════ *@
 @model DetailLacakViewModel
 @{
@@ -26,27 +25,30 @@
                        p.StatusPPIDID == StatusId.DataSiap  ? "bg-blue-500" :
                        p.StatusPPIDID == StatusId.Baru       ? "bg-gray-400" : "bg-amber-500";
 
-    // SubTask helpers
     var stData = Model.GetSubTask(JenisTask.PermintaanData);
     var stObs  = Model.GetSubTask(JenisTask.Observasi);
     var stWaw  = Model.GetSubTask(JenisTask.Wawancara);
 
-    var jadData = Model.GetJadwalAktif(JenisTask.PermintaanData);
     var jadObs  = Model.GetJadwalAktif("Observasi");
     var jadWaw  = Model.GetJadwalAktif("Wawancara");
 
-    bool isParallelActive = p.StatusPPIDID >= StatusId.Didisposisi
-                         && p.StatusPPIDID < StatusId.DataSiap
-                         && (p.IsPermintaanData || p.IsObservasi || p.IsWawancara);
+    // Parallel active: semua status di tahap "diproses" (step 6)
+    bool isParallelActive =
+        (p.StatusPPIDID == StatusId.Didisposisi
+         || p.StatusPPIDID == StatusId.DiProses
+         || p.StatusPPIDID == StatusId.ObservasiDijadwalkan
+         || p.StatusPPIDID == StatusId.ObservasiSelesai
+         || p.StatusPPIDID == StatusId.WawancaraDijadwalkan
+         || p.StatusPPIDID == StatusId.WawancaraSelesai)
+        && (p.IsPermintaanData || p.IsObservasi || p.IsWawancara);
 
-    // Badge helper
     string BadgeReschedule(SubTaskPPID? st) =>
         st != null && st.RescheduleCount > 0
             ? $"Dijadwal Ulang {st.RescheduleCount}×"
             : string.Empty;
 }
 
-@* ══ BANNER: status update (ditampilkan JS saat polling menemukan perubahan) ══ *@
+@* ══ BANNER: ditampilkan JS saat polling menemukan perubahan ══ *@
 <div id="update-banner"
      class="hidden fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-sm font-bold text-center py-3 shadow-lg cursor-pointer"
      onclick="window.location.reload()">
@@ -68,12 +70,10 @@
                 <h2 class="text-2xl font-extrabold font-mono text-gray-900 tracking-tight">@p.NoPermohonan</h2>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                     <span class="text-gray-400 text-xs">📅 @p.TanggalPermohonan?.ToString("dd MMMM yyyy")</span>
-                    <span class="text-gray-200 text-xs hidden sm:inline">·</span>
                     <span class="text-xs font-semibold @(p.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
                         @(p.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa/Pelajar" : "🏢 LSM / Umum")
                     </span>
                     @if (p.BatasWaktu.HasValue && p.StatusPPIDID < StatusId.DataSiap) {
-                        <span class="text-gray-200 text-xs hidden sm:inline">·</span>
                         <span class="text-xs @(p.IsOverdue ? "text-red-500 font-semibold" : p.HariSisa <= 3 ? "text-amber-500" : "text-gray-400")">
                             @(p.IsOverdue ? $"⚠ Lewat {Math.Abs(p.HariSisa??0)} hari" : $"Sisa {p.HariSisa} hari")
                         </span>
@@ -85,7 +85,6 @@
                     <span class="w-2 h-2 rounded-full @statusDot flex-shrink-0"></span>
                     <span class="text-sm font-semibold">@(p.Status?.NamaStatusPPID ?? "—")</span>
                 </div>
-                @* Indikator realtime *@
                 <div class="flex items-center gap-1.5 text-[10px] text-gray-400" id="refresh-indicator">
                     <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
                     <span>Pembaruan otomatis aktif</span>
@@ -105,8 +104,6 @@
                 {
                     bool isLast = step == Model.Riwayat.Last();
                     string lineColor = step.Selesai ? "bg-emerald-200" : "bg-gray-100";
-                    bool isParallelStep = step.StatusId == StatusId.Didisposisi
-                                      || step.StatusId == StatusId.DiProses;
 
                     <li class="flex gap-4 pb-0 relative">
                         @if (!isLast)
@@ -134,16 +131,19 @@
                                     @step.Label
                                 </p>
 
-                                @* Sub-label opsional (jenis keperluan, dll) *@
                                 @if (!string.IsNullOrEmpty(step.SubLabel) && !step.AktifSekarang && !step.Selesai)
                                 {
                                     <p class="text-[11px] text-gray-400 mt-0.5">@step.SubLabel</p>
                                 }
 
-                                @* ═══ PARALLEL STEP — info per-subtask ═══ *@
+                                @* ══ STEP 6 AKTIF: Panel sub-tugas paralel ══
+                                    Berlaku untuk SEMUA jenis (wawancara-only, parallel, dll.)
+                                    karena GetSteps selalu memakai StatusId.Didisposisi untuk step 6.
+                                *@
                                 @if (step.AktifSekarang && isParallelActive)
                                 {
                                     <div class="mt-3 space-y-2">
+
                                         @if (p.IsPermintaanData)
                                         {
                                             bool done = stData?.IsSelesai ?? false;
@@ -273,41 +273,29 @@
                                     <p class="text-blue-500 text-[11px] mt-2 font-medium">⏳ Sedang diproses secara paralel</p>
                                 }
 
-                                @* Step wawancara-only scheduled *@
-                                @if (step.AktifSekarang && p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi
-                                     && p.StatusPPIDID == StatusId.WawancaraDijadwalkan)
-                                {
-                                    bool isNew = Model.IsJadwalBaru("Wawancara");
-                                    string rescBadge = BadgeReschedule(stWaw);
-                                    <div class="mt-2 space-y-1">
-                                        @if (isNew)
-                                        { <span class="inline-block text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold animate-pulse mb-1">✨ JADWAL BARU</span> }
-                                        @if (!string.IsNullOrEmpty(rescBadge))
-                                        { <span class="inline-block text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-semibold mb-1">🔄 @rescBadge</span> }
-                                        @if (jadWaw != null)
-                                        {
-                                            <p class="text-xs text-violet-700 font-medium">📅 @jadWaw.Tanggal?.ToString("dddd, dd MMM yyyy") pukul @jadWaw.Waktu?.ToString("HH:mm") WIB</p>
-                                            @if (!string.IsNullOrEmpty(jadWaw.NamaPIC))
-                                            {
-                                                <p class="text-xs text-gray-500">Narasumber: <strong>@jadWaw.NamaPIC</strong>
-                                                @if (!string.IsNullOrEmpty(jadWaw.TeleponPIC)) {
-                                                    <a href="tel:@jadWaw.TeleponPIC" class="ml-1 text-blue-500">📱 @jadWaw.TeleponPIC</a>
-                                                }
-                                                </p>
-                                            }
-                                        }
-                                    </div>
-                                }
-
-                                @* Step aktif lainnya — kecuali Selesai *@
-                                @if (step.AktifSekarang && !isParallelActive && step.StatusId != StatusId.Selesai
-                                     && !(p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi
-                                          && p.StatusPPIDID == StatusId.WawancaraDijadwalkan))
+                                @* Step aktif lainnya (bukan step 6 paralel, bukan step 9) *@
+                                @if (step.AktifSekarang
+                                     && !isParallelActive
+                                     && step.StatusId != StatusId.Selesai
+                                     && step.StatusId != StatusId.DataSiap
+                                     && step.StatusId != StatusId.FeedbackPemohon)
                                 {
                                     <p class="text-blue-500 text-xs mt-1 font-medium">⏳ Sedang dalam proses</p>
                                 }
 
-                                @* Step Selesai aktif: tampilkan info selesai *@
+                                @* Step 7: Data tersedia *@
+                                @if (step.AktifSekarang && step.StatusId == StatusId.DataSiap)
+                                {
+                                    <p class="text-blue-600 text-xs mt-1 font-semibold">✅ Data sudah dapat diunduh</p>
+                                }
+
+                                @* Step 8: Menunggu feedback *@
+                                @if (step.AktifSekarang && step.StatusId == StatusId.FeedbackPemohon)
+                                {
+                                    <p class="text-amber-600 text-xs mt-1 font-medium">⏳ Menunggu pengisian kuesioner kepuasan</p>
+                                }
+
+                                @* Step 9: Selesai — TIDAK pernah tampilkan "sedang dalam proses" *@
                                 @if (step.AktifSekarang && step.StatusId == StatusId.Selesai)
                                 {
                                     <p class="text-emerald-600 text-xs mt-1 font-semibold">
@@ -363,7 +351,7 @@
                 </dl>
             </div>
 
-            @* Jadwal aktif (jika ada, ditampilkan per jenis) *@
+            @* Jadwal aktif *@
             @foreach (var jenis in new[] { "Observasi", "Wawancara" })
             {
                 var jadwal = Model.GetJadwalAktif(jenis);
@@ -392,13 +380,9 @@
                         </div>
                         <div class="flex gap-1 flex-wrap justify-end">
                             @if (isNewJad)
-                            {
-                                <span class="text-[10px] bg-green-100 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-bold animate-pulse">✨ BARU</span>
-                            }
+                            { <span class="text-[10px] bg-green-100 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-bold animate-pulse">✨ BARU</span> }
                             @if (rescCount > 0)
-                            {
-                                <span class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-semibold">🔄 Diubah @rescCount×</span>
-                            }
+                            { <span class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-semibold">🔄 Diubah @rescCount×</span> }
                         </div>
                     </div>
                     <div class="@itemBg rounded-xl px-3 py-2.5 border">
@@ -417,15 +401,9 @@
                         }
                     </div>
                     @if (rescCount > 0)
-                    {
-                        <p class="text-[10px] text-amber-600 mt-1.5">
-                            ℹ️ Jadwal ini sudah diubah @rescCount× — gunakan jadwal terbaru di atas.
-                        </p>
-                    }
+                    { <p class="text-[10px] text-amber-600 mt-1.5">ℹ️ Jadwal ini sudah diubah @rescCount× — gunakan jadwal terbaru di atas.</p> }
                     else
-                    {
-                        <p class="text-[11px] @noteC mt-2">⚠️ Hadir tepat waktu sesuai jadwal.</p>
-                    }
+                    { <p class="text-[11px] @noteC mt-2">⚠️ Hadir tepat waktu sesuai jadwal.</p> }
                 </div>
             }
 
@@ -453,24 +431,6 @@
                 </div>
             }
 
-            @* Wawancara selesai tanpa file *@
-            @if (p.StatusPPIDID == StatusId.WawancaraSelesai && dokDataHasil == null)
-            {
-                <div class="bg-white rounded-2xl border border-violet-200 shadow-sm p-5">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-7 h-7 bg-violet-50 border border-violet-200 rounded-lg flex items-center justify-center text-sm">🎤</div>
-                        <p class="font-bold text-gray-800 text-sm">Wawancara Selesai</p>
-                    </div>
-                    <p class="text-violet-600 text-xs mb-3">Wawancara telah dilaksanakan. Silakan isi kuesioner kepuasan layanan.</p>
-                    @if (bisaKuesioner) {
-                        <a asp-action="Kuesioner" asp-route-id="@p.PermohonanPPIDID"
-                           class="flex items-center justify-center gap-2 w-full bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors">
-                            📝 Isi Kuesioner Kepuasan
-                        </a>
-                    }
-                </div>
-            }
-
             @* Upload Laporan / Tugas Final *@
             @{
                 var dokTugas   = p.Dokumen.Where(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
@@ -492,9 +452,7 @@
                             {
                                 <div class="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
                                     <span class="text-indigo-500 text-sm flex-shrink-0">📎</span>
-                                    <p class="text-xs text-indigo-700 flex-1 truncate font-medium">
-                                        @f.NamaDokumenPPID
-                                    </p>
+                                    <p class="text-xs text-indigo-700 flex-1 truncate font-medium">@f.NamaDokumenPPID</p>
                                     <a href="@f.UploadDokumenPPID" target="_blank"
                                        class="text-[10px] text-indigo-500 hover:underline flex-shrink-0">Lihat</a>
                                 </div>
@@ -533,7 +491,6 @@
 (function () {
     'use strict';
 
-    // Data awal dari server (ISO 8601 UTC)
     const noPermohonan   = @Json.Serialize(p.NoPermohonan);
     const initStatusId   = @(p.StatusPPIDID?.ToString() ?? "null");
     const initChangedAt  = @Json.Serialize(Model.LastChangedAt.ToString("O"));
@@ -541,15 +498,14 @@
     let lastChangedAt = initChangedAt;
     let pollTimer     = null;
     let failCount     = 0;
-    const MAX_FAIL    = 5;   // stop polling after 5 consecutive failures
-    const INTERVAL_MS = 30_000; // 30 seconds
+    const MAX_FAIL    = 5;
+    const INTERVAL_MS = 30_000;
 
     function showBanner(message) {
         const banner = document.getElementById('update-banner');
         if (banner) {
             if (message) banner.textContent = message;
             banner.classList.remove('hidden');
-            // Shift page content down
             document.body.style.paddingTop = banner.offsetHeight + 'px';
         }
     }
@@ -576,14 +532,14 @@
             const data = await resp.json();
             if (!data) return;
 
-            failCount = 0; // reset failure count on success
+            failCount = 0;
 
-            const statusChanged  = data.statusId !== initStatusId;
-            const dataChanged    = data.lastChangedAt !== lastChangedAt;
+            const statusChanged = data.statusId !== initStatusId;
+            const dataChanged   = data.lastChangedAt !== lastChangedAt;
 
             if (statusChanged) {
                 showBanner('🔔 Status permohonan telah diperbarui — klik untuk memuat ulang');
-                clearInterval(pollTimer); // stop further polling, user should reload
+                clearInterval(pollTimer);
                 setIndicator(false, 'Status berubah — klik banner untuk refresh');
                 return;
             }
@@ -595,7 +551,6 @@
                 return;
             }
 
-            // no change
             setIndicator(true, 'Pembaruan otomatis aktif');
 
         } catch (err) {
@@ -609,10 +564,8 @@
         }
     }
 
-    // Jangan poll jika permohonan sudah selesai — tidak akan berubah lagi
     const isFinished = initStatusId === @StatusId.Selesai;
     if (!isFinished) {
-        // Tunda polling pertama 5 detik setelah halaman dimuat
         setTimeout(() => {
             poll();
             pollTimer = setInterval(poll, INTERVAL_MS);
@@ -621,7 +574,6 @@
         setIndicator(false, 'Permohonan selesai');
     }
 
-    // Pause polling saat tab tidak aktif, resume saat aktif kembali
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             clearInterval(pollTimer);
