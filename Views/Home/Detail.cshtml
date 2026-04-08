@@ -299,11 +299,20 @@
                                     </div>
                                 }
 
-                                @* Step aktif lainnya (non-parallel, non-wawancara-only) *@
-                                @if (step.AktifSekarang && !isParallelActive
-                                     && !(p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi && p.StatusPPIDID == StatusId.WawancaraDijadwalkan))
+                                @* Step aktif lainnya — kecuali Selesai *@
+                                @if (step.AktifSekarang && !isParallelActive && step.StatusId != StatusId.Selesai
+                                     && !(p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi
+                                          && p.StatusPPIDID == StatusId.WawancaraDijadwalkan))
                                 {
                                     <p class="text-blue-500 text-xs mt-1 font-medium">⏳ Sedang dalam proses</p>
+                                }
+
+                                @* Step Selesai aktif: tampilkan info selesai *@
+                                @if (step.AktifSekarang && step.StatusId == StatusId.Selesai)
+                                {
+                                    <p class="text-emerald-600 text-xs mt-1 font-semibold">
+                                        🏁 Permohonan telah selesai@(p.TanggalSelesai.HasValue ? $" — {p.TanggalSelesai.Value:dd MMM yyyy}" : "")
+                                    </p>
                                 }
                             </div>
                         </div>
@@ -459,6 +468,51 @@
                             📝 Isi Kuesioner Kepuasan
                         </a>
                     }
+                </div>
+            }
+
+            @* Upload Laporan / Tugas Final *@
+            @{
+                var dokTugas   = p.Dokumen.Where(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+                                          .OrderByDescending(d => d.CreatedAt).ToList();
+                bool canUpload = p.StatusPPIDID >= StatusId.DataSiap;
+            }
+            @if (canUpload)
+            {
+                <div class="bg-white rounded-2xl border border-indigo-200 shadow-sm p-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-7 h-7 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-center text-sm">📤</div>
+                        <p class="font-bold text-gray-800 text-sm">Laporan / Tugas Final</p>
+                    </div>
+
+                    @if (dokTugas.Any())
+                    {
+                        <div class="space-y-1.5 mb-3">
+                            @foreach (var f in dokTugas)
+                            {
+                                <div class="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                                    <span class="text-indigo-500 text-sm flex-shrink-0">📎</span>
+                                    <p class="text-xs text-indigo-700 flex-1 truncate font-medium">
+                                        @f.NamaDokumenPPID
+                                    </p>
+                                    <a href="@f.UploadDokumenPPID" target="_blank"
+                                       class="text-[10px] text-indigo-500 hover:underline flex-shrink-0">Lihat</a>
+                                </div>
+                            }
+                        </div>
+                        <p class="text-[10px] text-gray-400 mb-3">Sudah diunggah @dokTugas.Count berkas. Klik tombol di bawah untuk revisi.</p>
+                    }
+                    else
+                    {
+                        <p class="text-indigo-600 text-xs mb-3 leading-relaxed">
+                            Data sudah tersedia. Setelah penelitian selesai, unggah laporan / tugas akhir Anda di sini.
+                        </p>
+                    }
+
+                    <a asp-action="UploadTugas" asp-controller="Home" asp-route-id="@p.PermohonanPPIDID"
+                       class="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors">
+                        📤 @(dokTugas.Any() ? "Unggah Revisi Laporan" : "Unggah Laporan")
+                    </a>
                 </div>
             }
 

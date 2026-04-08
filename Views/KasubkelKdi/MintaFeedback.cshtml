@@ -1,6 +1,6 @@
 @* ══════════════════════════════════════════════════════════════════════
    Views/KasubkelKdi/MintaFeedback.cshtml
-   Konfirmasi sebelum mengubah status ke FeedbackPemohon (15)
+   FIX: lacakUrl menggunakan Url.Action agar benar di semua environment
 ══════════════════════════════════════════════════════════════════════ *@
 @model PermohonanPPID
 @{
@@ -10,7 +10,11 @@
 
     var pr       = Model.Pribadi;
     bool hasData = ViewData["HasData"] as bool? ?? false;
-    var lacakUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/Lacak?noPermohonan={Uri.EscapeDataString(Model.NoPermohonan ?? "")}";
+
+    @* FIX: gunakan Url.Action — /Lacak saja tidak valid dengan routing default *@
+    var lacakUrl = Url.Action("Lacak", "Home",
+        new { noPermohonan = Model.NoPermohonan },
+        Context.Request.Scheme)!;
 }
 
 <div class="max-w-xl mx-auto">
@@ -56,6 +60,7 @@
                 <li>• Status berubah dari <strong>Data Siap</strong> ke <strong>Feedback Pemohon</strong></li>
                 <li>• Pemohon dapat melihat status dan mengunduh data di portal publik</li>
                 <li>• Pemohon diminta mengisi kuesioner kepuasan layanan</li>
+                <li>• Pemohon juga dapat mengunggah laporan/tugas final mereka</li>
                 <li>• Setelah kuesioner diisi, status otomatis menjadi <strong>Selesai</strong></li>
                 <li>• Jika pemohon tidak merespons, KDI dapat tandai selesai secara manual</li>
             </ul>

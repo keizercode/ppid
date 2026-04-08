@@ -336,7 +336,7 @@
                 </div>
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 text-xs text-gray-600">
                     <p class="font-bold mb-1">Link lacak untuk dikirim ke pemohon:</p>
-                    <code class="text-blue-600 break-all">@(Context.Request.Scheme)://@(Context.Request.Host)/Lacak?noPermohonan=@Uri.EscapeDataString(p.NoPermohonan ?? "")</code>
+                    <code class="text-blue-600 break-all">@Url.Action("Lacak", "Home", new { noPermohonan = p.NoPermohonan }, Context.Request.Scheme)</code>
                 </div>
             }
 
@@ -387,6 +387,40 @@
         </div>
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Info Permohonan</p>
+
+@{
+                // SubTasks.cshtml — tambahkan di bawah "Info Permohonan" card
+                var tugasDocs = await db.DokumenPPID
+                    .Where(d => d.PermohonanPPIDID == p.PermohonanPPIDID
+                             && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToListAsync();
+            }
+            @if (tugasDocs.Any())
+            {
+                <div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5">
+                    <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">
+                        Laporan Final Pemohon (@tugasDocs.Count)
+                    </p>
+                    <div class="space-y-2">
+                        @foreach (var f in tugasDocs)
+                        {
+                            <div class="flex items-center gap-2.5 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2">
+                                <span class="text-indigo-500 flex-shrink-0">📎</span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-medium text-indigo-800 truncate">@f.NamaDokumenPPID</p>
+                                    <p class="text-[10px] text-indigo-400">@f.CreatedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                                </div>
+                                <a href="@f.UploadDokumenPPID" target="_blank"
+                                   class="text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded-lg font-medium">
+                                    Unduh
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
             <dl class="space-y-2">
                 <div><dt class="text-[10px] text-gray-400 uppercase font-semibold">Batas Waktu</dt>
                     <dd class="text-sm @(p.IsOverdue ? "text-red-600 font-semibold" : "text-gray-700")">

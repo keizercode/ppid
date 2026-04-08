@@ -682,3 +682,22 @@ public class ReplaceFileSubTaskVm
     [Display(Name = "Catatan Revisi")]
     public string? CatatanRevisi { get; set; }
 }
+
+/// <summary>Upload laporan/tugas final oleh pemohon via portal publik.</summary>
+public class UploadTugasVm
+{
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+
+    /// <summary>Dokumen TugasFinal yang sudah pernah diupload sebelumnya.</summary>
+    public List<DokumenPPID> FilesUploaded { get; set; } = [];
+
+    [Required(ErrorMessage = "File laporan wajib dipilih")]
+    [Display(Name = "File Laporan / Tugas Akhir")]
+    public IFormFile? FileTugas { get; set; }
+
+    [Display(Name = "Catatan (opsional)")]
+    public string? Catatan { get; set; }
+}

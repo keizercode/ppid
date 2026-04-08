@@ -401,6 +401,7 @@ public static class JenisDokumenId
     public const int IdentifikasiSigned = 5;
     public const int SuratIzin          = 6;
     public const int DataHasil          = 7;
+    public const int TugasFinal = 8;
 }
 
 public static class KeperluanId

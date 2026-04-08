@@ -282,13 +282,14 @@ public class HomeController(
 
         if (isWawancaraOnly)
         {
+            // Wawancara-only: step 6 langsung jadwal wawancara
             steps.Add((StatusId.WawancaraDijadwalkan, "6. Jadwal Wawancara Dibuat",
                 p.NamaProdusenData != null ? $"PIC: {p.NamaProdusenData}" : null));
-            steps.Add((StatusId.WawancaraSelesai, "7. Wawancara Selesai", null));
         }
         else
         {
-            // Step 6: parallel processing — sub-label dinamis berdasarkan jenis keperluan
+            // Parallel mode (data / observasi / wawancara):
+            // SATU step 6 saja — detail progress ditampilkan di panel sub-tugas
             var keperluanList = new List<string>();
             if (p.IsPermintaanData) keperluanList.Add("Permintaan Data");
             if (p.IsObservasi)      keperluanList.Add("Observasi");
@@ -296,24 +297,12 @@ public class HomeController(
 
             steps.Add((StatusId.Didisposisi, "6. Pembuatan Jadwal / Pemrosesan Data",
                 keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null));
-
-            if (p.IsObservasi)
-            {
-                steps.Add((StatusId.ObservasiDijadwalkan, "6b. Observasi Dijadwalkan", null));
-                steps.Add((StatusId.ObservasiSelesai,     "6c. Observasi Selesai",     null));
-            }
-
-            if (p.IsWawancara)
-            {
-                steps.Add((StatusId.WawancaraDijadwalkan, "6d. Wawancara Dijadwalkan", null));
-                steps.Add((StatusId.WawancaraSelesai,     "6e. Wawancara Selesai",     null));
-            }
-
-            steps.Add((StatusId.DataSiap, "7. Data Tersedia", null));
         }
 
-        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback Pemohon", null));
-        steps.Add((StatusId.Selesai,         "9. Selesai",                    null));
+        // Step 7 & 8 tetap sama
+        steps.Add((StatusId.DataSiap,       "7. Data Tersedia",                  null));
+        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Upload Laporan", null));
+        steps.Add((StatusId.Selesai,          "9. Selesai",                       null));
 
         return steps;
     }
@@ -324,5 +313,115 @@ public class HomeController(
         for (int i = 0; i < steps.Count; i++)
             if (steps[i].StatusId <= current) best = i;
         return best >= 0 ? best : steps.Count - 1;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // UPLOAD TUGAS / LAPORAN FINAL PEMOHON
+    // Pemohon mengunggah hasil akhir penelitian setelah data diterima.
+    // Accessible secara publik (tanpa autentikasi) sama seperti Lacak.
+    // ════════════════════════════════════════════════════════════════════════
+
+    [HttpGet("upload-tugas/{id:guid}")]
+    public async Task<IActionResult> UploadTugas(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Dokumen)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        // Hanya izinkan upload jika data sudah siap
+        if (p.StatusPPIDID < StatusId.DataSiap)
+        {
+            TempData["Error"] = "Laporan hanya dapat diunggah setelah data tersedia.";
+            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+        }
+
+        var uploaded = p.Dokumen
+            .Where(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToList();
+
+        return View(new UploadTugasVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+            FilesUploaded    = uploaded,
+        });
+    }
+
+    [HttpPost("upload-tugas"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadTugasPost(UploadTugasVm vm)
+    {
+        if (vm.FileTugas == null || vm.FileTugas.Length == 0)
+        {
+            ModelState.AddModelError(nameof(vm.FileTugas), "File wajib dipilih.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            // Re-load existing uploads
+            var pReload = await db.PermohonanPPID
+                .Include(x => x.Dokumen)
+                .FirstOrDefaultAsync(x => x.PermohonanPPIDID == vm.PermohonanPPIDID);
+            vm.FilesUploaded = pReload?.Dokumen
+                .Where(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToList() ?? [];
+            return View("UploadTugas", vm);
+        }
+
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is null) return NotFound();
+
+        if (p.StatusPPIDID < StatusId.DataSiap)
+        {
+            TempData["Error"] = "Upload tidak diizinkan pada status ini.";
+            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+        }
+
+        var now = DateTime.UtcNow;
+
+        // Simpan file
+        var uploadsDir = Path.Combine(
+            string.IsNullOrEmpty(env.WebRootPath)
+                ? Path.Combine(env.ContentRootPath, "wwwroot")
+                : env.WebRootPath,
+            "uploads", vm.PermohonanPPIDID.ToString());
+        Directory.CreateDirectory(uploadsDir);
+
+        var fn = $"tugas_{now:yyyyMMddHHmmss}_{Path.GetFileName(vm.FileTugas!.FileName)}";
+        await using (var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create))
+            await vm.FileTugas.CopyToAsync(s);
+
+        var fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+
+        db.DokumenPPID.Add(new DokumenPPID
+        {
+            PermohonanPPIDID     = vm.PermohonanPPIDID,
+            NamaDokumenPPID      = $"Laporan/Tugas Final — {vm.FileTugas.FileName}",
+            UploadDokumenPPID    = fp,
+            JenisDokumenPPIDID   = JenisDokumenId.TugasFinal,
+            NamaJenisDokumenPPID = "Tugas / Laporan Final",
+            CreatedAt            = now
+        });
+
+        db.AuditLog.Add(new AuditLogPPID
+        {
+            PermohonanPPIDID = vm.PermohonanPPIDID,
+            StatusLama       = p.StatusPPIDID,
+            StatusBaru       = p.StatusPPIDID ?? StatusId.DataSiap,
+            Keterangan       = $"Pemohon mengunggah laporan/tugas final: {vm.FileTugas.FileName}. Catatan: {vm.Catatan ?? "(kosong)"}",
+            Operator         = "Pemohon",
+            CreatedAt        = now
+        });
+
+        await db.SaveChangesAsync();
+
+        TempData["SuccessTugas"] = "Laporan berhasil diunggah! Terima kasih telah menyelesaikan penelitian Anda.";
+        return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
     }
 }
