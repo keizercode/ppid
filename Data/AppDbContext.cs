@@ -20,14 +20,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder m)
     {
-        // ── Pribadi ───────────────────────────────────────────────────────
         m.Entity<Pribadi>().HasKey(e => e.PribadiID);
         m.Entity<Pribadi>()
             .HasOne(e => e.PribadiPPID)
             .WithOne(e => e.Pribadi)
             .HasForeignKey<PribadiPPID>(e => e.PribadiID);
 
-        // ── PermohonanPPID ────────────────────────────────────────────────
         m.Entity<PermohonanPPID>()
             .HasOne(e => e.Status).WithMany()
             .HasForeignKey(e => e.StatusPPIDID);
@@ -46,7 +44,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         m.Entity<PermohonanPPID>()
             .HasIndex(e => e.NoPermohonan).IsUnique();
 
-        // ── SubTaskPPID ───────────────────────────────────────────────────
         m.Entity<SubTaskPPID>()
             .HasOne(e => e.Permohonan).WithMany()
             .HasForeignKey(e => e.PermohonanPPIDID)
@@ -56,22 +53,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         m.Entity<SubTaskPPID>()
             .HasIndex(e => new { e.PermohonanPPIDID, e.JenisTask });
 
-        // ── AppUser ───────────────────────────────────────────────────────
         m.Entity<AppUser>()
             .HasIndex(e => e.Username).IsUnique();
 
-        // ── SEED DATA ─────────────────────────────────────────────────────
-        // CATATAN PENTING: HasData() di sini HARUS SYNC dengan migration snapshot.
-        // Jangan tambah/ubah seed di sini tanpa membuat migration baru.
-        // Gunakan migration SQL ON CONFLICT DO NOTHING untuk data operasional.
         SeedStatusPPID(m);
         SeedKeperluan(m);
         SeedJenisDokumen(m);
     }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // SEED DATA — dikelola via EF Core migrations
-    // ════════════════════════════════════════════════════════════════════════
 
     private static void SeedStatusPPID(ModelBuilder m) =>
         m.Entity<StatusPPID>().HasData(
@@ -114,10 +102,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // NOPERMOHONAN GENERATOR
     // ════════════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Generate nomor permohonan unik secara atomic menggunakan advisory lock PostgreSQL.
-    /// Format: MHS687592/PPID/III/2026 (Kepegawaian) | UMM687592/PPID/III/2026 (Umum)
-    /// </summary>
     public async Task<(string NoPermohonan, int Sequence)> GenerateNoPermohonan(
         string loketJenis = LoketJenis.Kepegawaian)
     {
@@ -129,7 +113,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         await using var tx = await Database.BeginTransactionAsync();
         try
         {
-            // Advisory lock per tahun — mencegah race condition pada counter
             await Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(20250002)");
 
             await Database.ExecuteSqlAsync($"""
@@ -177,11 +160,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // HELPER METHODS
     // ════════════════════════════════════════════════════════════════════════
 
-    /// <summary>Batas waktu default: tanggal permohonan + 14 hari kalender.</summary>
     public static DateOnly HitungBatasWaktu(DateOnly tanggalPermohonan) =>
         tanggalPermohonan.AddDays(14);
 
-    /// <summary>Tambahkan entri audit log ke context (belum disimpan ke DB).</summary>
     public void AddAuditLog(
         Guid permohonanId, int? statusLama, int statusBaru,
         string keterangan, string operatorName)
@@ -201,10 +182,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // SUBTASK PARALLEL HELPERS
     // ════════════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Buat sub-task paralel saat KDI menerima disposisi.
-    /// Idempotent — tidak membuat duplikat jika dipanggil ulang.
-    /// </summary>
     public void CreateSubTasks(
         Guid permohonanId, bool perluData, bool perluObs,
         bool perluWaw, string operatorName)
@@ -242,352 +219,299 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             });
     }
 
-// ── GANTI AdvanceIfAllSubTasksDone ───────────────────────────────────────────
-/// <summary>
-/// Cek apakah semua sub-task *yang aktif* (bukan dibatalkan) sudah selesai.
-/// Jika ya, advance status permohonan ke DataSiap.
-///
-/// EC-4: Menggunakan advisory lock (20250003) agar tidak ada dua request
-///       yang sama-sama lolos cek "all done" sebelum salah satunya save.
-///       Lock di-acquire SEBELUM membaca status SubTask.
-///
-/// Catatan: SubTask yang Dibatalkan tidak dihitung → permohonan tetap bisa
-///          advance meski satu sub-task dibatalkan (misal obs dibatalkan,
-///          tapi data dan wawancara sudah selesai → DataSiap).
-/// </summary>
-public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
-{
-    // Advisory lock mencegah race condition di concurrent request.
-    // Lock otomatis dilepas saat transaksi berakhir.
-    await Database.ExecuteSqlAsync(
-        $"SELECT pg_advisory_xact_lock(20250003, {permohonanId.GetHashCode()})");
-
-    // Re-read state SETELAH lock diperoleh (agar tidak pakai stale data).
-    var tasks = await SubTaskPPID
-        .Where(t => t.PermohonanPPIDID == permohonanId)
-        .ToListAsync();
-
-    // Hanya task non-dibatalkan yang diperhitungkan.
-    var activeTasks = tasks.Where(t => t.StatusTask != SubTaskStatus.Dibatalkan).ToList();
-
-    if (activeTasks.Count == 0)
-        return false;
-
-    // Semua active task harus Selesai.
-    if (!activeTasks.All(t => t.IsSelesai))
-        return false;
-
-    var p = await PermohonanPPID.FindAsync(permohonanId);
-    if (p is null || p.StatusPPIDID >= Models.StatusId.DataSiap)
-        return false;   // sudah advance atau tidak valid
-
-    var lama       = p.StatusPPIDID;
-    p.StatusPPIDID = Models.StatusId.DataSiap;
-    p.UpdatedAt    = DateTime.UtcNow;
-
-    int selesaiCount = activeTasks.Count;
-    int batalCount   = tasks.Count(t => t.IsDibatalkan);
-    string keterangan = $"Semua sub-tugas aktif selesai ({selesaiCount} selesai" +
-                        (batalCount > 0 ? $", {batalCount} dibatalkan" : "") +
-                        ") — data siap diunduh pemohon.";
-
-    AddAuditLog(permohonanId, lama, Models.StatusId.DataSiap, keterangan, operatorName);
-    return true;
-}
-
-
-/// <summary>
-/// Ambil jadwal aktif (terbaru) untuk permohonan + jenis tertentu (EC-1).
-/// Jadwal lama (reschedule history) tetap ada di DB dengan IsAktif = false.
-/// </summary>
-public async Task<JadwalPPID?> GetJadwalAktif(Guid permohonanId, string jenisJadwal) =>
-    await JadwalPPID.FirstOrDefaultAsync(j =>
-        j.PermohonanPPIDID == permohonanId &&
-        j.JenisJadwal      == jenisJadwal  &&
-        j.IsAktif);
-
-
-
-/// <summary>Seluruh riwayat jadwal untuk audit trail (EC-1).</summary>
-public async Task<List<JadwalPPID>> GetJadwalHistory(Guid permohonanId, string jenisJadwal) =>
-    await JadwalPPID
-        .Where(j => j.PermohonanPPIDID == permohonanId && j.JenisJadwal == jenisJadwal)
-        .OrderByDescending(j => j.CreatedAt)
-        .ToListAsync();
-
-
-
-// ── TAMBAH RescheduleSubTask ─────────────────────────────────────────────────
-/// <summary>
-/// EC-1: Reschedule jadwal (berubah mendadak).
-///
-/// Langkah:
-///   1. Nonaktifkan jadwal lama (IsAktif = false)
-///   2. Buat jadwal baru sebagai aktif
-///   3. Update SubTask (tanggal, waktu, PIC, +1 RescheduleCount)
-///   4. Catat di AuditLog
-///   5. TIDAK mengubah status permohonan utama (sudah WawancaraDijadwalkan/ObservasiDijadwalkan)
-///
-/// Return: false jika SubTask tidak ditemukan atau sudah Selesai/Dibatalkan.
-/// </summary>
-public async Task<bool> RescheduleSubTask(
-    Guid     permohonanId,
-    string   jenisTask,
-    DateOnly tanggalBaru,
-    TimeOnly waktuBaru,
-    string   namaPicBaru,
-    string?  teleponPicBaru,
-    string   alasanReschedule,
-    string   operatorName)
-{
-    var sub = await GetSubTask(permohonanId, jenisTask);
-    if (sub is null) return false;
-
-    // Tidak boleh reschedule task yang sudah terminal.
-    if (sub.IsTerminal)
-        return false;
-
-    var now = DateTime.UtcNow;
-
-    // 1. Nonaktifkan semua jadwal lama.
-    var jadwalLama = await JadwalPPID
-        .Where(j => j.PermohonanPPIDID == permohonanId &&
-                    j.JenisJadwal      == jenisTask    &&
-                    j.IsAktif)
-        .ToListAsync();
-
-    foreach (var j in jadwalLama)
+    // ════════════════════════════════════════════════════════════════════════
+    // BUG FIX EC-CORE-1: AdvanceIfAllSubTasksDone
+    //
+    // BUG LAMA: guard pakai `p.StatusPPIDID >= StatusId.DataSiap`
+    //   - DataSiap = 10, WawancaraDijadwalkan = 12, WawancaraSelesai = 13
+    //   - 12 >= 10 = TRUE → return false → status TIDAK PERNAH naik ke DataSiap
+    //   - Inilah penyebab status di lacak tidak update dan panel admin stuck
+    //
+    // FIX: gunakan whitelist status terminal yang benar, bukan perbandingan angka.
+    //   Status 12-15 bukan "sudah selesai" — itu status intermediate yang
+    //   nomor ID-nya kebetulan lebih besar dari DataSiap(10) karena ditambah belakangan.
+    // ════════════════════════════════════════════════════════════════════════
+    public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
     {
-        j.IsAktif   = false;
-        j.UpdatedAt = now;
+        // Advisory lock mencegah race condition di concurrent request.
+        await Database.ExecuteSqlAsync(
+            $"SELECT pg_advisory_xact_lock(20250003, {permohonanId.GetHashCode()})");
+
+        // Re-read state SETELAH lock diperoleh.
+        var tasks = await SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == permohonanId)
+            .ToListAsync();
+
+        // Hanya task non-dibatalkan yang diperhitungkan.
+        var activeTasks = tasks.Where(t => t.StatusTask != SubTaskStatus.Dibatalkan).ToList();
+
+        if (activeTasks.Count == 0)
+            return false;
+
+        // Semua active task harus Selesai.
+        if (!activeTasks.All(t => t.IsSelesai))
+            return false;
+
+        var p = await PermohonanPPID.FindAsync(permohonanId);
+
+        // FIX: hanya skip jika sudah di status terminal yang benar.
+        // JANGAN pakai >= DataSiap karena WawancaraDijadwalkan(12), WawancaraSelesai(13),
+        // MenungguVerifikasi(14), FeedbackPemohon(15) semua > DataSiap(10) secara angka
+        // padahal bukan terminal state — ini root cause bug status tidak pernah maju.
+        if (p is null
+            || p.StatusPPIDID == Models.StatusId.DataSiap
+            || p.StatusPPIDID == Models.StatusId.FeedbackPemohon
+            || p.StatusPPIDID == Models.StatusId.Selesai)
+            return false;
+
+        var lama       = p.StatusPPIDID;
+        p.StatusPPIDID = Models.StatusId.DataSiap;
+        p.UpdatedAt    = DateTime.UtcNow;
+
+        int selesaiCount = activeTasks.Count;
+        int batalCount   = tasks.Count(t => t.IsDibatalkan);
+        string keterangan = $"Semua sub-tugas aktif selesai ({selesaiCount} selesai" +
+                            (batalCount > 0 ? $", {batalCount} dibatalkan" : "") +
+                            ") — data siap diunduh pemohon.";
+
+        AddAuditLog(permohonanId, lama, Models.StatusId.DataSiap, keterangan, operatorName);
+        return true;
     }
 
-    // 2. Buat jadwal baru.
-    JadwalPPID.Add(new Models.JadwalPPID
+    public async Task<JadwalPPID?> GetJadwalAktif(Guid permohonanId, string jenisJadwal) =>
+        await JadwalPPID.FirstOrDefaultAsync(j =>
+            j.PermohonanPPIDID == permohonanId &&
+            j.JenisJadwal      == jenisJadwal  &&
+            j.IsAktif);
+
+    public async Task<List<JadwalPPID>> GetJadwalHistory(Guid permohonanId, string jenisJadwal) =>
+        await JadwalPPID
+            .Where(j => j.PermohonanPPIDID == permohonanId && j.JenisJadwal == jenisJadwal)
+            .OrderByDescending(j => j.CreatedAt)
+            .ToListAsync();
+
+    public async Task<bool> RescheduleSubTask(
+        Guid     permohonanId,
+        string   jenisTask,
+        DateOnly tanggalBaru,
+        TimeOnly waktuBaru,
+        string   namaPicBaru,
+        string?  teleponPicBaru,
+        string   alasanReschedule,
+        string   operatorName)
     {
-        PermohonanPPIDID = permohonanId,
-        JenisJadwal      = jenisTask,
-        Tanggal          = tanggalBaru,
-        Waktu            = waktuBaru,
-        NamaPIC          = namaPicBaru,
-        TeleponPIC       = teleponPicBaru,
-        Keterangan       = alasanReschedule,
-        IsAktif          = true,
-        CreatedAt        = now,
-    });
+        var sub = await GetSubTask(permohonanId, jenisTask);
+        if (sub is null) return false;
+        if (sub.IsTerminal) return false;
 
-    // 3. Update SubTask.
-    sub.TanggalJadwal    = tanggalBaru;
-    sub.WaktuJadwal      = waktuBaru;
-    sub.NamaPIC          = namaPicBaru;
-    sub.TeleponPIC       = teleponPicBaru;
-    sub.StatusTask       = SubTaskStatus.InProgress; // pastikan masih InProgress
-    sub.RescheduleCount += 1;
-    sub.Operator         = operatorName;
-    sub.UpdatedAt        = now;
+        var now = DateTime.UtcNow;
 
-    // 4. Audit log.
-    var p = await PermohonanPPID.FindAsync(permohonanId);
-    if (p is not null)
-        AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
-            $"Reschedule {Models.JenisTask.GetLabel(jenisTask)} " +
-            $"(ke-{sub.RescheduleCount}): " +
-            $"{tanggalBaru:dd MMM yyyy} pukul {waktuBaru:HH:mm}, " +
-            $"PIC: {namaPicBaru}. Alasan: {alasanReschedule}",
-            operatorName);
+        var jadwalLama = await JadwalPPID
+            .Where(j => j.PermohonanPPIDID == permohonanId &&
+                        j.JenisJadwal      == jenisTask    &&
+                        j.IsAktif)
+            .ToListAsync();
 
-    return true;
-}
+        foreach (var j in jadwalLama)
+        {
+            j.IsAktif   = false;
+            j.UpdatedAt = now;
+        }
 
-// ── TAMBAH BatalSubTask ──────────────────────────────────────────────────────
-/// <summary>
-/// EC-2: Batalkan SubTask dengan alasan.
-///
-/// SubTask yang dibatalkan tidak dihitung dalam AdvanceIfAllSubTasksDone,
-/// sehingga permohonan tetap bisa advance ke DataSiap jika task lain selesai.
-///
-/// Jika semua active task sudah selesai SETELAH pembatalan ini,
-/// kembalikan true agar caller bisa memanggil AdvanceIfAllSubTasksDone.
-/// </summary>
-public async Task<bool> BatalSubTask(
-    Guid   permohonanId,
-    string jenisTask,
-    string alasanBatal,
-    string operatorName)
-{
-    var sub = await GetSubTask(permohonanId, jenisTask);
-    if (sub is null) return false;
+        JadwalPPID.Add(new Models.JadwalPPID
+        {
+            PermohonanPPIDID = permohonanId,
+            JenisJadwal      = jenisTask,
+            Tanggal          = tanggalBaru,
+            Waktu            = waktuBaru,
+            NamaPIC          = namaPicBaru,
+            TeleponPIC       = teleponPicBaru,
+            Keterangan       = alasanReschedule,
+            IsAktif          = true,
+            CreatedAt        = now,
+        });
 
-    // Tidak boleh membatalkan task yang sudah Selesai.
-    if (sub.IsSelesai)
-        return false;
+        sub.TanggalJadwal    = tanggalBaru;
+        sub.WaktuJadwal      = waktuBaru;
+        sub.NamaPIC          = namaPicBaru;
+        sub.TeleponPIC       = teleponPicBaru;
+        sub.StatusTask       = SubTaskStatus.InProgress;
+        sub.RescheduleCount += 1;
+        sub.Operator         = operatorName;
+        sub.UpdatedAt        = now;
 
-    var now = DateTime.UtcNow;
+        var p = await PermohonanPPID.FindAsync(permohonanId);
+        if (p is not null)
+            AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
+                $"Reschedule {Models.JenisTask.GetLabel(jenisTask)} " +
+                $"(ke-{sub.RescheduleCount}): " +
+                $"{tanggalBaru:dd MMM yyyy} pukul {waktuBaru:HH:mm}, " +
+                $"PIC: {namaPicBaru}. Alasan: {alasanReschedule}",
+                operatorName);
 
-    // Nonaktifkan jadwal jika ada.
-    var jadwalAktif = await JadwalPPID
-        .Where(j => j.PermohonanPPIDID == permohonanId &&
-                    j.JenisJadwal      == jenisTask    &&
-                    j.IsAktif)
-        .ToListAsync();
-    foreach (var j in jadwalAktif)
-    {
-        j.IsAktif   = false;
-        j.UpdatedAt = now;
+        return true;
     }
 
-    sub.StatusTask  = SubTaskStatus.Dibatalkan;
-    sub.BatalAlasan = alasanBatal;
-    sub.Operator    = operatorName;
-    sub.UpdatedAt   = now;
-
-    var p = await PermohonanPPID.FindAsync(permohonanId);
-    if (p is not null)
-        AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
-            $"Sub-tugas {Models.JenisTask.GetLabel(jenisTask)} dibatalkan. Alasan: {alasanBatal}",
-            operatorName);
-
-    return true;
-}
-
-// ── TAMBAH ReopenSubTask ─────────────────────────────────────────────────────
-/// <summary>
-/// EC-3: Buka kembali SubTask yang sudah Selesai/Dibatalkan.
-///
-/// Kasus: hasil wawancara/observasi ternyata kurang/salah, atau
-///        task yang sebelumnya dibatalkan ternyata perlu dikerjakan.
-///
-/// Efek samping: jika permohonan sudah DataSiap, status TIDAK di-rollback
-///               secara otomatis — caller harus putuskan apakah perlu rollback.
-///               Return nilai kedua (bool) = apakah status permohonan perlu di-rollback.
-/// </summary>
-public async Task<(bool Success, bool NeedsRollback)> ReopenSubTask(
-    Guid   permohonanId,
-    string jenisTask,
-    string alasanReopen,
-    string operatorName)
-{
-    var sub = await GetSubTask(permohonanId, jenisTask);
-    if (sub is null) return (false, false);
-
-    // Hanya bisa reopen task yang terminal.
-    if (!sub.IsTerminal) return (false, false);
-
-    var now = DateTime.UtcNow;
-
-    sub.StatusTask   = SubTaskStatus.Pending;   // kembali ke Pending, bukan InProgress
-    sub.ReopenedAt   = now;
-    sub.ReopenAlasan = alasanReopen;
-    sub.BatalAlasan  = null;
-    sub.SelesaiAt    = null;
-    sub.FilePath     = null;
-    sub.NamaFile     = null;
-    sub.Operator     = operatorName;
-    sub.UpdatedAt    = now;
-
-    var p = await PermohonanPPID.FindAsync(permohonanId);
-    bool needsRollback = p is not null && p.StatusPPIDID >= Models.StatusId.DataSiap;
-
-    if (p is not null)
-        AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
-            $"Sub-tugas {Models.JenisTask.GetLabel(jenisTask)} di-reopen. " +
-            $"Alasan: {alasanReopen}",
-            operatorName);
-
-    return (true, needsRollback);
-}
-
-// ── TAMBAH UpdatePICSubTask ──────────────────────────────────────────────────
-/// <summary>
-/// EC-6: Ganti PIC/narasumber TANPA mengubah tanggal dan waktu jadwal.
-///
-/// Berbeda dengan reschedule — ini hanya update kontak, tidak menambah
-/// entri JadwalPPID baru dan tidak menambah RescheduleCount.
-/// </summary>
-public async Task<bool> UpdatePICSubTask(
-    Guid    permohonanId,
-    string  jenisTask,
-    string  namaPicBaru,
-    string? teleponPicBaru,
-    string? catatanPerubahan,
-    string  operatorName)
-{
-    var sub = await GetSubTask(permohonanId, jenisTask);
-    if (sub is null || sub.IsTerminal) return false;
-
-    var now = DateTime.UtcNow;
-
-    // Update SubTask.
-    string picLama    = sub.NamaPIC ?? "(kosong)";
-    sub.NamaPIC       = namaPicBaru;
-    sub.TeleponPIC    = teleponPicBaru;
-    sub.Operator      = operatorName;
-    sub.UpdatedAt     = now;
-
-    // Update jadwal aktif juga.
-    var jadwalAktif = await GetJadwalAktif(permohonanId, jenisTask);
-    if (jadwalAktif is not null)
+    public async Task<bool> BatalSubTask(
+        Guid   permohonanId,
+        string jenisTask,
+        string alasanBatal,
+        string operatorName)
     {
-        jadwalAktif.NamaPIC    = namaPicBaru;
-        jadwalAktif.TeleponPIC = teleponPicBaru;
-        if (!string.IsNullOrEmpty(catatanPerubahan))
-            jadwalAktif.Keterangan = $"[Ganti PIC] {catatanPerubahan}";
-        jadwalAktif.UpdatedAt  = now;
+        var sub = await GetSubTask(permohonanId, jenisTask);
+        if (sub is null) return false;
+        if (sub.IsSelesai) return false;
+
+        var now = DateTime.UtcNow;
+
+        var jadwalAktif = await JadwalPPID
+            .Where(j => j.PermohonanPPIDID == permohonanId &&
+                        j.JenisJadwal      == jenisTask    &&
+                        j.IsAktif)
+            .ToListAsync();
+        foreach (var j in jadwalAktif)
+        {
+            j.IsAktif   = false;
+            j.UpdatedAt = now;
+        }
+
+        sub.StatusTask  = SubTaskStatus.Dibatalkan;
+        sub.BatalAlasan = alasanBatal;
+        sub.Operator    = operatorName;
+        sub.UpdatedAt   = now;
+
+        var p = await PermohonanPPID.FindAsync(permohonanId);
+        if (p is not null)
+            AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
+                $"Sub-tugas {Models.JenisTask.GetLabel(jenisTask)} dibatalkan. Alasan: {alasanBatal}",
+                operatorName);
+
+        return true;
     }
 
-    var p = await PermohonanPPID.FindAsync(permohonanId);
-    if (p is not null)
-        AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
-            $"PIC {Models.JenisTask.GetLabel(jenisTask)} diganti: " +
-            $"{picLama} → {namaPicBaru}" +
-            (string.IsNullOrEmpty(catatanPerubahan) ? "" : $". Catatan: {catatanPerubahan}"),
-            operatorName);
+    // ════════════════════════════════════════════════════════════════════════
+    // BUG FIX EC-CORE-2: ReopenSubTask needsRollback
+    //
+    // BUG LAMA: `p.StatusPPIDID >= Models.StatusId.DataSiap`
+    //   - Sama dengan bug di AdvanceIfAllSubTasksDone
+    //   - WawancaraDijadwalkan(12) >= DataSiap(10) = TRUE
+    //   - Reopen meminta konfirmasi rollback padahal status belum DataSiap
+    //   - Jika operator tidak tahu harus centang apa → form error → reopen gagal
+    //
+    // FIX: whitelist status yang benar-benar perlu di-rollback.
+    // ════════════════════════════════════════════════════════════════════════
+    public async Task<(bool Success, bool NeedsRollback)> ReopenSubTask(
+        Guid   permohonanId,
+        string jenisTask,
+        string alasanReopen,
+        string operatorName)
+    {
+        var sub = await GetSubTask(permohonanId, jenisTask);
+        if (sub is null) return (false, false);
+        if (!sub.IsTerminal) return (false, false);
 
-    return true;
-}
+        var now = DateTime.UtcNow;
 
-// ── TAMBAH ReplaceFileSubTask ────────────────────────────────────────────────
-/// <summary>
-/// EC-7: Ganti file hasil (revisi) setelah SubTask Selesai.
-///
-/// File lama tetap di-record di DokumenPPID untuk audit trail,
-/// SubTask.FilePath diperbarui ke file baru.
-/// </summary>
-public async Task<bool> ReplaceFileSubTask(
-    Guid    permohonanId,
-    string  jenisTask,
-    string  filePathBaru,
-    string  namaFileBaru,
-    string? catatanRevisi,
-    string  operatorName)
-{
-    var sub = await GetSubTask(permohonanId, jenisTask);
+        sub.StatusTask   = SubTaskStatus.Pending;
+        sub.ReopenedAt   = now;
+        sub.ReopenAlasan = alasanReopen;
+        sub.BatalAlasan  = null;
+        sub.SelesaiAt    = null;
+        sub.FilePath     = null;
+        sub.NamaFile     = null;
+        sub.Operator     = operatorName;
+        sub.UpdatedAt    = now;
 
-    // Hanya task Selesai yang bisa replace file.
-    if (sub is null || !sub.IsSelesai) return false;
+        var p = await PermohonanPPID.FindAsync(permohonanId);
 
-    var now = DateTime.UtcNow;
+        // FIX: hanya rollback jika memang sudah di status DataSiap/FeedbackPemohon/Selesai.
+        // BUKAN pakai >= DataSiap karena akan salah deteksi status 12-15.
+        bool needsRollback = p is not null && (
+            p.StatusPPIDID == Models.StatusId.DataSiap ||
+            p.StatusPPIDID == Models.StatusId.FeedbackPemohon ||
+            p.StatusPPIDID == Models.StatusId.Selesai);
 
-    sub.FilePath  = filePathBaru;
-    sub.NamaFile  = namaFileBaru;
-    sub.Catatan   = string.IsNullOrEmpty(catatanRevisi)
-        ? sub.Catatan
-        : $"[Revisi {now:dd MMM HH:mm}] {catatanRevisi}";
-    sub.Operator  = operatorName;
-    sub.UpdatedAt = now;
+        if (p is not null)
+            AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
+                $"Sub-tugas {Models.JenisTask.GetLabel(jenisTask)} di-reopen. " +
+                $"Alasan: {alasanReopen}",
+                operatorName);
 
-    var p = await PermohonanPPID.FindAsync(permohonanId);
-    if (p is not null)
-        AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DataSiap,
-            $"File hasil {Models.JenisTask.GetLabel(jenisTask)} direvisi: " +
-            $"{namaFileBaru}" +
-            (string.IsNullOrEmpty(catatanRevisi) ? "" : $". Catatan: {catatanRevisi}"),
-            operatorName);
+        return (true, needsRollback);
+    }
 
-    return true;
-}
+    public async Task<bool> UpdatePICSubTask(
+        Guid    permohonanId,
+        string  jenisTask,
+        string  namaPicBaru,
+        string? teleponPicBaru,
+        string? catatanPerubahan,
+        string  operatorName)
+    {
+        var sub = await GetSubTask(permohonanId, jenisTask);
+        if (sub is null || sub.IsTerminal) return false;
 
-    /// <summary>Ambil satu SubTask berdasarkan permohonan dan jenis.</summary>
+        var now = DateTime.UtcNow;
+
+        string picLama    = sub.NamaPIC ?? "(kosong)";
+        sub.NamaPIC       = namaPicBaru;
+        sub.TeleponPIC    = teleponPicBaru;
+        sub.Operator      = operatorName;
+        sub.UpdatedAt     = now;
+
+        var jadwalAktif = await GetJadwalAktif(permohonanId, jenisTask);
+        if (jadwalAktif is not null)
+        {
+            jadwalAktif.NamaPIC    = namaPicBaru;
+            jadwalAktif.TeleponPIC = teleponPicBaru;
+            if (!string.IsNullOrEmpty(catatanPerubahan))
+                jadwalAktif.Keterangan = $"[Ganti PIC] {catatanPerubahan}";
+            jadwalAktif.UpdatedAt  = now;
+        }
+
+        var p = await PermohonanPPID.FindAsync(permohonanId);
+        if (p is not null)
+            AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
+                $"PIC {Models.JenisTask.GetLabel(jenisTask)} diganti: " +
+                $"{picLama} → {namaPicBaru}" +
+                (string.IsNullOrEmpty(catatanPerubahan) ? "" : $". Catatan: {catatanPerubahan}"),
+                operatorName);
+
+        return true;
+    }
+
+    public async Task<bool> ReplaceFileSubTask(
+        Guid    permohonanId,
+        string  jenisTask,
+        string  filePathBaru,
+        string  namaFileBaru,
+        string? catatanRevisi,
+        string  operatorName)
+    {
+        var sub = await GetSubTask(permohonanId, jenisTask);
+        if (sub is null || !sub.IsSelesai) return false;
+
+        var now = DateTime.UtcNow;
+
+        sub.FilePath  = filePathBaru;
+        sub.NamaFile  = namaFileBaru;
+        sub.Catatan   = string.IsNullOrEmpty(catatanRevisi)
+            ? sub.Catatan
+            : $"[Revisi {now:dd MMM HH:mm}] {catatanRevisi}";
+        sub.Operator  = operatorName;
+        sub.UpdatedAt = now;
+
+        var p = await PermohonanPPID.FindAsync(permohonanId);
+        if (p is not null)
+            AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DataSiap,
+                $"File hasil {Models.JenisTask.GetLabel(jenisTask)} direvisi: " +
+                $"{namaFileBaru}" +
+                (string.IsNullOrEmpty(catatanRevisi) ? "" : $". Catatan: {catatanRevisi}"),
+                operatorName);
+
+        return true;
+    }
+
     public async Task<SubTaskPPID?> GetSubTask(Guid permohonanId, string jenisTask) =>
         await SubTaskPPID.FirstOrDefaultAsync(t =>
             t.PermohonanPPIDID == permohonanId &&
