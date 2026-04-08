@@ -1,0 +1,75 @@
+@model BatalSubTaskVm
+@{
+    ViewData["Title"] = $"Batalkan {JenisTask.GetLabel(Model.JenisTask)}";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-lg mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-xl">🚫</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Batalkan @JenisTask.GetLabel(Model.JenisTask)</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+    <div class="p-6">
+
+        @if (Model.AkanAdvanceStatus)
+        {
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
+                <span class="text-emerald-500 flex-shrink-0 mt-0.5">✓</span>
+                <p class="text-xs text-emerald-700 leading-relaxed">
+                    Setelah pembatalan ini, semua sub-tugas aktif lainnya sudah selesai.
+                    Status permohonan akan otomatis maju ke <strong>Data Siap</strong>.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
+                <span class="text-amber-500 flex-shrink-0 mt-0.5">⚠️</span>
+                <p class="text-xs text-amber-700 leading-relaxed">
+                    Sub-tugas yang dibatalkan tidak dihitung dalam penyelesaian permohonan.
+                    Permohonan tetap bisa berlanjut dengan tugas-tugas yang tersisa.
+                </p>
+            </div>
+        }
+
+        <form action="/kasubkel-kdi/batal-subtask" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="JenisTask" />
+            <input type="hidden" asp-for="AkanAdvanceStatus" />
+
+            <div class="mb-5">
+                <label class="lbl">Alasan Pembatalan <span class="req">*</span></label>
+                <textarea asp-for="AlasanBatal" rows="3" class="fld resize-none"
+                          placeholder="Jelaskan alasan mengapa sub-tugas ini perlu dibatalkan..."></textarea>
+                <span asp-validation-for="AlasanBatal" class="err"></span>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">
+                    ← Kembali
+                </a>
+                <button type="submit"
+                        onclick="return confirm('Batalkan sub-tugas ini? Tindakan ini tidak dapat diurungkan kecuali dengan Reopen.')"
+                        class="flex-grow bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm">
+                    🚫 Batalkan Sub-tugas
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #ef4444;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>

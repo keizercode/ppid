@@ -1,0 +1,105 @@
+@* ══════════════════════════════════════════════════════════════════════
+   Views/KasubkelKdi/ReopenSubTask.cshtml  — EC-3
+══════════════════════════════════════════════════════════════════════ *@
+@model ReopenSubTaskVm
+@{
+    ViewData["Title"] = $"Buka Kembali {JenisTask.GetLabel(Model.JenisTask)}";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+    string statusLabel = StatusId.GetStepLabel(Model.StatusSaatIni);
+}
+
+<div class="max-w-lg mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center text-xl">↩️</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Buka Kembali @JenisTask.GetLabel(Model.JenisTask)</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+    <div class="p-6">
+
+        @* Warning critical: status akan dimundurkan *@
+        @if (Model.StatusAkanDiRollback)
+        {
+            <div class="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-5">
+                <div class="flex items-start gap-3">
+                    <span class="text-red-500 text-xl flex-shrink-0">⚠️</span>
+                    <div>
+                        <p class="font-bold text-red-800 text-sm">Status Permohonan Akan Dimundurkan</p>
+                        <p class="text-red-700 text-xs mt-1.5 leading-relaxed">
+                            Permohonan ini sudah dalam status <strong>@statusLabel</strong>.
+                            Membuka kembali sub-tugas ini akan memundurkan status permohonan ke
+                            <strong>Sedang Diproses</strong>, karena tidak semua tugas lagi selesai.
+                        </p>
+                        <p class="text-red-600 text-xs mt-1.5 font-semibold">
+                            Pastikan pemohon sudah diberitahu tentang perubahan ini.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 flex gap-2 items-start">
+                <span class="text-blue-500 flex-shrink-0 mt-0.5">ℹ️</span>
+                <p class="text-xs text-blue-700 leading-relaxed">
+                    Sub-tugas akan dikembalikan ke status <strong>Menunggu</strong>.
+                    Jadwal dan file lama dihapus dari sub-tugas ini (tetap tersimpan di riwayat dokumen).
+                    Anda perlu membuat jadwal baru setelah ini.
+                </p>
+            </div>
+        }
+
+        <form action="/kasubkel-kdi/reopen-subtask" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="JenisTask" />
+            <input type="hidden" asp-for="StatusSaatIni" />
+            <input type="hidden" asp-for="StatusAkanDiRollback" />
+
+            <div class="mb-4">
+                <label class="lbl">Alasan Pembukaan Kembali <span class="req">*</span></label>
+                <textarea asp-for="AlasanReopen" rows="3" class="fld resize-none"
+                          placeholder="Contoh: Hasil observasi kurang lengkap, perlu dilakukan kembali di lokasi yang berbeda..."></textarea>
+                <span asp-validation-for="AlasanReopen" class="err"></span>
+            </div>
+
+            @if (Model.StatusAkanDiRollback)
+            {
+                <div class="mb-5">
+                    <label class="flex items-start gap-3 p-3 rounded-xl border-2 border-red-200 cursor-pointer has-[:checked]:border-red-500 has-[:checked]:bg-red-50 transition-all">
+                        <input asp-for="KonfirmasiRollback" type="checkbox" class="mt-0.5 flex-shrink-0 accent-red-600" />
+                        <span class="text-sm text-gray-700">
+                            Saya mengerti bahwa status permohonan akan dimundurkan ke
+                            <strong class="text-red-700">Sedang Diproses</strong> dan
+                            pemohon sudah diberitahu.
+                        </span>
+                    </label>
+                    <span asp-validation-for="KonfirmasiRollback" class="err"></span>
+                </div>
+            }
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">
+                    ← Kembali
+                </a>
+                <button type="submit"
+                        class="flex-grow @(Model.StatusAkanDiRollback ? "bg-red-600 hover:bg-red-700" : "bg-violet-600 hover:bg-violet-700") text-white font-bold py-2.5 px-6 rounded-xl text-sm">
+                    ↩ Buka Kembali Sub-tugas →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #7c3aed;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>

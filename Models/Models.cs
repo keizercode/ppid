@@ -200,6 +200,16 @@ public class JadwalPPID
     [Column("Waktu")]              public TimeOnly? Waktu           { get; set; }
     [Column("NamaPIC")]            public string?  NamaPIC          { get; set; }
     [Column("TeleponPIC")]         public string?  TeleponPIC       { get; set; }
+
+    /// <summary>Alasan perubahan jadwal / keterangan tambahan (EC-1, EC-6).</summary>
+    [Column("Keterangan")]         public string?  Keterangan       { get; set; }
+
+    /// <summary>
+    /// Hanya satu jadwal per jenis yang aktif (EC-1).
+    /// Jadwal lama tetap disimpan untuk audit trail tapi IsAktif = false.
+    /// </summary>
+    [Column("IsAktif")]            public bool     IsAktif          { get; set; } = true;
+
     [Column("CreatedAt")]          public DateTime? CreatedAt       { get; set; }
     [Column("UpdatedAt")]          public DateTime? UpdatedAt       { get; set; }
 
@@ -247,14 +257,36 @@ public class SubTaskPPID
     [Column("SelesaiAt")]            public DateTime? SelesaiAt        { get; set; }
     [Column("UpdatedAt")]            public DateTime? UpdatedAt        { get; set; }
 
+    // ── Lifecycle columns (EC-1, EC-2, EC-3, EC-4) ────────────────────────
+    /// <summary>Alasan pembatalan (EC-2). Null jika belum pernah dibatalkan.</summary>
+    [Column("BatalAlasan")]          public string?   BatalAlasan      { get; set; }
+
+    /// <summary>Berapa kali jadwal sudah diubah (EC-1). Dipakai untuk audit + UI warning.</summary>
+    [Column("RescheduleCount")]      public int       RescheduleCount  { get; set; }
+
+    /// <summary>Terakhir di-reopen (EC-3).</summary>
+    [Column("ReopenedAt")]           public DateTime? ReopenedAt       { get; set; }
+
+    /// <summary>Alasan reopen (EC-3).</summary>
+    [Column("ReopenAlasan")]         public string?   ReopenAlasan     { get; set; }
+
+    /// <summary>
+    /// Optimistic concurrency guard (EC-4).
+    /// Di-increment setiap UPDATE di AdvanceIfAllSubTasksDone.
+    /// </summary>
+    [Column("RowVersion")]           public long      RowVersion       { get; set; }
+
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 
-    // ── Computed helpers ─────────────────────────────────────────────────
+    // ── Computed helpers ──────────────────────────────────────────────────
     public bool IsPending    => StatusTask == SubTaskStatus.Pending;
     public bool IsInProgress => StatusTask == SubTaskStatus.InProgress;
     public bool IsSelesai    => StatusTask == SubTaskStatus.Selesai;
+    public bool IsDibatalkan => StatusTask == SubTaskStatus.Dibatalkan;
+    public bool IsTerminal   => SubTaskStatus.IsTerminal(StatusTask);
     public bool HasFile      => !string.IsNullOrEmpty(FilePath);
     public bool HasJadwal    => TanggalJadwal.HasValue;
+    public bool WasRescheduled => RescheduleCount > 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -266,12 +298,14 @@ public static class SubTaskStatus
     public const int Pending    = 0;
     public const int InProgress = 1;
     public const int Selesai    = 2;
+    public const int Dibatalkan = 3;    // EC-2: batal, tidak akan dikerjakan
 
     public static string GetLabel(int status) => status switch
     {
         Pending    => "Menunggu",
         InProgress => "Sedang Diproses",
         Selesai    => "Selesai",
+        Dibatalkan => "Dibatalkan",
         _          => "—"
     };
 
@@ -280,8 +314,11 @@ public static class SubTaskStatus
         Pending    => "bg-gray-100 text-gray-500",
         InProgress => "bg-amber-50 text-amber-700",
         Selesai    => "bg-emerald-50 text-emerald-700",
+        Dibatalkan => "bg-red-50 text-red-600",
         _          => "bg-gray-50 text-gray-400"
     };
+
+    public static bool IsTerminal(int status) => status is Selesai or Dibatalkan;
 }
 
 public static class JenisTask

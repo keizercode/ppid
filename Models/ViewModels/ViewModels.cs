@@ -507,3 +507,126 @@ public class EditPermohonanVm
     [Display(Name = "Permintaan Data")] public bool IsPermintaanData { get; set; }
     [Display(Name = "Wawancara")]       public bool IsWawancara      { get; set; }
 }
+
+// ── EC-1: Reschedule jadwal ──────────────────────────────────────────────────
+public class RescheduleSubTaskVm
+{
+    public Guid    PermohonanPPIDID  { get; set; }
+    public string  NoPermohonan      { get; set; } = string.Empty;
+    public string  NamaPemohon       { get; set; } = string.Empty;
+    public string  JudulPenelitian   { get; set; } = string.Empty;
+    public string  JenisTask         { get; set; } = string.Empty;
+
+    // Jadwal lama (untuk ditampilkan sebagai referensi)
+    public DateOnly? TanggalLama     { get; set; }
+    public TimeOnly? WaktuLama       { get; set; }
+    public string?   NamaPICLama     { get; set; }
+    public int       RescheduleCount { get; set; }   // berapa kali sudah di-reschedule
+
+    // Jadwal baru
+    [Required]
+    [Display(Name = "Tanggal Baru")]
+    public DateOnly TanggalBaru { get; set; } = DateOnly.FromDateTime(DateTime.Today.AddDays(3));
+
+    [Required]
+    [Display(Name = "Jam Baru")]
+    public TimeOnly WaktuBaru { get; set; } = new TimeOnly(9, 0);
+
+    [Required]
+    [Display(Name = "Nama PIC / Narasumber")]
+    public string NamaPICBaru { get; set; } = string.Empty;
+
+    [Display(Name = "No. Telepon PIC")]
+    [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
+    public string? TeleponPICBaru { get; set; }
+
+    [Required(ErrorMessage = "Alasan reschedule wajib diisi")]
+    [Display(Name = "Alasan Perubahan Jadwal")]
+    [MinLength(10, ErrorMessage = "Alasan minimal 10 karakter")]
+    public string AlasanReschedule { get; set; } = string.Empty;
+}
+
+// ── EC-2: Batalkan SubTask ───────────────────────────────────────────────────
+public class BatalSubTaskVm
+{
+    public Guid    PermohonanPPIDID { get; set; }
+    public string  NoPermohonan     { get; set; } = string.Empty;
+    public string  NamaPemohon      { get; set; } = string.Empty;
+    public string  JenisTask        { get; set; } = string.Empty;
+    public string  StatusSaatIni    { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Alasan pembatalan wajib diisi")]
+    [Display(Name = "Alasan Pembatalan")]
+    [MinLength(10, ErrorMessage = "Alasan minimal 10 karakter")]
+    public string AlasanBatal { get; set; } = string.Empty;
+
+    /// <summary>
+    /// True jika setelah pembatalan ini, semua task aktif sudah selesai.
+    /// Diisi di POST handler untuk menampilkan pesan yang tepat.
+    /// </summary>
+    public bool AkanAdvanceStatus { get; set; }
+}
+
+// ── EC-3: Reopen SubTask ─────────────────────────────────────────────────────
+public class ReopenSubTaskVm
+{
+    public Guid    PermohonanPPIDID { get; set; }
+    public string  NoPermohonan     { get; set; } = string.Empty;
+    public string  NamaPemohon      { get; set; } = string.Empty;
+    public string  JenisTask        { get; set; } = string.Empty;
+    public int     StatusSaatIni    { get; set; }
+
+    /// <summary>True jika permohonan sudah DataSiap/FeedbackPemohon — perlu konfirmasi rollback.</summary>
+    public bool StatusAkanDiRollback { get; set; }
+
+    [Required(ErrorMessage = "Alasan reopen wajib diisi")]
+    [Display(Name = "Alasan Pembukaan Kembali")]
+    [MinLength(10, ErrorMessage = "Alasan minimal 10 karakter")]
+    public string AlasanReopen { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Harus dicentang jika StatusAkanDiRollback = true.
+    /// Konfirmasi bahwa operator sadar status permohonan akan mundur ke DiProses.
+    /// </summary>
+    [Display(Name = "Saya mengerti status permohonan akan mundur")]
+    public bool KonfirmasiRollback { get; set; }
+}
+
+// ── EC-6: Ganti PIC ──────────────────────────────────────────────────────────
+public class UpdatePICVm
+{
+    public Guid    PermohonanPPIDID { get; set; }
+    public string  NoPermohonan     { get; set; } = string.Empty;
+    public string  NamaPemohon      { get; set; } = string.Empty;
+    public string  JenisTask        { get; set; } = string.Empty;
+    public string? NamaPICSaatIni   { get; set; }
+
+    [Required(ErrorMessage = "Nama PIC baru wajib diisi")]
+    [Display(Name = "Nama PIC / Narasumber Baru")]
+    public string NamaPICBaru { get; set; } = string.Empty;
+
+    [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
+    [Display(Name = "No. Telepon PIC Baru")]
+    public string? TeleponPICBaru { get; set; }
+
+    [Display(Name = "Catatan Perubahan (opsional)")]
+    public string? CatatanPerubahan { get; set; }
+}
+
+// ── EC-7: Ganti file hasil ────────────────────────────────────────────────────
+public class ReplaceFileSubTaskVm
+{
+    public Guid    PermohonanPPIDID { get; set; }
+    public string  NoPermohonan     { get; set; } = string.Empty;
+    public string  NamaPemohon      { get; set; } = string.Empty;
+    public string  JenisTask        { get; set; } = string.Empty;
+    public string? FilePathLama     { get; set; }
+    public string? NamaFileLama     { get; set; }
+
+    [Required(ErrorMessage = "File revisi wajib diupload")]
+    [Display(Name = "File Revisi")]
+    public IFormFile? FileRevisi { get; set; }
+
+    [Display(Name = "Catatan Revisi")]
+    public string? CatatanRevisi { get; set; }
+}

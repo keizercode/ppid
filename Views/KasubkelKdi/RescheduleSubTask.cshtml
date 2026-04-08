@@ -1,0 +1,128 @@
+@model RescheduleSubTaskVm
+@{
+    bool isWaw   = Model.JenisTask == JenisTask.Wawancara;
+    string icon  = isWaw ? "🎤" : "🔍";
+    string color = isWaw ? "violet" : "orange";
+    string label = JenisTask.GetLabel(Model.JenisTask);
+    ViewData["Title"] = $"Reschedule {label}";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl">📅</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Ubah Jadwal @label</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        @* Warning: sudah pernah di-reschedule sebelumnya *@
+        @if (Model.RescheduleCount > 0)
+        {
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
+                <span class="text-amber-500 flex-shrink-0 mt-0.5">⚠️</span>
+                <p class="text-xs text-amber-700 leading-relaxed">
+                    Jadwal ini sudah diubah <strong>@Model.RescheduleCount kali</strong> sebelumnya.
+                    Pastikan pemohon dan PIC sudah diberitahu. Seluruh riwayat tersimpan untuk audit.
+                </p>
+            </div>
+        }
+
+        @* Jadwal lama sebagai referensi *@
+        @if (Model.TanggalLama.HasValue)
+        {
+            <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Jadwal Saat Ini (Akan Diganti)</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-sm">❌</div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 line-through">
+                            @Model.TanggalLama.Value.ToString("dddd, dd MMMM yyyy")
+                            pukul @(Model.WaktuLama?.ToString("HH:mm") ?? "—") WIB
+                        </p>
+                        @if (!string.IsNullOrEmpty(Model.NamaPICLama))
+{
+    <p class="text-xs text-gray-400 mt-0.5">PIC: @Model.NamaPICLama</p>
+}
+                    </div>
+                </div>
+            </div>
+        }
+
+        <form action="/kasubkel-kdi/reschedule" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="JudulPenelitian" />
+            <input type="hidden" asp-for="JenisTask" />
+            <input type="hidden" asp-for="RescheduleCount" />
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="lbl">Tanggal Baru <span class="req">*</span></label>
+                    <input asp-for="TanggalBaru" type="date" class="fld"
+                           min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    <span asp-validation-for="TanggalBaru" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Jam Baru <span class="req">*</span></label>
+                    <input asp-for="WaktuBaru" type="time" class="fld" />
+                    <span asp-validation-for="WaktuBaru" class="err"></span>
+                </div>
+                <div class="col-span-2">
+                    <label class="lbl">Nama PIC / @(isWaw ? "Narasumber" : "Koordinator") <span class="req">*</span></label>
+                    <input asp-for="NamaPICBaru" class="fld" placeholder="Nama narasumber atau koordinator" />
+                    <span asp-validation-for="NamaPICBaru" class="err"></span>
+                </div>
+                <div class="col-span-2">
+                    <label class="lbl">No. Telepon PIC</label>
+                    <input asp-for="TeleponPICBaru" class="fld" placeholder="08xxxxxxxxxx" />
+                </div>
+                <div class="col-span-2">
+                    <label class="lbl">Alasan Perubahan Jadwal <span class="req">*</span></label>
+                    <textarea asp-for="AlasanReschedule" rows="3" class="fld resize-none"
+                              placeholder="Contoh: Narasumber tidak bisa hadir pada tanggal yang dijadwalkan karena menghadiri rapat dinas. Diubah ke minggu depan setelah konfirmasi via telepon."></textarea>
+                    <span asp-validation-for="AlasanReschedule" class="err"></span>
+                    <p class="text-[11px] text-gray-400 mt-1">
+                        Alasan ini akan tercatat di audit log dan ditampilkan di riwayat jadwal.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 flex gap-2 items-start">
+                <span class="text-blue-500 flex-shrink-0 mt-0.5">ℹ️</span>
+                <p class="text-xs text-blue-700 leading-relaxed">
+                    Jadwal lama akan dinonaktifkan dan tetap tersimpan untuk audit trail.
+                    Status permohonan tidak berubah. Pastikan pemohon diberitahu melalui telepon/email.
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">
+                    ← Batal
+                </a>
+                <button type="submit"
+                        class="flex-grow bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
+                    📅 Simpan Jadwal Baru →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #f59e0b;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>

@@ -42,6 +42,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxLdWVzaW9uZXIuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/BatalSubTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcQmF0YWxTdWJUYXNrLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/Detail.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcRGV0YWlsLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -60,6 +64,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/PermintaanData.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcUGVybWludGFhbkRhdGEuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/ReopenSubTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcUmVvcGVuU3ViVGFzay5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/RescheduleSubTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZGlcUmVzY2hlZHVsZVN1YlRhc2suY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKdi/SelesaiSubTask.cshtml]
