@@ -1,0 +1,97 @@
+@model UpdatePICVm
+@{
+    string label = JenisTask.GetLabel(Model.JenisTask);
+    string icon  = JenisTask.GetIcon(Model.JenisTask);
+    ViewData["Title"] = $"Ganti PIC — {label}";
+    ViewData["Role"]  = "Kasubkel KDI";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-lg mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-xl">👤</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Ganti PIC / Narasumber — @label</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        @* PIC saat ini *@
+        @if (!string.IsNullOrEmpty(Model.NamaPICSaatIni))
+        {
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">PIC Saat Ini</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm">👤</div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 line-through">@Model.NamaPICSaatIni</p>
+                        <p class="text-[10px] text-gray-400">PIC lama akan diganti</p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* Keterangan *@
+        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-5 flex gap-2 items-start">
+            <span class="text-indigo-500 flex-shrink-0 mt-0.5">ℹ️</span>
+            <p class="text-xs text-indigo-700 leading-relaxed">
+                Penggantian PIC <strong>tidak mengubah tanggal jadwal</strong> dan tidak menambah
+                RescheduleCount. Gunakan ini jika hanya koordinator/narasumber yang berganti
+                namun jadwal tetap sama.
+                <br/>
+                Pemohon akan melihat PIC baru di portal lacak status.
+            </p>
+        </div>
+
+        <form action="/kasubkel-kdi/update-pic" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="JenisTask" />
+            <input type="hidden" asp-for="NamaPICSaatIni" />
+
+            <div class="grid grid-cols-1 gap-4 mb-5">
+                <div>
+                    <label class="lbl">Nama PIC / Narasumber Baru <span class="req">*</span></label>
+                    <input asp-for="NamaPICBaru" class="fld" placeholder="Nama koordinator atau narasumber baru" />
+                    <span asp-validation-for="NamaPICBaru" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">No. Telepon PIC Baru <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                    <input asp-for="TeleponPICBaru" class="fld" placeholder="08xxxxxxxxxx" />
+                    <span asp-validation-for="TeleponPICBaru" class="err"></span>
+                </div>
+                <div>
+                    <label class="lbl">Catatan Perubahan <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
+                    <textarea asp-for="CatatanPerubahan" rows="2" class="fld resize-none"
+                              placeholder="Misal: koordinator sebelumnya mendadak dinas luar kota, digantikan oleh..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">
+                    ← Kembali
+                </a>
+                <button type="submit"
+                        class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
+                    👤 Simpan PIC Baru →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .req{color:#f87171}
+    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+    .fld:focus{box-shadow:0 0 0 2.5px #6366f1;border-color:transparent;background:white}
+    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+</style>

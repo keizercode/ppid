@@ -44,14 +44,40 @@ public class HomeController(
             .Include(p => p.PribadiPPID)
             .FirstOrDefaultAsync(p => p.PribadiID == permohonan.PribadiID);
 
+        // ── Load SubTasks untuk info paralel di timeline ──────────────────
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == permohonan.PermohonanPPIDID)
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+
+        // ── Jadwal aktif per jenis (termasuk info reschedule) ────────────
+        var jadwalAktif = await db.JadwalPPID
+            .Where(j => j.PermohonanPPIDID == permohonan.PermohonanPPIDID && j.IsAktif)
+            .ToListAsync();
+
+        // ── Hitung lastChangedAt (untuk badge "BARU" di realtime check) ──
+        var subTaskLastUpdate = subTasks.Any()
+            ? subTasks.Max(t => t.UpdatedAt ?? t.CreatedAt)
+            : (DateTime?)null;
+        var jadwalLastUpdate  = jadwalAktif.Any()
+            ? jadwalAktif.Max(j => j.UpdatedAt ?? j.CreatedAt ?? DateTime.MinValue)
+            : (DateTime?)null;
+
         var vm = new DetailLacakViewModel
         {
-            Permohonan  = permohonan,
-            Pribadi     = pribadi!,
-            PribadiPPID = pribadi?.PribadiPPID,
-            Detail      = permohonan.Detail.ToList(),
-            Jadwal      = permohonan.Jadwal.OrderBy(j => j.Tanggal).ToList(),
-            Riwayat     = BuildRiwayat(permohonan)
+            Permohonan      = permohonan,
+            Pribadi         = pribadi!,
+            PribadiPPID     = pribadi?.PribadiPPID,
+            Detail          = permohonan.Detail.ToList(),
+            Jadwal          = permohonan.Jadwal.OrderBy(j => j.Tanggal).ToList(),
+            Riwayat         = BuildRiwayat(permohonan),
+            SubTasks        = subTasks,
+            JadwalAktif     = jadwalAktif,
+            LastChangedAt   = new[] {
+                permohonan.UpdatedAt,
+                subTaskLastUpdate,
+                jadwalLastUpdate
+            }.Where(d => d.HasValue).Select(d => d!.Value).DefaultIfEmpty(DateTime.MinValue).Max()
         };
 
         return View("Detail", vm);
@@ -69,6 +95,54 @@ public class HomeController(
     }
 
     // ════════════════════════════════════════════════════════════════════════
+    // CEK STATUS (REALTIME POLLING API)
+    // Digunakan oleh Detail.cshtml untuk polling setiap 30 detik.
+    // Return JSON ringan: statusId + lastChangedAt (ISO 8601).
+    // ════════════════════════════════════════════════════════════════════════
+
+    [HttpGet("cek-status")]
+    public async Task<IActionResult> CekStatus([FromQuery] string? no)
+    {
+        if (string.IsNullOrEmpty(no)) return Json(null);
+        no = no.Trim().ToUpperInvariant();
+
+        var p = await db.PermohonanPPID
+            .Where(x => x.NoPermohonan == no)
+            .Select(x => new
+            {
+                x.StatusPPIDID,
+                x.UpdatedAt,
+                x.PermohonanPPIDID
+            })
+            .FirstOrDefaultAsync();
+
+        if (p is null) return Json(null);
+
+        // Ambil waktu update subtask & jadwal terbaru
+        var stUpdate = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == p.PermohonanPPIDID)
+            .Select(t => (DateTime?)t.UpdatedAt)
+            .MaxAsync() ?? (DateTime?)null;
+
+        var jadUpdate = await db.JadwalPPID
+            .Where(j => j.PermohonanPPIDID == p.PermohonanPPIDID && j.IsAktif)
+            .Select(j => j.UpdatedAt ?? j.CreatedAt)
+            .MaxAsync();
+
+        var allDates = new[] { p.UpdatedAt, stUpdate, jadUpdate }
+            .Where(d => d.HasValue)
+            .Select(d => d!.Value)
+            .DefaultIfEmpty(DateTime.MinValue)
+            .Max();
+
+        return Json(new
+        {
+            statusId      = p.StatusPPIDID,
+            lastChangedAt = allDates.ToString("O")   // ISO 8601 for JS comparison
+        });
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
     // KUESIONER
     // ════════════════════════════════════════════════════════════════════════
 
@@ -78,7 +152,6 @@ public class HomeController(
         var p = await db.PermohonanPPID.FindAsync(id);
         if (p == null) return NotFound();
 
-        // Kuesioner hanya bisa diisi jika status >= FeedbackPemohon (atau DataSiap sebagai fallback)
         if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
         {
             TempData["Error"] = "Kuesioner tidak tersedia untuk status permohonan ini.";
@@ -111,7 +184,7 @@ public class HomeController(
                 PermohonanPPIDID = model.PermohonanPPIDID,
                 StatusLama       = statusLama,
                 StatusBaru       = StatusId.Selesai,
-                Keterangan       = "Kuesioner kepuasan diisi pemohon",
+                Keterangan       = $"Kuesioner kepuasan diisi pemohon. Nilai: {model.NilaiKepuasan}/5.",
                 Operator         = "Pemohon",
                 CreatedAt        = DateTime.UtcNow
             });
@@ -123,7 +196,7 @@ public class HomeController(
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // ERROR HANDLER — professional exception capture
+    // ERROR HANDLER
     // ════════════════════════════════════════════════════════════════════════
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
@@ -135,7 +208,6 @@ public class HomeController(
         var ex        = exFeature?.Error;
         var path      = exFeature?.Path ?? HttpContext.Request.Path;
 
-        // Log exception dengan konteks lengkap
         if (ex is not null)
         {
             logger.LogError(ex,
@@ -145,7 +217,6 @@ public class HomeController(
                 HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
         }
 
-        // Development: tampilkan detail teknis
         if (env.IsDevelopment() && ex is not null)
         {
             var detail = $"""
@@ -166,7 +237,6 @@ public class HomeController(
             return Content(detail, "text/plain; charset=utf-8");
         }
 
-        // Production: pesan ramah tanpa bocoran teknis
         return Content(
             "Terjadi kesalahan pada sistem. " +
             "Silakan kembali ke halaman sebelumnya dan coba lagi. " +
@@ -176,7 +246,7 @@ public class HomeController(
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // TIMELINE BUILDER
+    // TIMELINE BUILDER — 9-step + sub-step informatif
     // ════════════════════════════════════════════════════════════════════════
 
     private static List<RiwayatStatusVm> BuildRiwayat(PermohonanPPID p)
@@ -191,55 +261,64 @@ public class HomeController(
         {
             StatusId      = s.StatusId,
             Label         = s.Label,
+            SubLabel      = s.SubLabel,
             Selesai       = i < currentIdx,
             AktifSekarang = i == currentIdx
         }).ToList();
     }
 
-    private static List<(int StatusId, string Label)> GetSteps(PermohonanPPID p)
+    private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(PermohonanPPID p)
     {
-        var steps = new List<(int, string)>
+        var steps = new List<(int, string, string?)>
         {
-            (StatusId.TerdaftarSistem,    "1. Permohonan Terdaftar"),
-            (StatusId.IdentifikasiAwal,   "2. Tanda Tangan Identifikasi Awal"),
-            (StatusId.MenungguVerifikasi, "3. Verifikasi Kasubkel & Disposisi Unit"),
-            (StatusId.MenungguSuratIzin,  "4. Pembuatan Surat Izin"),
-            (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit"),
+            (StatusId.TerdaftarSistem,    "1. Permohonan Terdaftar",                  null),
+            (StatusId.IdentifikasiAwal,   "2. Tanda Tangan Identifikasi Awal",        null),
+            (StatusId.MenungguVerifikasi, "3. Verifikasi Kasubkel & Disposisi Unit",  null),
+            (StatusId.MenungguSuratIzin,  "4. Pembuatan Surat Izin",                  null),
+            (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit",                     null),
         };
 
         bool isWawancaraOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
 
         if (isWawancaraOnly)
         {
-            steps.Add((StatusId.WawancaraDijadwalkan, "6. Jadwal Wawancara Dibuat"));
-            steps.Add((StatusId.WawancaraSelesai,     "7. Wawancara Selesai"));
+            steps.Add((StatusId.WawancaraDijadwalkan, "6. Jadwal Wawancara Dibuat",
+                p.NamaProdusenData != null ? $"PIC: {p.NamaProdusenData}" : null));
+            steps.Add((StatusId.WawancaraSelesai, "7. Wawancara Selesai", null));
         }
         else
         {
-            steps.Add((StatusId.Didisposisi, "6. Pembuatan Jadwal / Pemrosesan Data"));
+            // Step 6: parallel processing — sub-label dinamis berdasarkan jenis keperluan
+            var keperluanList = new List<string>();
+            if (p.IsPermintaanData) keperluanList.Add("Permintaan Data");
+            if (p.IsObservasi)      keperluanList.Add("Observasi");
+            if (p.IsWawancara)      keperluanList.Add("Wawancara");
+
+            steps.Add((StatusId.Didisposisi, "6. Pembuatan Jadwal / Pemrosesan Data",
+                keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null));
 
             if (p.IsObservasi)
             {
-                steps.Add((StatusId.ObservasiDijadwalkan, "6b. Observasi Dijadwalkan"));
-                steps.Add((StatusId.ObservasiSelesai,     "6c. Observasi Selesai"));
+                steps.Add((StatusId.ObservasiDijadwalkan, "6b. Observasi Dijadwalkan", null));
+                steps.Add((StatusId.ObservasiSelesai,     "6c. Observasi Selesai",     null));
             }
 
             if (p.IsWawancara)
             {
-                steps.Add((StatusId.WawancaraDijadwalkan, "6d. Wawancara Dijadwalkan"));
-                steps.Add((StatusId.WawancaraSelesai,     "6e. Wawancara Selesai"));
+                steps.Add((StatusId.WawancaraDijadwalkan, "6d. Wawancara Dijadwalkan", null));
+                steps.Add((StatusId.WawancaraSelesai,     "6e. Wawancara Selesai",     null));
             }
 
-            steps.Add((StatusId.DataSiap, "7. Data Tersedia"));
+            steps.Add((StatusId.DataSiap, "7. Data Tersedia", null));
         }
 
-        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback Pemohon"));
-        steps.Add((StatusId.Selesai,         "9. Selesai"));
+        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback Pemohon", null));
+        steps.Add((StatusId.Selesai,         "9. Selesai",                    null));
 
         return steps;
     }
 
-    private static int FindNearestIdx(List<(int StatusId, string Label)> steps, int current)
+    private static int FindNearestIdx(List<(int StatusId, string Label, string? SubLabel)> steps, int current)
     {
         int best = -1;
         for (int i = 0; i < steps.Count; i++)

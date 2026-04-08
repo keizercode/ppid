@@ -37,20 +37,72 @@ public class LacakViewModel
 
 public class DetailLacakViewModel
 {
-    public PermohonanPPID             Permohonan  { get; set; } = null!;
-    public Pribadi                    Pribadi     { get; set; } = null!;
-    public PribadiPPID?               PribadiPPID { get; set; }
-    public List<PermohonanPPIDDetail> Detail      { get; set; } = [];
-    public List<JadwalPPID>           Jadwal      { get; set; } = [];
-    public List<RiwayatStatusVm>      Riwayat     { get; set; } = [];
+    public PermohonanPPID             Permohonan    { get; set; } = null!;
+    public Pribadi                    Pribadi       { get; set; } = null!;
+    public PribadiPPID?               PribadiPPID   { get; set; }
+    public List<PermohonanPPIDDetail> Detail        { get; set; } = [];
+    public List<JadwalPPID>           Jadwal        { get; set; } = [];
+    public List<RiwayatStatusVm>      Riwayat       { get; set; } = [];
+
+    // ── Baru: untuk timeline informasi sub-tugas paralel ─────────────────
+    /// <summary>SubTask dari KDI — berisi progress data/obs/wawancara per tugas.</summary>
+    public List<SubTaskPPID>          SubTasks      { get; set; } = [];
+
+    /// <summary>Hanya jadwal aktif (IsAktif = true) — satu per jenis.</summary>
+    public List<JadwalPPID>           JadwalAktif   { get; set; } = [];
+
+    /// <summary>
+    /// Waktu terbaru ada perubahan (UpdatedAt permohonan, subtask, atau jadwal aktif).
+    /// Digunakan oleh polling JS untuk deteksi "ada update sejak halaman dimuat".
+    /// </summary>
+    public DateTime                   LastChangedAt { get; set; }
+
+    // ── Helper shortcuts ─────────────────────────────────────────────────
+    public SubTaskPPID? GetSubTask(string jenis) =>
+        SubTasks.FirstOrDefault(t => t.JenisTask == jenis);
+
+    public JadwalPPID? GetJadwalAktif(string jenis) =>
+        JadwalAktif.FirstOrDefault(j => j.JenisJadwal == jenis);
+
+    /// <summary>
+    /// True jika jadwal aktif untuk jenis tertentu baru dibuat / diperbarui
+    /// dalam N jam terakhir (default 72 jam).
+    /// Dipakai untuk badge "BARU" di lacak publik.
+    /// </summary>
+    public bool IsJadwalBaru(string jenis, int jamThreshold = 72)
+    {
+        var j = GetJadwalAktif(jenis);
+        if (j is null) return false;
+        var since = DateTime.UtcNow.AddHours(-jamThreshold);
+        var jadwalTime = j.UpdatedAt ?? j.CreatedAt ?? DateTime.MinValue;
+        return jadwalTime >= since;
+    }
+
+    /// <summary>
+    /// True jika PIC subtask diperbarui baru-baru ini TANPA jadwal baru
+    /// (RescheduleCount tidak bertambah sejak terakhir UpdatedAt).
+    /// Dipakai untuk badge "PIC BARU" di lacak publik.
+    /// </summary>
+    public bool IsPicBaru(string jenis, int jamThreshold = 72)
+    {
+        var st = GetSubTask(jenis);
+        if (st?.UpdatedAt is null) return false;
+        if (st.RescheduleCount > 0) return false; // sudah ditangani badge reschedule
+        return st.UpdatedAt >= DateTime.UtcNow.AddHours(-jamThreshold);
+    }
 }
 
 public class RiwayatStatusVm
 {
-    public int    StatusId      { get; set; }
-    public string Label         { get; set; } = string.Empty;
-    public bool   Selesai       { get; set; }
-    public bool   AktifSekarang { get; set; }
+    public int     StatusId      { get; set; }
+    public string  Label         { get; set; } = string.Empty;
+    /// <summary>
+    /// Sub-label opsional — misal jenis keperluan, PIC, atau keterangan singkat lain.
+    /// Ditampilkan di bawah Label di timeline lacak publik.
+    /// </summary>
+    public string? SubLabel      { get; set; }
+    public bool    Selesai       { get; set; }
+    public bool    AktifSekarang { get; set; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
