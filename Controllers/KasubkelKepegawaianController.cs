@@ -293,7 +293,7 @@ public async Task<IActionResult> HasilFeedback(Guid id)
 
     if (p is null) return NotFound();
 
-    var feedbacks = await db.FeedbackTask
+    var feedbacks = await db.FeedbackTaskPPID
         .Where(f => f.PermohonanPPIDID == id)
         .ToListAsync();
 

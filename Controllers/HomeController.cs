@@ -53,6 +53,15 @@ public class HomeController(
             .Where(j => j.PermohonanPPIDID == permohonan.PermohonanPPIDID && j.IsAktif)
             .ToListAsync();
 
+        var feedbacks = await db.FeedbackTaskPPID
+            .AsNoTracking()
+            .Where(f => f.PermohonanPPIDID == permohonan.PermohonanPPIDID)
+            .ToListAsync();
+
+            ViewData["FeedbackMap"] = feedbacks
+            .GroupBy(f => f.JenisTask)
+            .ToDictionary(g => g.Key, g => true);
+
         var subTaskLastUpdate = subTasks.Any()
             ? subTasks.Max(t => t.UpdatedAt ?? t.CreatedAt)
             : (DateTime?)null;
@@ -464,7 +473,7 @@ public async Task<IActionResult> FeedbackTask(Guid id, string jenisTask)
     }
 
     // Cek apakah sudah pernah diisi
-    var existing = await db.FeedbackTask
+    var existing = await db.FeedbackTaskPPID
         .FirstOrDefaultAsync(f => f.PermohonanPPIDID == id && f.JenisTask == jenisTask);
 
     return View(new FeedbackTaskVm
@@ -514,13 +523,13 @@ public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
     }
 
     // Upsert feedback
-    var existing = await db.FeedbackTask
+    var existing = await db.FeedbackTaskPPID
         .FirstOrDefaultAsync(f => f.PermohonanPPIDID == vm.PermohonanPPIDID
                                 && f.JenisTask == vm.JenisTask);
 
     if (existing is null)
     {
-        db.FeedbackTask.Add(new FeedbackTaskPPID
+        db.FeedbackTaskPPID.Add(new FeedbackTaskPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
             JenisTask        = vm.JenisTask,
