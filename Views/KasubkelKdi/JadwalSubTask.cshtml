@@ -1,6 +1,9 @@
 @* ══════════════════════════════════════════════════════════════════════
-   Views/KasubkelKdi/JadwalSubTask.cshtml — UPDATED
-   Perubahan: tambah field LokasiJenis (Online/Offline) + LokasiDetail
+   Views/KasubkelKdi/JadwalSubTask.cshtml — FIXED RZ1031
+   FIX: @(condition ? "checked" : "") di area atribut tag helper dilarang.
+        asp-for pada <input type="radio"> secara otomatis membandingkan
+        Model.LokasiJenis dengan value="" untuk menentukan checked state —
+        tidak perlu atribut checked eksplisit.
 ══════════════════════════════════════════════════════════════════════ *@
 @model JadwalSubTaskVm
 @{
@@ -71,20 +74,24 @@
                     <span asp-validation-for="TeleponPIC" class="err"></span>
                 </div>
 
-                @* ── LOKASI ONLINE/OFFLINE ── *@
+                @* ── LOKASI ONLINE/OFFLINE ──
+                   FIX RZ1031 (line 81 & 87 original):
+                   Hapus @(condition ? "checked" : "") — atribut mentah C# di area
+                   tag helper dilarang compiler Razor. asp-for="LokasiJenis" dengan
+                   value="Offline"/"Online" sudah cukup: tag helper membandingkan
+                   Model.LokasiJenis == value untuk emit checked="checked" otomatis.
+                *@
                 <div class="col-span-2">
                     <label class="lbl">Jenis Pertemuan <span class="req">*</span></label>
                     <div class="grid grid-cols-2 gap-2">
                         <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-gray-600 has-[:checked]:bg-gray-50 transition-all">
                             <input asp-for="LokasiJenis" type="radio" value="Offline" id="lokasiOffline"
-                                   class="accent-gray-600"
-                                   @(Model.LokasiJenis != "Online" ? "checked" : "") />
+                                   class="accent-gray-600" />
                             <span class="text-sm font-semibold text-gray-700">📍 Offline</span>
                         </label>
                         <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
                             <input asp-for="LokasiJenis" type="radio" value="Online" id="lokasiOnline"
-                                   class="accent-blue-600"
-                                   @(Model.LokasiJenis == "Online" ? "checked" : "") />
+                                   class="accent-blue-600" />
                             <span class="text-sm font-semibold text-gray-700">🌐 Online</span>
                         </label>
                     </div>

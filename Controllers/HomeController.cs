@@ -488,6 +488,10 @@ public async Task<IActionResult> FeedbackTask(Guid id, string jenisTask)
         LokasiDetail     = st.LokasiDetail,
         SudahDiisi       = existing is not null,
         NilaiLama        = existing?.NilaiKepuasan ?? 0,
+        // FIX: pre-populate NilaiKepuasan dari existing sehingga asp-for
+        // pada radio button di view dapat menentukan checked state secara
+        // otomatis tanpa @() expression terlarang di area atribut.
+        NilaiKepuasan    = existing?.NilaiKepuasan ?? 0,
         CatatanLama      = existing?.Catatan,
         FilePathLama     = existing?.FileLaporan,
         NamaFileLama     = existing?.NamaFile,
