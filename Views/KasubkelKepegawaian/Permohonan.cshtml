@@ -162,6 +162,14 @@
                                         <a href="/kasubkel-kepegawaian/surat-izin/@item.PermohonanPPIDID"
                                            class="text-[11px] bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg font-semibold">📄 Surat Izin</a>
                                     }
+
+                                    @if (item.StatusPPIDID >= StatusId.DataSiap)
+                                    {
+                                        <a href="/kasubkel-kepegawaian/feedback/@item.PermohonanPPIDID"
+                                            class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg font-medium">
+                                            📋 Feedback
+                                        </a>
+                                    }
                                 </div>
                             </td>
 

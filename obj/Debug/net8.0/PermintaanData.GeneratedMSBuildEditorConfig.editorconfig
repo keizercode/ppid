@@ -34,6 +34,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxEZXRhaWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/Home/FeedbackTask.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxGZWVkYmFja1Rhc2suY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/Home/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -104,6 +108,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Detail.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxEZXRhaWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/HasilFeedback.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcS2FzdWJrZWxLZXBlZ2F3YWlhblxIYXNpbEZlZWRiYWNrLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/KasubkelKepegawaian/Index.cshtml]

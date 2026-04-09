@@ -286,8 +286,35 @@ public class HomeController(
             keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null));
 
         steps.Add((StatusId.DataSiap,        "7. Data Tersedia",                       null));
+        @if (Model.StatusPPIDID >= StatusId.DataSiap)
+    {
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <a href="/kasubkel-kepegawaian/feedback/@Model.PermohonanPPIDID"
+               class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-amber-100 transition-colors">
+                📋 Lihat Hasil Feedback Pemohon
+            </a>
+        </div>
+    }
         steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Upload Laporan", null));
+        @if (Model.StatusPPIDID >= StatusId.DataSiap)
+    {
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <a href="/kasubkel-kepegawaian/feedback/@Model.PermohonanPPIDID"
+               class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-amber-100 transition-colors">
+                📋 Lihat Hasil Feedback Pemohon
+            </a>
+        </div>
+    }
         steps.Add((StatusId.Selesai,         "9. Selesai",                             null));
+        @if (Model.StatusPPIDID >= StatusId.DataSiap)
+    {
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <a href="/kasubkel-kepegawaian/feedback/@Model.PermohonanPPIDID"
+               class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-amber-100 transition-colors">
+                📋 Lihat Hasil Feedback Pemohon
+            </a>
+        </div>
+    }
 
         return steps;
     }
@@ -443,4 +470,108 @@ public class HomeController(
         TempData["SuccessTugas"] = "Laporan berhasil diunggah! Terima kasih telah menyelesaikan penelitian Anda.";
         return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
     }
+
+    [HttpGet("feedback-task/{id:guid}/{jenisTask}")]
+public async Task<IActionResult> FeedbackTask(Guid id, string jenisTask)
+{
+    var p = await db.PermohonanPPID
+        .Include(x => x.Pribadi)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+    if (p is null) return NotFound();
+
+    // Hanya boleh jika sub-task sudah selesai
+    var st = await db.SubTaskPPID
+        .FirstOrDefaultAsync(t => t.PermohonanPPIDID == id && t.JenisTask == jenisTask);
+
+    if (st is null || !st.IsSelesai)
+    {
+        TempData["Error"] = $"Feedback {JenisTask.GetLabel(jenisTask)} hanya dapat diisi setelah tugas selesai.";
+        return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+    }
+
+    // Cek apakah sudah pernah diisi
+    var existing = await db.FeedbackTask
+        .FirstOrDefaultAsync(f => f.PermohonanPPIDID == id && f.JenisTask == jenisTask);
+
+    return View(new FeedbackTaskVm
+    {
+        PermohonanPPIDID = id,
+        NoPermohonan     = p.NoPermohonan ?? string.Empty,
+        JenisTask        = jenisTask,
+        NamaPemohon      = p.Pribadi?.Nama ?? string.Empty,
+        JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+        TanggalJadwal    = st.TanggalJadwal,
+        WaktuJadwal      = st.WaktuJadwal,
+        LokasiDetail     = st.LokasiDetail,
+        SudahDiisi       = existing is not null,
+        NilaiLama        = existing?.NilaiKepuasan ?? 0,
+        CatatanLama      = existing?.Catatan,
+        FilePathLama     = existing?.FileLaporan,
+        NamaFileLama     = existing?.NamaFile,
+    });
+}
+
+// ── POST /feedback-task ───────────────────────────────────────────────────
+[HttpPost("feedback-task"), ValidateAntiForgeryToken]
+public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
+{
+    if (!ModelState.IsValid)
+        return View("FeedbackTask", vm);
+
+    var now     = DateTime.UtcNow;
+    string? fp  = null;
+    string? fn  = null;
+
+    // Upload file laporan jika ada
+    if (vm.FileLaporan?.Length > 0)
+    {
+        var uploadsDir = Path.Combine(
+            string.IsNullOrEmpty(env.WebRootPath)
+                ? Path.Combine(env.ContentRootPath, "wwwroot")
+                : env.WebRootPath,
+            "uploads", vm.PermohonanPPIDID.ToString());
+        Directory.CreateDirectory(uploadsDir);
+
+        fn = $"feedback_{vm.JenisTask}_{now:yyyyMMddHHmmss}_{Path.GetFileName(vm.FileLaporan.FileName)}";
+        await using var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create);
+        await vm.FileLaporan.CopyToAsync(s);
+        fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+        fn = vm.FileLaporan.FileName;
+    }
+
+    // Upsert feedback
+    var existing = await db.FeedbackTask
+        .FirstOrDefaultAsync(f => f.PermohonanPPIDID == vm.PermohonanPPIDID
+                                && f.JenisTask == vm.JenisTask);
+
+    if (existing is null)
+    {
+        db.FeedbackTask.Add(new FeedbackTaskPPID
+        {
+            PermohonanPPIDID = vm.PermohonanPPIDID,
+            JenisTask        = vm.JenisTask,
+            NilaiKepuasan    = vm.NilaiKepuasan,
+            Catatan          = vm.Catatan,
+            FileLaporan      = fp ?? vm.FilePathLama,
+            NamaFile         = fn ?? vm.NamaFileLama,
+            CreatedAt        = now
+        });
+    }
+    else
+    {
+        existing.NilaiKepuasan = vm.NilaiKepuasan;
+        existing.Catatan       = vm.Catatan;
+        if (fp is not null)
+        {
+            existing.FileLaporan = fp;
+            existing.NamaFile    = fn;
+        }
+    }
+
+    await db.SaveChangesAsync();
+
+    TempData["Success"] = $"Feedback {JenisTask.GetLabel(vm.JenisTask)} berhasil dikirim. Terima kasih!";
+    return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
+}
 }

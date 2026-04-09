@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AuditLogPPID>         AuditLog             { get; set; }
     public DbSet<AppUser>              AppUsers             { get; set; }
     public DbSet<SubTaskPPID>          SubTaskPPID          { get; set; }
+    public DbSet<FeedbackTaskPPID>     FeedbackTaskPPID     { get; set; }
 
     protected override void OnModelCreating(ModelBuilder m)
     {
@@ -43,6 +44,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(e => e.PermohonanPPIDID);
         m.Entity<PermohonanPPID>()
             .HasIndex(e => e.NoPermohonan).IsUnique();
+
+        m.Entity<FeedbackTaskPPID>()
+            .HasOne(e => e.Permohonan).WithMany()
+            .HasForeignKey(e => e.PermohonanPPIDID)
+            .OnDelete(DeleteBehavior.Cascade);
+        m.Entity<FeedbackTaskPPID>()
+            .HasIndex(e => e.PermohonanPPIDID);
+        m.Entity<FeedbackTaskPPID>()
+            .HasIndex(e => new { e.PermohonanPPIDID, e.JenisTask }).IsUnique();
 
         m.Entity<SubTaskPPID>()
             .HasOne(e => e.Permohonan).WithMany()
@@ -327,6 +337,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             Waktu            = waktuBaru,
             NamaPIC          = namaPicBaru,
             TeleponPIC       = teleponPicBaru,
+            LokasiJenis      = vm.LokasiJenis,
+            LokasiDetail     = vm.LokasiDetail,
             Keterangan       = alasanReschedule,
             IsAktif          = true,
             CreatedAt        = now,
@@ -336,6 +348,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         sub.WaktuJadwal      = waktuBaru;
         sub.NamaPIC          = namaPicBaru;
         sub.TeleponPIC       = teleponPicBaru;
+        sub.LokasiJenis      = vm.LokasiJenis;
+        sub.LokasiDetail     = vm.LokasiDetail;
         sub.StatusTask       = SubTaskStatus.InProgress;
         sub.RescheduleCount += 1;
         sub.Operator         = operatorName;

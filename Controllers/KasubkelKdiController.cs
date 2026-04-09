@@ -345,6 +345,8 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             Waktu             = sub?.WaktuJadwal   ?? new TimeOnly(9, 0),
             NamaPIC           = sub?.NamaPIC       ?? string.Empty,
             TeleponPIC        = sub?.TeleponPIC,
+            LokasiJenis      = sub?.LokasiJenis  ?? "Offline",
+            LokasiDetail     = sub?.LokasiDetail,
         });
     }
 
@@ -356,15 +358,17 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
         var now = DateTime.UtcNow;
 
         db.JadwalPPID.Add(new JadwalPPID
-        {
-            PermohonanPPIDID = vm.PermohonanPPIDID,
-            JenisJadwal      = "Observasi",
-            Tanggal          = vm.Tanggal,
-            Waktu            = vm.Waktu,
-            NamaPIC          = vm.NamaPIC,
-            TeleponPIC       = vm.TeleponPIC,
-            CreatedAt        = now
-        });
+    {
+        PermohonanPPIDID = vm.PermohonanPPIDID,
+        JenisJadwal      = "Observasi",
+        Tanggal          = vm.Tanggal,
+        Waktu            = vm.Waktu,
+        NamaPIC          = vm.NamaPIC,
+        TeleponPIC       = vm.TeleponPIC,
+        LokasiJenis      = vm.LokasiJenis,
+        LokasiDetail     = vm.LokasiDetail,
+        CreatedAt        = now
+    });
 
         var sub = vm.SubTaskID != Guid.Empty
             ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
@@ -377,6 +381,8 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             sub.WaktuJadwal   = vm.Waktu;
             sub.NamaPIC       = vm.NamaPIC;
             sub.TeleponPIC    = vm.TeleponPIC;
+            sub.LokasiJenis  = vm.LokasiJenis;
+            sub.LokasiDetail = vm.LokasiDetail;
             sub.Operator      = CurrentUser;
             sub.UpdatedAt     = now;
         }
@@ -536,6 +542,8 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
                                 ?? new TimeOnly(9, 0),
             NamaPIC           = jadwalExisting?.NamaPIC ?? sub?.NamaPIC ?? string.Empty,
             TeleponPIC        = jadwalExisting?.TeleponPIC ?? sub?.TeleponPIC,
+            LokasiJenis       = jadwalExisting?.LokasiJenis  ?? sub?.LokasiJenis  ?? "Offline",
+            LokasiDetail      = jadwalExisting?.LokasiDetail ?? sub?.LokasiDetail,
         });
     }
 
@@ -558,6 +566,8 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             Waktu            = vm.Waktu,
             NamaPIC          = vm.NamaPIC,
             TeleponPIC       = vm.TeleponPIC,
+            LokasiJenis      = vm.LokasiJenis,
+            LokasiDetail     = vm.LokasiDetail,
             CreatedAt        = now
         });
 
@@ -572,6 +582,8 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             sub.WaktuJadwal   = vm.Waktu;
             sub.NamaPIC       = vm.NamaPIC;
             sub.TeleponPIC    = vm.TeleponPIC;
+            sub.LokasiJenis   = vm.LokasiJenis;
+            sub.LokasiDetail  = vm.LokasiDetail;
             sub.Operator      = CurrentUser;
             sub.UpdatedAt     = now;
         }

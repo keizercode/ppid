@@ -1,0 +1,197 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/KasubkelKepegawaian/HasilFeedback.cshtml
+   Kasubkel Kepegawaian menerima dan melihat semua feedback per task dari pemohon.
+════════════════════════════════════════════════════════════════════════════ *@
+@model HasilFeedbackVm
+@{
+    ViewData["Title"] = $"Hasil Feedback — {Model.Permohonan.NoPermohonan}";
+    ViewData["Role"]  = "Kasubkel Kepegawaian";
+    Layout = "_LayoutAdmin";
+
+    var p    = Model.Permohonan;
+    var pr   = p.Pribadi;
+}
+
+<div class="max-w-3xl mx-auto">
+
+    <a href="/kasubkel-kepegawaian/detail/@p.PermohonanPPIDID"
+       class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium mb-5">
+        ← Kembali ke Detail
+    </a>
+
+    <!-- Header -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Hasil Feedback Pemohon</p>
+                <h2 class="text-xl font-extrabold font-mono text-gray-800">@p.NoPermohonan</h2>
+                <p class="text-sm text-gray-500 mt-1">@pr?.Nama — @p.JudulPenelitian</p>
+            </div>
+            @if (Model.JumlahFeedback > 0)
+            {
+                <div class="flex flex-col items-start sm:items-end gap-1">
+                    <div class="flex items-center gap-1">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span class="text-xl @(i <= Math.Round(Model.RataRata) ? "text-amber-400" : "text-gray-200")">★</span>
+                        }
+                    </div>
+                    <p class="text-sm font-bold text-gray-700">Rata-rata: @Model.RataRata.ToString("F1") / 5</p>
+                    <p class="text-xs text-gray-400">@Model.JumlahFeedback feedback diterima</p>
+                </div>
+            }
+            else
+            {
+                <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-400 font-medium">
+                    Belum ada feedback
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Feedback per Jenis Task -->
+    @{
+        var taskTypes = new[]
+        {
+            (JenisTask.PermintaanData, "📊", "Permintaan Data", "blue"),
+            (JenisTask.Observasi,      "🔍", "Observasi",       "orange"),
+            (JenisTask.Wawancara,      "🎤", "Wawancara",       "violet"),
+        };
+    }
+
+    <div class="space-y-4 mb-5">
+        @foreach (var (jenis, icon, label, color) in taskTypes)
+        {
+            var st  = Model.SubTasks.FirstOrDefault(t => t.JenisTask == jenis);
+            var fb  = Model.GetFeedback(jenis);
+
+            // Hanya tampilkan jika task ini memang ada
+            bool taskAda = st != null;
+            if (!taskAda) continue;
+
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-50 flex items-center gap-3">
+                    <div class="w-9 h-9 bg-@color-50 border border-@color-100 rounded-xl flex items-center justify-center text-xl">@icon</div>
+                    <div class="flex-1">
+                        <p class="font-bold text-gray-800 text-sm">@label</p>
+                        <p class="text-xs text-gray-400 mt-0.5">
+                            Sub-tugas: <span class="@(st!.IsSelesai ? "text-emerald-600" : st.IsDibatalkan ? "text-red-500" : "text-amber-600") font-medium">@SubTaskStatus.GetLabel(st.StatusTask)</span>
+                        </p>
+                    </div>
+                    @if (fb != null)
+                    {
+                        <div class="flex items-center gap-1">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <span class="text-lg @(i <= fb.NilaiKepuasan ? "text-amber-400" : "text-gray-200")">★</span>
+                            }
+                            <span class="ml-1 text-sm font-bold text-gray-700">@fb.NilaiKepuasan/5</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-xs bg-gray-100 text-gray-400 px-3 py-1 rounded-full font-medium">Belum diisi</span>
+                    }
+                </div>
+
+                <div class="p-5">
+                    @if (fb != null)
+                    {
+                        <div class="space-y-3">
+                            <!-- Nilai dengan emoji -->
+                            <div>
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Nilai Kepuasan</p>
+                                @{
+                                    var (emoji, nilaiLabel) = fb.NilaiKepuasan switch {
+                                        1 => ("😞", "Buruk"),
+                                        2 => ("😕", "Kurang"),
+                                        3 => ("😐", "Cukup"),
+                                        4 => ("😊", "Baik"),
+                                        5 => ("😁", "Sangat Baik"),
+                                        _ => ("—", "—")
+                                    };
+                                }
+                                <p class="text-sm font-semibold text-gray-800">@emoji @nilaiLabel (@fb.NilaiKepuasan/5)</p>
+                            </div>
+
+                            <!-- Catatan -->
+                            @if (!string.IsNullOrEmpty(fb.Catatan))
+                            {
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Catatan Pemohon</p>
+                                    <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                                        <p class="text-sm text-gray-700 leading-relaxed">@fb.Catatan</p>
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- File laporan -->
+                            @if (!string.IsNullOrEmpty(fb.FileLaporan))
+                            {
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">File yang Diunggah</p>
+                                    <div class="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+                                        <span class="text-emerald-500 flex-shrink-0">📎</span>
+                                        <p class="text-xs font-medium text-emerald-800 flex-1 truncate">@(fb.NamaFile ?? "File laporan")</p>
+                                        <a href="@fb.FileLaporan" target="_blank"
+                                           class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-bold flex-shrink-0">
+                                            Unduh
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Tanggal feedback -->
+                            <p class="text-[10px] text-gray-300">Diisi: @fb.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                        </div>
+                    }
+                    else if (st!.IsSelesai)
+                    {
+                        <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-2 items-start">
+                            <span class="text-amber-500 flex-shrink-0">⏳</span>
+                            <p class="text-xs text-amber-700 leading-relaxed">
+                                Tugas @label sudah selesai, namun pemohon belum mengisi feedback.
+                                Pemohon dapat mengisi feedback dari portal publik dengan nomor permohonan mereka.
+                            </p>
+                        </div>
+                    }
+                    else if (st.IsDibatalkan)
+                    {
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 flex gap-2 items-center">
+                            <span class="text-gray-400 flex-shrink-0">🚫</span>
+                            <p class="text-xs text-gray-500">Sub-tugas @label dibatalkan — tidak ada feedback.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex gap-2 items-center">
+                            <span class="text-gray-400 flex-shrink-0">⏳</span>
+                            <p class="text-xs text-gray-500">Sub-tugas @label belum selesai — feedback belum tersedia.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Info portal -->
+    @if (Model.Feedbacks.Count < Model.SubTasks.Count(t => t.IsSelesai && !t.IsDibatalkan))
+    {
+        <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4 flex gap-3 items-start">
+            <span class="text-blue-500 flex-shrink-0 mt-0.5">ℹ️</span>
+            <div>
+                <p class="text-sm font-bold text-blue-800">Ada feedback yang belum diisi</p>
+                <p class="text-xs text-blue-600 mt-1 leading-relaxed">
+                    Informasikan kepada pemohon untuk membuka portal publik, masukkan nomor
+                    <span class="font-mono font-bold">@p.NoPermohonan</span>, lalu klik tombol
+                    "Isi Feedback" di setiap tugas yang sudah selesai.
+                </p>
+            </div>
+        </div>
+    }
+
+    <a href="/kasubkel-kepegawaian/detail/@p.PermohonanPPIDID"
+       class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+        ← Kembali ke Detail Permohonan
+    </a>
+</div>

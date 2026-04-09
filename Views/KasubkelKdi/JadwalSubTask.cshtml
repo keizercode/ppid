@@ -1,6 +1,6 @@
 @* ══════════════════════════════════════════════════════════════════════
-   Views/KasubkelKdi/JadwalSubTask.cshtml
-   Digunakan untuk: JadwalObservasi, JadwalWawancara
+   Views/KasubkelKdi/JadwalSubTask.cshtml — UPDATED
+   Perubahan: tambah field LokasiJenis (Online/Offline) + LokasiDetail
 ══════════════════════════════════════════════════════════════════════ *@
 @model JadwalSubTaskVm
 @{
@@ -8,10 +8,9 @@
     ViewData["Title"] = $"Jadwal {(isWaw ? "Wawancara" : "Observasi")}";
     ViewData["Role"]  = "Kasubkel KDI";
     Layout = "_LayoutAdmin";
-    string icon      = isWaw ? "🎤" : "🔍";
-    string color     = isWaw ? "violet" : "orange";
-    // URL ditentukan oleh route attribute di controller — tidak perlu asp-controller
-    string postUrl   = isWaw ? "/kasubkel-kdi/jadwal-wawancara" : "/kasubkel-kdi/jadwal-observasi";
+    string icon    = isWaw ? "🎤" : "🔍";
+    string color   = isWaw ? "violet" : "orange";
+    string postUrl = isWaw ? "/kasubkel-kdi/jadwal-wawancara" : "/kasubkel-kdi/jadwal-observasi";
 }
 
 <div class="max-w-xl mx-auto">
@@ -42,8 +41,6 @@
             </div>
         }
 
-        @* PENTING: gunakan action="..." langsung tanpa asp-controller agar tidak terjadi
-           konflik antara tag helper dan atribut action yang sudah ditentukan secara eksplisit *@
         <form action="@postUrl" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="SubTaskID" />
@@ -73,9 +70,34 @@
                     <input asp-for="TeleponPIC" class="fld" placeholder="08xxxxxxxxxx" />
                     <span asp-validation-for="TeleponPIC" class="err"></span>
                 </div>
+
+                @* ── LOKASI ONLINE/OFFLINE ── *@
                 <div class="col-span-2">
-                    <label class="lbl">Lokasi / Platform</label>
-                    <input asp-for="Lokasi" class="fld" placeholder="Ruang Rapat A / Google Meet" />
+                    <label class="lbl">Jenis Pertemuan <span class="req">*</span></label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-gray-600 has-[:checked]:bg-gray-50 transition-all">
+                            <input asp-for="LokasiJenis" type="radio" value="Offline" id="lokasiOffline"
+                                   class="accent-gray-600"
+                                   @(Model.LokasiJenis != "Online" ? "checked" : "") />
+                            <span class="text-sm font-semibold text-gray-700">📍 Offline</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                            <input asp-for="LokasiJenis" type="radio" value="Online" id="lokasiOnline"
+                                   class="accent-blue-600"
+                                   @(Model.LokasiJenis == "Online" ? "checked" : "") />
+                            <span class="text-sm font-semibold text-gray-700">🌐 Online</span>
+                        </label>
+                    </div>
+                    <span asp-validation-for="LokasiJenis" class="err"></span>
+                </div>
+
+                <div class="col-span-2" id="lokasiDetailWrap">
+                    <label class="lbl" id="lokasiDetailLabel">
+                        <span id="lblOffline">Nama Ruangan</span>
+                        <span id="lblOnline" class="hidden">Link Zoom / Google Meet</span>
+                    </label>
+                    <input asp-for="LokasiDetail" class="fld" id="lokasiDetailInput"
+                           placeholder="Misal: Ruang Rapat Lantai 3 / https://zoom.us/j/..." />
                 </div>
             </div>
 
@@ -84,8 +106,7 @@
                 <p class="text-xs text-yellow-800 leading-relaxed">
                     <strong>Kewajiban Petugas:</strong> Setelah jadwal tersimpan, petugas
                     <strong class="text-yellow-900">wajib mengingatkan produsen data / narasumber</strong>
-                    mengenai jadwal yang ditetapkan — melalui telepon, WhatsApp, atau tatap muka langsung.
-                    Pastikan konfirmasi kehadiran sudah diterima sebelum hari pelaksanaan.
+                    melalui telepon, WhatsApp, atau tatap muka langsung.
                 </p>
             </div>
 
@@ -109,3 +130,21 @@
     .fld:focus{box-shadow:0 0 0 2.5px #8b5cf6;border-color:transparent;background:white}
     .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
 </style>
+
+<script>
+// Toggle label dan placeholder sesuai jenis lokasi
+function updateLokasiUI() {
+    const isOnline = document.getElementById('lokasiOnline').checked;
+    document.getElementById('lblOffline').classList.toggle('hidden', isOnline);
+    document.getElementById('lblOnline').classList.toggle('hidden', !isOnline);
+    document.getElementById('lokasiDetailInput').placeholder = isOnline
+        ? 'https://zoom.us/j/123456 atau https://meet.google.com/abc-defg-hij'
+        : 'Misal: Ruang Rapat Lantai 3 Gedung DLH';
+}
+
+document.getElementById('lokasiOffline').addEventListener('change', updateLokasiUI);
+document.getElementById('lokasiOnline').addEventListener('change', updateLokasiUI);
+
+// Init
+updateLokasiUI();
+</script>

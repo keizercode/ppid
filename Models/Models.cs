@@ -210,6 +210,12 @@ public class JadwalPPID
     /// </summary>
     [Column("IsAktif")]            public bool     IsAktif          { get; set; } = true;
 
+    /// <summary>"Offline" atau "Online"</summary>
+    [Column("LokasiJenis")]   public string? LokasiJenis  { get; set; }
+
+    /// <summary>Nama ruangan (offline) atau link Zoom/Meet (online)</summary>
+    [Column("LokasiDetail")]  public string? LokasiDetail { get; set; }
+
     [Column("CreatedAt")]          public DateTime? CreatedAt       { get; set; }
     [Column("UpdatedAt")]          public DateTime? UpdatedAt       { get; set; }
 
@@ -250,6 +256,12 @@ public class SubTaskPPID
     [Column("Catatan")]              public string?   Catatan          { get; set; }
     [Column("NamaPIC")]              public string?   NamaPIC          { get; set; }
     [Column("TeleponPIC")]           public string?   TeleponPIC       { get; set; }
+    /// <summary>"Offline" atau "Online"</summary>
+    [Column("LokasiJenis")]   public string? LokasiJenis  { get; set; }
+
+    /// <summary>Nama ruangan (offline) atau link Zoom/Meet (online)</summary>
+    [Column("LokasiDetail")]  public string? LokasiDetail { get; set; }
+
     [Column("TanggalJadwal")]        public DateOnly? TanggalJadwal    { get; set; }
     [Column("WaktuJadwal")]          public TimeOnly? WaktuJadwal      { get; set; }
     [Column("Operator")]             public string?   Operator         { get; set; }
@@ -287,6 +299,39 @@ public class SubTaskPPID
     public bool HasFile      => !string.IsNullOrEmpty(FilePath);
     public bool HasJadwal    => TanggalJadwal.HasValue;
     public bool WasRescheduled => RescheduleCount > 0;
+}
+
+/// <summary>
+/// Feedback pemohon untuk setiap jenis tugas yang telah diselesaikan
+/// (Observasi, PermintaanData, Wawancara).
+/// Satu PermohonanPPID dapat memiliki hingga 3 feedback (unik per JenisTask).
+/// Diterima dan dilihat oleh Kasubkel Kepegawaian.
+/// </summary>
+[Table("FeedbackTaskPPID", Schema = "public")]
+public class FeedbackTaskPPID
+{
+    [Key, Column("FeedbackTaskID")]  public Guid    FeedbackTaskID   { get; set; } = Guid.NewGuid();
+    [Column("PermohonanPPIDID")]     public Guid    PermohonanPPIDID { get; set; }
+    [Column("JenisTask")]            public string  JenisTask        { get; set; } = string.Empty;
+
+    /// <summary>Nilai kepuasan pemohon 1–5.</summary>
+    [Column("NilaiKepuasan")]        public int     NilaiKepuasan    { get; set; }
+
+    [Column("Catatan")]              public string? Catatan          { get; set; }
+
+    /// <summary>Path file laporan/tugas yang diunggah bersama feedback ini.</summary>
+    [Column("FileLaporan")]          public string? FileLaporan      { get; set; }
+    [Column("NamaFile")]             public string? NamaFile         { get; set; }
+    [Column("CreatedAt")]            public DateTime CreatedAt       { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
+}
+
+// ── Tambahan konstanta di LokasiJenis ────────────────────────────────────
+public static class LokasiJenisConst
+{
+    public const string Offline = "Offline";
+    public const string Online  = "Online";
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

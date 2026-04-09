@@ -1,0 +1,170 @@
+@model FeedbackTaskVm
+@{
+    ViewData["Title"] = $"Feedback {JenisTask.GetLabel(Model.JenisTask)}";
+    string jenisLabel = JenisTask.GetLabel(Model.JenisTask);
+    string jenisIcon  = JenisTask.GetIcon(Model.JenisTask);
+    string jenisColor = Model.JenisTask switch {
+        JenisTask.Observasi      => "orange",
+        JenisTask.Wawancara      => "violet",
+        _                        => "blue"
+    };
+    string headerFrom = jenisColor switch {
+        "orange" => "from-orange-700 to-orange-900",
+        "violet" => "from-violet-700 to-violet-900",
+        _        => "from-[#001e55] to-[#003d99]"
+    };
+}
+
+<div class="max-w-md mx-auto px-4 py-10">
+    <a href="@Url.Action("Lacak", "Home", new { noPermohonan = Model.NoPermohonan })"
+       class="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm font-medium mb-5">
+        ← Kembali ke Status
+    </a>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+
+        <!-- Header -->
+        <div class="bg-gradient-to-br @headerFrom px-7 py-7 text-center">
+            <div class="w-14 h-14 bg-white/15 border border-white/20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3">@jenisIcon</div>
+            <h2 class="text-white font-bold text-lg">Feedback @jenisLabel</h2>
+            <p class="text-white/60 text-xs mt-1 font-mono">@Model.NoPermohonan</p>
+        </div>
+
+        <div class="p-6">
+
+            @* Info jadwal (konteks) *@
+            @if (Model.TanggalJadwal.HasValue)
+            {
+                <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-5 text-xs text-gray-600">
+                    <p class="font-bold text-gray-500 uppercase tracking-widest text-[10px] mb-1.5">Info Pelaksanaan</p>
+                    <p>📅 <strong>@Model.TanggalJadwal.Value.ToString("dddd, dd MMMM yyyy")</strong>
+                       pukul @(Model.WaktuJadwal?.ToString("HH:mm") ?? "—") WIB</p>
+                    @if (!string.IsNullOrEmpty(Model.LokasiDetail))
+                    {
+                        <p class="mt-0.5">📍 @Model.LokasiDetail</p>
+                    }
+                </div>
+            }
+
+            @* Sudah diisi sebelumnya *@
+            @if (Model.SudahDiisi)
+            {
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
+                    <span class="text-amber-500 flex-shrink-0">ℹ️</span>
+                    <p class="text-xs text-amber-700 leading-relaxed">
+                        Anda sudah pernah mengisi feedback ini (nilai: <strong>@Model.NilaiLama/5</strong>).
+                        Isi form di bawah untuk memperbarui.
+                    </p>
+                </div>
+            }
+
+            <form asp-action="FeedbackTaskPost" asp-controller="Home" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="PermohonanPPIDID" />
+                <input type="hidden" asp-for="NoPermohonan" />
+                <input type="hidden" asp-for="JenisTask" />
+                <input type="hidden" asp-for="NamaPemohon" />
+                <input type="hidden" asp-for="JudulPenelitian" />
+                <input type="hidden" asp-for="FilePathLama" />
+                <input type="hidden" asp-for="NamaFileLama" />
+
+                <!-- Rating Bintang -->
+                <div class="mb-6">
+                    <p class="text-sm font-bold text-gray-700 mb-4 text-center">
+                        Bagaimana penilaian Anda terhadap layanan <strong>@jenisLabel</strong>?
+                    </p>
+                    <div class="flex gap-2 justify-center">
+                        @foreach (var (val, emoji, lbl, color) in new[]{
+                            (1,"😞","Buruk",        "hover:bg-red-50    hover:border-red-300    peer-checked:bg-red-50    peer-checked:border-red-400"),
+                            (2,"😕","Kurang",       "hover:bg-orange-50 hover:border-orange-300 peer-checked:bg-orange-50 peer-checked:border-orange-400"),
+                            (3,"😐","Cukup",        "hover:bg-amber-50  hover:border-amber-300  peer-checked:bg-amber-50  peer-checked:border-amber-400"),
+                            (4,"😊","Baik",         "hover:bg-blue-50   hover:border-blue-300   peer-checked:bg-blue-50   peer-checked:border-blue-400"),
+                            (5,"😁","Sangat Baik",  "hover:bg-emerald-50 hover:border-emerald-300 peer-checked:bg-emerald-50 peer-checked:border-emerald-400"),
+                        }) {
+                            <label class="cursor-pointer">
+                                <input type="radio" asp-for="NilaiKepuasan" value="@val" class="sr-only peer"
+                                       @(Model.SudahDiisi && Model.NilaiLama == val ? "checked" : "") />
+                                <div class="w-14 h-16 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-gray-200 transition-all @color">
+                                    <span class="text-2xl">@emoji</span>
+                                    <span class="text-[9px] font-semibold text-gray-500 text-center leading-tight">@lbl</span>
+                                </div>
+                            </label>
+                        }
+                    </div>
+                    <span asp-validation-for="NilaiKepuasan" class="text-red-500 text-xs mt-2 block text-center"></span>
+                </div>
+
+                <!-- Catatan -->
+                <div class="mb-5">
+                    <label asp-for="Catatan" class="block text-sm font-bold text-gray-700 mb-1.5">
+                        Masukan / Saran <span class="text-gray-400 font-normal">(opsional)</span>
+                    </label>
+                    <textarea asp-for="Catatan" rows="3"
+                              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none bg-gray-50 focus:bg-white"
+                              placeholder="Tuliskan pengalaman, saran, atau masukan Anda...">@Model.CatatanLama</textarea>
+                </div>
+
+                <!-- Upload Laporan (opsional) -->
+                <div class="mb-5">
+                    <label class="block text-sm font-bold text-gray-700 mb-1.5">
+                        Unggah Laporan / Hasil <span class="text-gray-400 font-normal">(opsional)</span>
+                    </label>
+
+                    @if (!string.IsNullOrEmpty(Model.NamaFileLama))
+                    {
+                        <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-2">
+                            <span class="text-emerald-500">📎</span>
+                            <p class="text-xs text-emerald-700 font-medium flex-1 truncate">@Model.NamaFileLama</p>
+                            @if (!string.IsNullOrEmpty(Model.FilePathLama))
+                            {
+                                <a href="@Model.FilePathLama" target="_blank"
+                                   class="text-[11px] text-emerald-600 hover:underline flex-shrink-0">Lihat</a>
+                            }
+                        </div>
+                        <p class="text-[10px] text-gray-400 mb-2">Sudah ada file. Upload baru untuk mengganti.</p>
+                    }
+
+                    <div id="dz-feedback"
+                         class="border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-xl p-6 text-center transition-all cursor-pointer bg-gray-50 hover:bg-blue-50 group">
+                        <div class="text-2xl mb-1">📄</div>
+                        <p class="text-sm font-semibold text-gray-600 group-hover:text-blue-700">Klik atau drag file ke sini</p>
+                        <p class="text-xs text-gray-400 mt-1">PDF, Word, ZIP — maks. 50 MB</p>
+                        <input asp-for="FileLaporan" type="file" id="fileFeedback"
+                               accept=".pdf,.docx,.doc,.zip" class="hidden" />
+                        <p id="feedbackFileName" class="text-xs text-blue-600 mt-2 font-semibold hidden"></p>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 rounded-xl transition-colors shadow-sm text-sm">
+                    Kirim Feedback →
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const dz  = document.getElementById('dz-feedback');
+const fi  = document.getElementById('fileFeedback');
+const fnEl= document.getElementById('feedbackFileName');
+
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-blue-400','bg-blue-50'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('border-blue-400','bg-blue-50'));
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        fi.files = dt.files;
+        showFile(e.dataTransfer.files[0].name);
+    }
+});
+fi.addEventListener('change', function() { if (this.files[0]) showFile(this.files[0].name); });
+function showFile(name) {
+    fnEl.textContent = '✓ ' + name;
+    fnEl.classList.remove('hidden');
+    dz.classList.add('border-blue-400','bg-blue-50');
+}
+</script>

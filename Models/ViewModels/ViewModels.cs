@@ -186,12 +186,14 @@ public class DaftarPemohonVm
     [Display(Name = "Tanggal Permohonan")]
     public DateOnly TanggalPermohonan { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
+    [Required(ErrorMessage = "Nama Pengampu / PIC wajib diisi")]
     [Display(Name = "Pengampu / PIC")]
-    public string? Pengampu { get; set; }
+    public string Pengampu { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "No. Telepon Pengampu / PIC wajib diisi")]
     [Display(Name = "No. Telepon Pengampu / PIC")]
     [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
-    public string? TeleponPengampu { get; set; }
+    public string TeleponPengampu { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Judul penelitian wajib diisi")]
     [Display(Name = "Judul Penelitian")]
@@ -406,6 +408,14 @@ public class JadwalSubTaskVm
     [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
     public string? TeleponPIC { get; set; }
 
+    [Required(ErrorMessage = "Jenis lokasi wajib dipilih")]
+    [Display(Name = "Jenis Pertemuan")]
+    public string LokasiJenis { get; set; } = "Offline";
+
+    /// <summary>Nama ruangan jika Offline, atau link Zoom/Meet jika Online.</summary>
+    [Display(Name = "Nama Ruangan / Link Meeting")]
+    public string? LokasiDetail { get; set; }
+
     [Display(Name = "Lokasi / Platform")]
     public string? Lokasi { get; set; }
 }
@@ -592,6 +602,17 @@ public class RescheduleSubTaskVm
     [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
     public string? TeleponPICBaru { get; set; }
 
+    [Required(ErrorMessage = "Jenis lokasi wajib dipilih")]
+    [Display(Name = "Jenis Lokasi")]
+    public string LokasiJenis { get; set; } = "Offline";
+
+    [Display(Name = "Nama Ruangan / Link Meeting")]
+    public string? LokasiDetail { get; set; }
+
+    // (isi default dari data lama agar form reschedule lebih user-friendly)
+    public string? LokasiJenisLama  { get; set; }
+    public string? LokasiDetailLama { get; set; }
+
     [Required(ErrorMessage = "Alasan reschedule wajib diisi")]
     [Display(Name = "Alasan Perubahan Jadwal")]
     [MinLength(10, ErrorMessage = "Alasan minimal 10 karakter")]
@@ -700,4 +721,62 @@ public class UploadTugasVm
 
     [Display(Name = "Catatan (opsional)")]
     public string? Catatan { get; set; }
+}
+
+/// <summary>
+/// Feedback pemohon untuk satu jenis tugas (Observasi / PermintaanData / Wawancara).
+/// Diisi dari portal publik (Home/FeedbackTask) dan diterima Kasubkel Kepegawaian.
+/// </summary>
+public class FeedbackTaskVm
+{
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+
+    /// <summary>JenisTask.PermintaanData | JenisTask.Observasi | JenisTask.Wawancara</summary>
+    public string JenisTask        { get; set; } = string.Empty;
+
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+
+    // Info jadwal (ditampilkan di form agar pemohon tahu konteks)
+    public DateOnly? TanggalJadwal { get; set; }
+    public TimeOnly? WaktuJadwal   { get; set; }
+    public string?   LokasiDetail  { get; set; }
+
+    // Apakah sudah pernah mengisi feedback ini?
+    public bool  SudahDiisi        { get; set; }
+    public int   NilaiLama         { get; set; }
+    public string? CatatanLama     { get; set; }
+
+    [Required]
+    [Range(1, 5, ErrorMessage = "Pilih nilai kepuasan 1–5")]
+    public int NilaiKepuasan { get; set; }
+
+    [Display(Name = "Catatan / Saran")]
+    public string? Catatan { get; set; }
+
+    [Display(Name = "Unggah Laporan / Hasil (opsional)")]
+    public IFormFile? FileLaporan { get; set; }
+
+    // Sudah ada file sebelumnya
+    public string? FilePathLama { get; set; }
+    public string? NamaFileLama { get; set; }
+}
+
+/// <summary>
+/// ViewModel ringkasan semua feedback untuk satu permohonan — digunakan
+/// di Kasubkel Kepegawaian untuk melihat semua feedback pemohon.
+/// </summary>
+public class HasilFeedbackVm
+{
+    public PermohonanPPID              Permohonan   { get; set; } = null!;
+    public List<FeedbackTaskPPID>      Feedbacks    { get; set; } = [];
+    public List<SubTaskPPID>           SubTasks     { get; set; } = [];
+
+    public FeedbackTaskPPID? GetFeedback(string jenis) =>
+        Feedbacks.FirstOrDefault(f => f.JenisTask == jenis);
+
+    public int JumlahFeedback => Feedbacks.Count;
+    public double RataRata    =>
+        Feedbacks.Count > 0 ? Feedbacks.Average(f => f.NilaiKepuasan) : 0;
 }

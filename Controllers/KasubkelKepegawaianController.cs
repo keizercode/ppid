@@ -282,6 +282,34 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(Index));
     }
 
+    // ── GET /kasubkel-kepegawaian/feedback/{id} ───────────────────────────────
+[HttpGet("feedback/{id:guid}")]
+public async Task<IActionResult> HasilFeedback(Guid id)
+{
+    var p = await db.PermohonanPPID
+        .Include(x => x.Pribadi)
+        .Include(x => x.Status)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+    if (p is null) return NotFound();
+
+    var feedbacks = await db.FeedbackTask
+        .Where(f => f.PermohonanPPIDID == id)
+        .ToListAsync();
+
+    var subTasks = await db.SubTaskPPID
+        .Where(t => t.PermohonanPPIDID == id)
+        .OrderBy(t => t.JenisTask)
+        .ToListAsync();
+
+    return View(new HasilFeedbackVm
+    {
+        Permohonan = p,
+        Feedbacks  = feedbacks,
+        SubTasks   = subTasks,
+    });
+}
+
     // ── Private helpers ───────────────────────────────────────────────────
 
     private static bool IsVerifikasiAllowed(int? statusId) =>
