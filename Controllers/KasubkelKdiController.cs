@@ -866,6 +866,7 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             vm.PermohonanPPIDID, vm.JenisTask,
             vm.TanggalBaru, vm.WaktuBaru,
             vm.NamaPICBaru, vm.TeleponPICBaru,
+            vm.LokasiJenis, vm.LokasiDetail,
             vm.AlasanReschedule, CurrentUser);
 
         if (!success)

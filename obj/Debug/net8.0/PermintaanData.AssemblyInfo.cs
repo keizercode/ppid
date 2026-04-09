@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PermintaanData")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+79e331de9438fe4bd399fc0b42f78f1ca59a6578")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7d22127a480c08c4d3dc1793d7ca95d7ec4936ef")]
 [assembly: System.Reflection.AssemblyProductAttribute("PermintaanData")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PermintaanData")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

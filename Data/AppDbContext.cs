@@ -308,6 +308,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         TimeOnly waktuBaru,
         string   namaPicBaru,
         string?  teleponPicBaru,
+        string?  lokasiJenis,
+        string?  lokasiDetail,
         string   alasanReschedule,
         string   operatorName)
     {
@@ -337,8 +339,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             Waktu            = waktuBaru,
             NamaPIC          = namaPicBaru,
             TeleponPIC       = teleponPicBaru,
-            LokasiJenis      = vm.LokasiJenis,
-            LokasiDetail     = vm.LokasiDetail,
+            LokasiJenis      = lokasiJenis,
+            LokasiDetail     = lokasiDetail,
             Keterangan       = alasanReschedule,
             IsAktif          = true,
             CreatedAt        = now,
@@ -348,8 +350,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         sub.WaktuJadwal      = waktuBaru;
         sub.NamaPIC          = namaPicBaru;
         sub.TeleponPIC       = teleponPicBaru;
-        sub.LokasiJenis      = vm.LokasiJenis;
-        sub.LokasiDetail     = vm.LokasiDetail;
+        sub.LokasiJenis      = lokasiJenis;
+        sub.LokasiDetail     = lokasiDetail;
         sub.StatusTask       = SubTaskStatus.InProgress;
         sub.RescheduleCount += 1;
         sub.Operator         = operatorName;

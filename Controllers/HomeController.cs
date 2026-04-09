@@ -286,35 +286,8 @@ public class HomeController(
             keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null));
 
         steps.Add((StatusId.DataSiap,        "7. Data Tersedia",                       null));
-        @if (Model.StatusPPIDID >= StatusId.DataSiap)
-    {
-        <div class="mt-3 pt-3 border-t border-gray-100">
-            <a href="/kasubkel-kepegawaian/feedback/@Model.PermohonanPPIDID"
-               class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-amber-100 transition-colors">
-                📋 Lihat Hasil Feedback Pemohon
-            </a>
-        </div>
-    }
         steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Upload Laporan", null));
-        @if (Model.StatusPPIDID >= StatusId.DataSiap)
-    {
-        <div class="mt-3 pt-3 border-t border-gray-100">
-            <a href="/kasubkel-kepegawaian/feedback/@Model.PermohonanPPIDID"
-               class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-amber-100 transition-colors">
-                📋 Lihat Hasil Feedback Pemohon
-            </a>
-        </div>
-    }
         steps.Add((StatusId.Selesai,         "9. Selesai",                             null));
-        @if (Model.StatusPPIDID >= StatusId.DataSiap)
-    {
-        <div class="mt-3 pt-3 border-t border-gray-100">
-            <a href="/kasubkel-kepegawaian/feedback/@Model.PermohonanPPIDID"
-               class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-amber-100 transition-colors">
-                📋 Lihat Hasil Feedback Pemohon
-            </a>
-        </div>
-    }
 
         return steps;
     }
