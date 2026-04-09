@@ -369,42 +369,47 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         return true;
     }
 
-    public async Task<bool> BatalSubTask(
-        Guid   permohonanId,
-        string jenisTask,
-        string alasanBatal,
-        string operatorName)
+
+public async Task<bool> BatalSubTask(
+    Guid   permohonanId,
+    string jenisTask,
+    string alasanBatal,
+    string operatorName)
+{
+    var sub = await GetSubTask(permohonanId, jenisTask);
+    if (sub is null) return false;
+
+    // DIHAPUS: if (sub.IsSelesai) return false;
+    // Pembatalan task Selesai diizinkan — controller yang memvalidasi per jenis task.
+
+    if (sub.IsDibatalkan) return false; // sudah dibatalkan, tidak perlu ulang
+
+    var now = DateTime.UtcNow;
+
+    var jadwalAktif = await JadwalPPID
+        .Where(j => j.PermohonanPPIDID == permohonanId &&
+                    j.JenisJadwal      == jenisTask    &&
+                    j.IsAktif)
+        .ToListAsync();
+    foreach (var j in jadwalAktif)
     {
-        var sub = await GetSubTask(permohonanId, jenisTask);
-        if (sub is null) return false;
-        if (sub.IsSelesai) return false;
-
-        var now = DateTime.UtcNow;
-
-        var jadwalAktif = await JadwalPPID
-            .Where(j => j.PermohonanPPIDID == permohonanId &&
-                        j.JenisJadwal      == jenisTask    &&
-                        j.IsAktif)
-            .ToListAsync();
-        foreach (var j in jadwalAktif)
-        {
-            j.IsAktif   = false;
-            j.UpdatedAt = now;
-        }
-
-        sub.StatusTask  = SubTaskStatus.Dibatalkan;
-        sub.BatalAlasan = alasanBatal;
-        sub.Operator    = operatorName;
-        sub.UpdatedAt   = now;
-
-        var p = await PermohonanPPID.FindAsync(permohonanId);
-        if (p is not null)
-            AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
-                $"Sub-tugas {Models.JenisTask.GetLabel(jenisTask)} dibatalkan. Alasan: {alasanBatal}",
-                operatorName);
-
-        return true;
+        j.IsAktif   = false;
+        j.UpdatedAt = now;
     }
+
+    sub.StatusTask  = SubTaskStatus.Dibatalkan;
+    sub.BatalAlasan = alasanBatal;
+    sub.Operator    = operatorName;
+    sub.UpdatedAt   = now;
+
+    var p = await PermohonanPPID.FindAsync(permohonanId);
+    if (p is not null)
+        AddAuditLog(permohonanId, p.StatusPPIDID, p.StatusPPIDID ?? Models.StatusId.DiProses,
+            $"Sub-tugas {Models.JenisTask.GetLabel(jenisTask)} dibatalkan. Alasan: {alasanBatal}",
+            operatorName);
+
+    return true;
+}
 
     // ════════════════════════════════════════════════════════════════════════
     // BUG FIX EC-CORE-2: ReopenSubTask needsRollback

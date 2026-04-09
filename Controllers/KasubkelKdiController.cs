@@ -890,75 +890,131 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
 
     // ── Batalkan SubTask ──────────────────────────────────────────────────
 
-    [HttpGet("batal-subtask/{id:guid}/{jenisTask}")]
-    public async Task<IActionResult> BatalSubTask(Guid id, string jenisTask)
+
+[HttpGet("batal-subtask/{id:guid}/{jenisTask}")]
+public async Task<IActionResult> BatalSubTask(Guid id, string jenisTask)
+{
+    var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+    if (p is null) return NotFound();
+
+    var sub = await db.GetSubTask(id, jenisTask);
+    if (sub is null)
     {
-        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
-            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-        if (p is null) return NotFound();
-
-        var sub = await db.GetSubTask(id, jenisTask);
-        if (sub is null)
-        {
-            TempData["Error"] = "Sub-tugas tidak ditemukan.";
-            return RedirectToAction(nameof(SubTasks), new { id });
-        }
-
-        if (sub.IsSelesai)
-        {
-            TempData["Error"] = "Sub-tugas yang sudah selesai tidak bisa dibatalkan. " +
-                                "Gunakan Reopen jika hasil perlu direvisi.";
-            return RedirectToAction(nameof(SubTasks), new { id });
-        }
-
-        if (sub.IsDibatalkan)
-        {
-            TempData["Error"] = "Sub-tugas ini sudah dalam status dibatalkan.";
-            return RedirectToAction(nameof(SubTasks), new { id });
-        }
-
-        var allTasks    = await db.SubTaskPPID.Where(t => t.PermohonanPPIDID == id).ToListAsync();
-        var activeTasks = allTasks.Where(t => !t.IsDibatalkan && t.SubTaskID != sub.SubTaskID).ToList();
-        bool allOtherDone = activeTasks.Count == 0 || activeTasks.All(t => t.IsSelesai);
-
-        return View("BatalSubTask", new BatalSubTaskVm
-        {
-            PermohonanPPIDID  = id,
-            NoPermohonan      = p.NoPermohonan   ?? string.Empty,
-            NamaPemohon       = p.Pribadi?.Nama  ?? string.Empty,
-            JenisTask         = jenisTask,
-            StatusSaatIni     = SubTaskStatus.GetLabel(sub.StatusTask),
-            AkanAdvanceStatus = allOtherDone,
-        });
+        TempData["Error"] = "Sub-tugas tidak ditemukan.";
+        return RedirectToAction(nameof(SubTasks), new { id });
     }
 
-    [HttpPost("batal-subtask"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> BatalSubTaskPost(BatalSubTaskVm vm)
+    // Task Selesai: hanya PermintaanData yang boleh dibatalkan.
+    // Observasi & Wawancara yang sudah Selesai → gunakan Reopen.
+    if (sub.IsSelesai && jenisTask != JenisTask.PermintaanData)
     {
-        if (!ModelState.IsValid) return View("BatalSubTask", vm);
+        TempData["Error"] = $"Sub-tugas {JenisTask.GetLabel(jenisTask)} yang sudah selesai " +
+                            "tidak bisa dibatalkan. Gunakan Reopen jika hasil perlu dikerjakan ulang.";
+        return RedirectToAction(nameof(SubTasks), new { id });
+    }
 
-        var success = await db.BatalSubTask(
-            vm.PermohonanPPIDID, vm.JenisTask,
-            vm.AlasanBatal, CurrentUser);
+    if (sub.IsDibatalkan)
+    {
+        TempData["Error"] = "Sub-tugas ini sudah dalam status dibatalkan.";
+        return RedirectToAction(nameof(SubTasks), new { id });
+    }
 
-        if (!success)
-        {
-            TempData["Error"] = "Pembatalan gagal — sub-tugas tidak ditemukan atau sudah selesai.";
-            return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
-        }
+    // Hitung apakah setelah dibatalkan, semua task aktif lain sudah selesai
+    var allTasks    = await db.SubTaskPPID.Where(t => t.PermohonanPPIDID == id).ToListAsync();
+    var activeTasks = allTasks.Where(t => !t.IsDibatalkan && t.SubTaskID != sub.SubTaskID).ToList();
+    bool allOtherDone = activeTasks.Count == 0 || activeTasks.All(t => t.IsSelesai);
 
-        await db.SaveChangesAsync();
+    return View("BatalSubTask", new BatalSubTaskVm
+    {
+        PermohonanPPIDID  = id,
+        NoPermohonan      = p.NoPermohonan   ?? string.Empty,
+        NamaPemohon       = p.Pribadi?.Nama  ?? string.Empty,
+        JenisTask         = jenisTask,
+        StatusSaatIni     = SubTaskStatus.GetLabel(sub.StatusTask),
+        AkanAdvanceStatus = allOtherDone && !sub.IsSelesai,
+        // Jika task ini Selesai, kita akan ROLLBACK bukan advance
+        AkanRollbackStatus = sub.IsSelesai && (
+            p.StatusPPIDID == StatusId.DataSiap ||
+            p.StatusPPIDID == StatusId.FeedbackPemohon ||
+            p.StatusPPIDID == StatusId.Selesai),
+    });
+}
 
-        var advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
-        await db.SaveChangesAsync();
 
-        TempData["Success"] = advanced
-            ? $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} dibatalkan. " +
-              "Task aktif lainnya sudah selesai — status menjadi <strong>Data Siap</strong>."
-            : $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} berhasil dibatalkan.";
+[HttpPost("batal-subtask"), ValidateAntiForgeryToken]
+public async Task<IActionResult> BatalSubTaskPost(BatalSubTaskVm vm)
+{
+    if (!ModelState.IsValid) return View("BatalSubTask", vm);
 
+    // Ambil status sub-task SEBELUM dibatalkan, untuk menentukan rollback
+    var subBefore = await db.GetSubTask(vm.PermohonanPPIDID, vm.JenisTask);
+    bool wasSelesai = subBefore?.IsSelesai ?? false;
+
+    // Ambil status permohonan SEBELUM dibatalkan
+    var pBefore = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    bool statusWasTerminal = pBefore is not null && (
+        pBefore.StatusPPIDID == StatusId.DataSiap ||
+        pBefore.StatusPPIDID == StatusId.FeedbackPemohon ||
+        pBefore.StatusPPIDID == StatusId.Selesai);
+
+    var success = await db.BatalSubTask(
+        vm.PermohonanPPIDID, vm.JenisTask,
+        vm.AlasanBatal, CurrentUser);
+
+    if (!success)
+    {
+        TempData["Error"] = "Pembatalan gagal — sub-tugas tidak ditemukan atau sudah dibatalkan.";
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
+
+    await db.SaveChangesAsync();
+
+    bool advanced  = false;
+    bool rolledBack = false;
+
+    if (wasSelesai && statusWasTerminal)
+    {
+        // PermintaanData yang sebelumnya Selesai menyebabkan status DataSiap.
+        // Sekarang dibatalkan → rollback ke DiProses.
+        // TIDAK memanggil AdvanceIfAllSubTasksDone karena task lain yang Selesai
+        // bisa langsung men-advance kembali, padahal PermintaanData baru saja dibatalkan.
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is not null)
+        {
+            var lama        = p.StatusPPIDID;
+            p.StatusPPIDID  = StatusId.DiProses;
+            p.UpdatedAt     = DateTime.UtcNow;
+
+            db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
+                $"Status di-rollback ke DiProses karena sub-tugas {JenisTask.GetLabel(vm.JenisTask)} " +
+                $"dibatalkan setelah data tersedia. Alasan: {vm.AlasanBatal}",
+                CurrentUser);
+
+            await db.SaveChangesAsync();
+            rolledBack = true;
+        }
+    }
+    else
+    {
+        // Task belum Selesai saat dibatalkan → cek apakah task lain sudah selesai semua
+        advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
+        await db.SaveChangesAsync();
+    }
+
+    string msg;
+    if (rolledBack)
+        msg = $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} dibatalkan. " +
+              "Status permohonan dimundurkan kembali ke <strong>Sedang Diproses</strong>.";
+    else if (advanced)
+        msg = $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} dibatalkan. " +
+              "Task aktif lainnya sudah selesai — status menjadi <strong>Data Siap</strong>.";
+    else
+        msg = $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} berhasil dibatalkan.";
+
+    TempData["Success"] = msg;
+    return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+}
 
     // ── Reopen SubTask ────────────────────────────────────────────────────
 

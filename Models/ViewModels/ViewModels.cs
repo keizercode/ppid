@@ -634,10 +634,19 @@ public class BatalSubTaskVm
     public string AlasanBatal { get; set; } = string.Empty;
 
     /// <summary>
-    /// True jika setelah pembatalan ini, semua task aktif sudah selesai.
-    /// Diisi di POST handler untuk menampilkan pesan yang tepat.
+    /// True jika setelah pembatalan ini, semua task aktif sudah selesai
+    /// sehingga status permohonan akan maju ke DataSiap.
+    /// Hanya true jika task yang dibatalkan belum Selesai.
     /// </summary>
     public bool AkanAdvanceStatus { get; set; }
+
+    /// <summary>
+    /// True jika task yang dibatalkan sebelumnya Selesai DAN status
+    /// permohonan sudah DataSiap/FeedbackPemohon/Selesai.
+    /// Artinya status akan MUNDUR ke DiProses setelah pembatalan.
+    /// Berlaku khusus untuk PermintaanData Selesai yang dibatalkan.
+    /// </summary>
+    public bool AkanRollbackStatus { get; set; }
 }
 
 // ── EC-3: Reopen SubTask ─────────────────────────────────────────────────────

@@ -39,7 +39,7 @@
         {
             <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Jadwal Saat Ini (Akan Diganti)</p>
-                <div class="flex items-center gap-3">
+                <div class="flex items-start gap-3">
                     <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-sm">❌</div>
                     <div>
                         <p class="text-sm font-semibold text-gray-600 line-through">
@@ -47,9 +47,16 @@
                             pukul @(Model.WaktuLama?.ToString("HH:mm") ?? "—") WIB
                         </p>
                         @if (!string.IsNullOrEmpty(Model.NamaPICLama))
-{
-    <p class="text-xs text-gray-400 mt-0.5">PIC: @Model.NamaPICLama</p>
-}
+                        {
+                            <p class="text-xs text-gray-400 mt-0.5">PIC: @Model.NamaPICLama</p>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.LokasiJenisLama))
+                        {
+                            <p class="text-xs text-gray-400 mt-0.5">
+                                @(Model.LokasiJenisLama == "Online" ? "🌐 Online" : "📍 Offline")
+                                @if (!string.IsNullOrEmpty(Model.LokasiDetailLama)) { <span>— @Model.LokasiDetailLama</span> }
+                            </p>
+                        }
                     </div>
                 </div>
             </div>
@@ -85,6 +92,35 @@
                     <label class="lbl">No. Telepon PIC</label>
                     <input asp-for="TeleponPICBaru" class="fld" placeholder="08xxxxxxxxxx" />
                 </div>
+
+                @* ── LOKASI: Online / Offline (FIX: RescheduleSubTask sekarang menyertakan lokasi) *@
+                <div class="col-span-2">
+                    <label class="lbl">Jenis Pertemuan <span class="req">*</span></label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-gray-600 has-[:checked]:bg-gray-50 transition-all">
+                            <input asp-for="LokasiJenis" type="radio" value="Offline" id="reschedOffline"
+                                   class="accent-gray-600" />
+                            <span class="text-sm font-semibold text-gray-700">📍 Offline</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                            <input asp-for="LokasiJenis" type="radio" value="Online" id="reschedOnline"
+                                   class="accent-blue-600" />
+                            <span class="text-sm font-semibold text-gray-700">🌐 Online</span>
+                        </label>
+                    </div>
+                    <span asp-validation-for="LokasiJenis" class="err"></span>
+                </div>
+
+                <div class="col-span-2">
+                    <label class="lbl">
+                        <span id="reschedLblOffline">Nama Ruangan</span>
+                        <span id="reschedLblOnline" class="hidden">Link Zoom / Google Meet</span>
+                        <span class="text-gray-400 font-normal normal-case">(opsional)</span>
+                    </label>
+                    <input asp-for="LokasiDetail" class="fld" id="reschedLokasiDetailInput"
+                           placeholder="Misal: Ruang Rapat Lantai 3 / https://zoom.us/j/..." />
+                </div>
+
                 <div class="col-span-2">
                     <label class="lbl">Alasan Perubahan Jadwal <span class="req">*</span></label>
                     <textarea asp-for="AlasanReschedule" rows="3" class="fld resize-none"
@@ -126,3 +162,17 @@
     .fld:focus{box-shadow:0 0 0 2.5px #f59e0b;border-color:transparent;background:white}
     .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
 </style>
+
+<script>
+function updateReschedLokasiUI() {
+    const isOnline = document.getElementById('reschedOnline').checked;
+    document.getElementById('reschedLblOffline').classList.toggle('hidden', isOnline);
+    document.getElementById('reschedLblOnline').classList.toggle('hidden', !isOnline);
+    document.getElementById('reschedLokasiDetailInput').placeholder = isOnline
+        ? 'https://zoom.us/j/123456 atau https://meet.google.com/abc-defg-hij'
+        : 'Misal: Ruang Rapat Lantai 3 Gedung DLH';
+}
+document.getElementById('reschedOffline').addEventListener('change', updateReschedLokasiUI);
+document.getElementById('reschedOnline').addEventListener('change', updateReschedLokasiUI);
+updateReschedLokasiUI();
+</script>

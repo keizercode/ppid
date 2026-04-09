@@ -1,9 +1,16 @@
 @* ════════════════════════════════════════════════════════════════════════════
-   Views/KasubkelKdi/SubTasks.cshtml
-   PERUBAHAN:
-   - Hapus `await db.DokumenPPID` langsung dari view (tidak valid di Razor view)
-   - Gunakan ViewData["TugasDocs"] yang di-populate oleh controller
-   - Hapus `await` di view (views Razor tidak mendukung async top-level)
+   Views/KasubkelKdi/SubTasks.cshtml — UPDATED
+
+   Perbaikan tombol aksi per jenis task:
+
+   PermintaanData Selesai → Revisi File + Batalkan
+     (Data salah/tidak tersedia = batalkan; data perlu diperbaiki = revisi file)
+
+   Observasi / Wawancara Selesai → Revisi File + Reopen
+     (Hasil perlu dikerjakan ulang dari awal → Reopen reset ke Pending)
+
+   Apa pun Dibatalkan → Reopen
+     (Buka kembali untuk dikerjakan ulang)
 ════════════════════════════════════════════════════════════════════════════ *@
 @model ParallelTasksVm
 @{
@@ -26,7 +33,6 @@
     bool canFeedback   = isDataSiap;
     bool canForceClose = isDataSiap || isFeedback;
 
-    // Laporan final dari controller (ViewData — tidak boleh pakai db langsung di view)
     var tugasDocs = ViewData["TugasDocs"] as List<DokumenPPID> ?? new();
 
     static string ReschedBadge(SubTaskPPID? st) =>
@@ -114,6 +120,7 @@
             bool   baru     = IsRecentlyUpdated(st);
             string rescBadge = ReschedBadge(st);
 
+            // Warna border card berdasarkan status
             string cardBorder = st.IsSelesai    ? "border-emerald-200" :
                     st.IsDibatalkan ? "border-red-200"     :
                     st.IsInProgress ? "border-amber-200"   : "border-gray-200";
@@ -167,6 +174,13 @@
                             📅 <strong>@st.TanggalJadwal.Value.ToString("dd MMM yyyy")</strong>
                             pukul @(st.WaktuJadwal?.ToString("HH:mm") ?? "—") WIB
                         </p>
+                        @if (!string.IsNullOrEmpty(st.LokasiJenis))
+                        {
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                @(st.LokasiJenis == "Online" ? "🌐 Online" : "📍 Offline")
+                                @if (!string.IsNullOrEmpty(st.LokasiDetail)) { <span>— <strong>@st.LokasiDetail</strong></span> }
+                            </p>
+                        }
                         @if (!string.IsNullOrEmpty(st.NamaPIC))
                         {
                             <p class="text-xs text-gray-500 mt-0.5">PIC: <strong>@st.NamaPIC</strong></p>
@@ -201,8 +215,11 @@
                     </div>
                 }
 
+                @* ══ TOMBOL AKSI BERDASARKAN STATUS DAN JENIS TASK ══ *@
+
                 @if (st.IsDibatalkan)
                 {
+                    @* Semua jenis task yang dibatalkan → tampilkan Reopen *@
                     <div class="bg-red-50 border border-red-100 rounded-xl p-2.5 mb-2">
                         <p class="text-[11px] text-red-600 font-medium">🚫 Dibatalkan: @(st.BatalAlasan ?? "—")</p>
                     </div>
@@ -213,6 +230,7 @@
                 }
                 else if (!st.IsSelesai)
                 {
+                    @* Task belum selesai → tampilkan aksi utama + aksi sekunder *@
                     <div class="flex gap-1.5 flex-col">
                         <a href="@actionUrl"
                            class="w-full flex items-center justify-center gap-2 @(st.IsInProgress ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#002d7a] hover:bg-blue-900") text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
@@ -220,6 +238,7 @@
                               st.IsInProgress ? "Konfirmasi Selesai →" : "—")
                         </a>
 
+                        @* Aksi sekunder khusus Observasi/Wawancara *@
                         @if (jenis != JenisTask.PermintaanData)
                         {
                             <div class="flex gap-1.5">
@@ -242,6 +261,7 @@
                         }
                         else
                         {
+                            @* PermintaanData pending/in-progress → hanya Batalkan *@
                             <a href="/kasubkel-kdi/batal-subtask/@p.PermohonanPPIDID/@st.JenisTask"
                                class="w-full text-center bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 text-[11px] font-semibold px-2 py-1.5 rounded-lg transition-colors">
                                 🚫 Batalkan
@@ -251,11 +271,15 @@
                 }
                 else
                 {
+                    @* ══ TASK SELESAI: logika tombol berbeda per jenis ══
+                       PermintaanData Selesai → Revisi File + Batalkan
+                       Observasi/Wawancara Selesai → Revisi File + Reopen *@
                     <div class="flex items-center justify-between">
                         <div class="text-emerald-600 text-xs font-semibold">
                             ✓ Selesai @st.SelesaiAt?.ToLocalTime().ToString("dd MMM HH:mm")
                         </div>
-                        <div class="flex gap-1.5">
+                        <div class="flex gap-1.5 flex-wrap justify-end">
+                            @* Revisi File tersedia untuk semua jenis task Selesai yang punya file *@
                             @if (st.HasFile)
                             {
                                 <a href="/kasubkel-kdi/revisi-file/@p.PermohonanPPIDID/@st.JenisTask"
@@ -263,10 +287,25 @@
                                     📝 Revisi File
                                 </a>
                             }
-                            <a href="/kasubkel-kdi/reopen-subtask/@p.PermohonanPPIDID/@st.JenisTask"
-                               class="text-[11px] bg-violet-50 hover:bg-violet-100 border border-violet-100 text-violet-600 px-2 py-1 rounded-lg font-medium transition-colors">
-                                ↩ Reopen
-                            </a>
+
+                            @if (jenis == JenisTask.PermintaanData)
+                            {
+                                @* PermintaanData Selesai → Batalkan
+                                   (data salah/tidak bisa diberikan → batalkan, status mundur ke DiProses) *@
+                                <a href="/kasubkel-kdi/batal-subtask/@p.PermohonanPPIDID/@st.JenisTask"
+                                   class="text-[11px] bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 px-2 py-1 rounded-lg font-medium transition-colors">
+                                    🚫 Batalkan
+                                </a>
+                            }
+                            else
+                            {
+                                @* Observasi/Wawancara Selesai → Reopen
+                                   (hasil perlu dikerjakan ulang dari awal → reset ke Pending) *@
+                                <a href="/kasubkel-kdi/reopen-subtask/@p.PermohonanPPIDID/@st.JenisTask"
+                                   class="text-[11px] bg-violet-50 hover:bg-violet-100 border border-violet-100 text-violet-600 px-2 py-1 rounded-lg font-medium transition-colors">
+                                    ↩ Reopen
+                                </a>
+                            }
                         </div>
                     </div>
                 }
@@ -395,7 +434,6 @@
         </div>
     </div>
 
-    @* Laporan final pemohon (dari ViewData, bukan db langsung) *@
     @if (tugasDocs.Any())
     {
         <div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 mb-4">
