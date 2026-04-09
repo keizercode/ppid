@@ -58,7 +58,7 @@ public class HomeController(
             .Where(f => f.PermohonanPPIDID == permohonan.PermohonanPPIDID)
             .ToListAsync();
 
-            ViewData["FeedbackMap"] = feedbacks
+        ViewData["FeedbackMap"] = feedbacks
             .GroupBy(f => f.JenisTask)
             .ToDictionary(g => g.Key, g => true);
 
@@ -146,59 +146,6 @@ public class HomeController(
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // KUESIONER
-    // ════════════════════════════════════════════════════════════════════════
-
-    [HttpGet]
-    public async Task<IActionResult> Kuesioner(Guid id)
-    {
-        var p = await db.PermohonanPPID.FindAsync(id);
-        if (p == null) return NotFound();
-
-        if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
-        {
-            TempData["Error"] = "Kuesioner tidak tersedia untuk status permohonan ini.";
-            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
-        }
-
-        return View(new KuesionerVm
-        {
-            PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan!
-        });
-    }
-
-    [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> KuesionerPost(KuesionerVm model)
-    {
-        if (!ModelState.IsValid) return View("Kuesioner", model);
-
-        var p = await db.PermohonanPPID.FindAsync(model.PermohonanPPIDID);
-        if (p != null && p.StatusPPIDID != StatusId.Selesai)
-        {
-            var statusLama   = p.StatusPPIDID;
-            p.StatusPPIDID   = StatusId.Selesai;
-            p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
-            p.UpdatedAt      = DateTime.UtcNow;
-            await db.SaveChangesAsync();
-
-            db.AuditLog.Add(new AuditLogPPID
-            {
-                PermohonanPPIDID = model.PermohonanPPIDID,
-                StatusLama       = statusLama,
-                StatusBaru       = StatusId.Selesai,
-                Keterangan       = $"Kuesioner kepuasan diisi pemohon. Nilai: {model.NilaiKepuasan}/5.",
-                Operator         = "Pemohon",
-                CreatedAt        = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
-        }
-
-        TempData["Success"] = "Terima kasih! Kuesioner berhasil dikirim.";
-        return RedirectToAction("Lacak", new { noPermohonan = model.NoPermohonan });
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
     // ERROR HANDLER
     // ════════════════════════════════════════════════════════════════════════
 
@@ -281,11 +228,6 @@ public class HomeController(
             (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit",                    null),
         };
 
-        // ── Step 6: SELALU satu step, tanpa branch wawancara-only ──────────
-        // Detail jadwal/progress ditampilkan di panel sub-tugas di dalam step ini.
-        // Status intermediate (WawancaraDijadwalkan 12, ObservasiDijadwalkan 8, dsb.)
-        // semuanya dipetakan ke posisi workflow 5 oleh GetWorkflowOrder sehingga
-        // FindNearestIdx tetap menunjuk step 6 dengan benar, bukan step 9.
         var keperluanList = new List<string>();
         if (p.IsPermintaanData) keperluanList.Add("Permintaan Data");
         if (p.IsObservasi)      keperluanList.Add("Observasi");
@@ -294,34 +236,28 @@ public class HomeController(
         steps.Add((StatusId.Didisposisi, "6. Pembuatan Jadwal / Pemrosesan Data",
             keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null));
 
-        steps.Add((StatusId.DataSiap,        "7. Data Tersedia",                       null));
-        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Upload Laporan", null));
-        steps.Add((StatusId.Selesai,         "9. Selesai",                             null));
+        steps.Add((StatusId.DataSiap,        "7. Data Tersedia",                          null));
+
+        // Step 8: Pengisian Feedback per Tugas (Observasi, PermintaanData, Wawancara)
+        var feedbackList = new List<string>();
+        if (p.IsPermintaanData) feedbackList.Add("Permintaan Data");
+        if (p.IsObservasi)      feedbackList.Add("Observasi");
+        if (p.IsWawancara)      feedbackList.Add("Wawancara");
+
+        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Unggah Laporan",
+            feedbackList.Count > 0 ? "Feedback: " + string.Join(", ", feedbackList) : null));
+
+        steps.Add((StatusId.Selesai, "9. Selesai", null));
 
         return steps;
     }
 
-    /// <summary>
-    /// Posisi ordinal workflow aktual — BUKAN nilai StatusId.
-    ///
-    /// StatusId 12-15 ditambahkan setelah DataSiap(10)/Selesai(11) sehingga
-    /// perbandingan numerik ID tidak mencerminkan urutan proses.
-    /// Contoh bug lama: WawancaraDijadwalkan(12) &gt; Selesai(11) numeris,
-    /// sehingga FindNearestIdx lama mengira permohonan sudah di step Selesai
-    /// padahal masih di tahap penjadwalan wawancara.
-    ///
-    /// Dengan fungsi ini semua status di tahap "diproses" mendapat order=5
-    /// (sama dengan Didisposisi), sehingga step 6 selalu aktif selama proses
-    /// berlangsung dan step 9 (Selesai, order=8) tidak pernah "aktif" prematur.
-    /// </summary>
     private static int GetWorkflowOrder(int statusId) => statusId switch
     {
         StatusId.TerdaftarSistem                                          => 1,
         StatusId.IdentifikasiAwal                                         => 2,
         StatusId.MenungguVerifikasi or StatusId.MenungguSuratIzin         => 3,
         StatusId.SuratIzinTerbit                                          => 4,
-        // Semua status proses (termasuk yang ID-nya 12-15 secara numerik
-        // lebih besar dari DataSiap/Selesai) berada di posisi 5:
         StatusId.Didisposisi or StatusId.DiProses
             or StatusId.ObservasiDijadwalkan or StatusId.ObservasiSelesai
             or StatusId.WawancaraDijadwalkan or StatusId.WawancaraSelesai => 5,
@@ -340,7 +276,6 @@ public class HomeController(
 
         for (int i = 0; i < steps.Count; i++)
         {
-            // Gunakan workflow order, bukan nilai StatusId numerik
             if (GetWorkflowOrder(steps[i].StatusId) <= currentOrder)
                 best = i;
         }
@@ -453,111 +388,186 @@ public class HomeController(
         return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // FEEDBACK PER TASK (OBSERVASI / PERMINTAAN DATA / WAWANCARA)
+    // Menggantikan Kuesioner Kepuasan Umum.
+    // ════════════════════════════════════════════════════════════════════════
+
     [HttpGet("feedback-task/{id:guid}/{jenisTask}")]
-public async Task<IActionResult> FeedbackTask(Guid id, string jenisTask)
-{
-    var p = await db.PermohonanPPID
-        .Include(x => x.Pribadi)
-        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-
-    if (p is null) return NotFound();
-
-    // Hanya boleh jika sub-task sudah selesai
-    var st = await db.SubTaskPPID
-        .FirstOrDefaultAsync(t => t.PermohonanPPIDID == id && t.JenisTask == jenisTask);
-
-    if (st is null || !st.IsSelesai)
+    public async Task<IActionResult> FeedbackTask(Guid id, string jenisTask)
     {
-        TempData["Error"] = $"Feedback {JenisTask.GetLabel(jenisTask)} hanya dapat diisi setelah tugas selesai.";
-        return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
-    }
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
 
-    // Cek apakah sudah pernah diisi
-    var existing = await db.FeedbackTaskPPID
-        .FirstOrDefaultAsync(f => f.PermohonanPPIDID == id && f.JenisTask == jenisTask);
+        if (p is null) return NotFound();
 
-    return View(new FeedbackTaskVm
-    {
-        PermohonanPPIDID = id,
-        NoPermohonan     = p.NoPermohonan ?? string.Empty,
-        JenisTask        = jenisTask,
-        NamaPemohon      = p.Pribadi?.Nama ?? string.Empty,
-        JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
-        TanggalJadwal    = st.TanggalJadwal,
-        WaktuJadwal      = st.WaktuJadwal,
-        LokasiDetail     = st.LokasiDetail,
-        SudahDiisi       = existing is not null,
-        NilaiLama        = existing?.NilaiKepuasan ?? 0,
-        // FIX: pre-populate NilaiKepuasan dari existing sehingga asp-for
-        // pada radio button di view dapat menentukan checked state secara
-        // otomatis tanpa @() expression terlarang di area atribut.
-        NilaiKepuasan    = existing?.NilaiKepuasan ?? 0,
-        CatatanLama      = existing?.Catatan,
-        FilePathLama     = existing?.FileLaporan,
-        NamaFileLama     = existing?.NamaFile,
-    });
-}
+        // Hanya boleh jika sub-task sudah selesai
+        var st = await db.SubTaskPPID
+            .FirstOrDefaultAsync(t => t.PermohonanPPIDID == id && t.JenisTask == jenisTask);
 
-// ── POST /feedback-task ───────────────────────────────────────────────────
-[HttpPost("feedback-task"), ValidateAntiForgeryToken]
-public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
-{
-    if (!ModelState.IsValid)
-        return View("FeedbackTask", vm);
-
-    var now     = DateTime.UtcNow;
-    string? fp  = null;
-    string? fn  = null;
-
-    // Upload file laporan jika ada
-    if (vm.FileLaporan?.Length > 0)
-    {
-        var uploadsDir = Path.Combine(
-            string.IsNullOrEmpty(env.WebRootPath)
-                ? Path.Combine(env.ContentRootPath, "wwwroot")
-                : env.WebRootPath,
-            "uploads", vm.PermohonanPPIDID.ToString());
-        Directory.CreateDirectory(uploadsDir);
-
-        fn = $"feedback_{vm.JenisTask}_{now:yyyyMMddHHmmss}_{Path.GetFileName(vm.FileLaporan.FileName)}";
-        await using var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create);
-        await vm.FileLaporan.CopyToAsync(s);
-        fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
-        fn = vm.FileLaporan.FileName;
-    }
-
-    // Upsert feedback
-    var existing = await db.FeedbackTaskPPID
-        .FirstOrDefaultAsync(f => f.PermohonanPPIDID == vm.PermohonanPPIDID
-                                && f.JenisTask == vm.JenisTask);
-
-    if (existing is null)
-    {
-        db.FeedbackTaskPPID.Add(new FeedbackTaskPPID
+        if (st is null || !st.IsSelesai)
         {
-            PermohonanPPIDID = vm.PermohonanPPIDID,
-            JenisTask        = vm.JenisTask,
-            NilaiKepuasan    = vm.NilaiKepuasan,
-            Catatan          = vm.Catatan,
-            FileLaporan      = fp ?? vm.FilePathLama,
-            NamaFile         = fn ?? vm.NamaFileLama,
-            CreatedAt        = now
+            TempData["Error"] = $"Feedback {JenisTask.GetLabel(jenisTask)} hanya dapat diisi setelah tugas selesai.";
+            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+        }
+
+        // Harus sudah DataSiap atau FeedbackPemohon agar bisa mengisi
+        if (p.StatusPPIDID < StatusId.DataSiap)
+        {
+            TempData["Error"] = "Feedback belum dapat diisi. Pastikan semua proses pengolahan data selesai terlebih dahulu.";
+            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+        }
+
+        var existing = await db.FeedbackTaskPPID
+            .FirstOrDefaultAsync(f => f.PermohonanPPIDID == id && f.JenisTask == jenisTask);
+
+        return View(new FeedbackTaskVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan ?? string.Empty,
+            JenisTask        = jenisTask,
+            NamaPemohon      = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+            TanggalJadwal    = st.TanggalJadwal,
+            WaktuJadwal      = st.WaktuJadwal,
+            LokasiDetail     = st.LokasiDetail,
+            SudahDiisi       = existing is not null,
+            NilaiLama        = existing?.NilaiKepuasan ?? 0,
+            NilaiKepuasan    = existing?.NilaiKepuasan ?? 0,
+            CatatanLama      = existing?.Catatan,
+            FilePathLama     = existing?.FileLaporan,
+            NamaFileLama     = existing?.NamaFile,
         });
     }
-    else
+
+    [HttpPost("feedback-task"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
     {
-        existing.NilaiKepuasan = vm.NilaiKepuasan;
-        existing.Catatan       = vm.Catatan;
-        if (fp is not null)
+        if (!ModelState.IsValid)
+            return View("FeedbackTask", vm);
+
+        var now    = DateTime.UtcNow;
+        string? fp = null;
+        string? fn = null;
+
+        // Upload file laporan jika ada
+        if (vm.FileLaporan?.Length > 0)
         {
-            existing.FileLaporan = fp;
-            existing.NamaFile    = fn;
+            var uploadsDir = Path.Combine(
+                string.IsNullOrEmpty(env.WebRootPath)
+                    ? Path.Combine(env.ContentRootPath, "wwwroot")
+                    : env.WebRootPath,
+                "uploads", vm.PermohonanPPIDID.ToString());
+            Directory.CreateDirectory(uploadsDir);
+
+            fn = $"feedback_{vm.JenisTask}_{now:yyyyMMddHHmmss}_{Path.GetFileName(vm.FileLaporan.FileName)}";
+            await using var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create);
+            await vm.FileLaporan.CopyToAsync(s);
+            fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+            fn = vm.FileLaporan.FileName;
         }
+
+        // Upsert feedback
+        var existing = await db.FeedbackTaskPPID
+            .FirstOrDefaultAsync(f => f.PermohonanPPIDID == vm.PermohonanPPIDID
+                                   && f.JenisTask == vm.JenisTask);
+
+        if (existing is null)
+        {
+            db.FeedbackTaskPPID.Add(new FeedbackTaskPPID
+            {
+                PermohonanPPIDID = vm.PermohonanPPIDID,
+                JenisTask        = vm.JenisTask,
+                NilaiKepuasan    = vm.NilaiKepuasan,
+                Catatan          = vm.Catatan,
+                FileLaporan      = fp ?? vm.FilePathLama,
+                NamaFile         = fn ?? vm.NamaFileLama,
+                CreatedAt        = now
+            });
+        }
+        else
+        {
+            existing.NilaiKepuasan = vm.NilaiKepuasan;
+            existing.Catatan       = vm.Catatan;
+            if (fp is not null)
+            {
+                existing.FileLaporan = fp;
+                existing.NamaFile    = fn;
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        // ── Cek apakah semua feedback task yang wajib sudah terisi ────────
+        // Jika ya, otomatis advance status ke Selesai.
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+
+        if (p != null
+            && (p.StatusPPIDID == StatusId.FeedbackPemohon || p.StatusPPIDID == StatusId.DataSiap)
+            && p.StatusPPIDID != StatusId.Selesai)
+        {
+            // Task yang aktif (tidak dibatalkan) dan sudah selesai
+            var completedTaskJenis = await db.SubTaskPPID
+                .Where(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
+                         && t.StatusTask == SubTaskStatus.Selesai)
+                .Select(t => t.JenisTask)
+                .ToListAsync();
+
+            // Feedback yang sudah terisi
+            var filledFeedbackJenis = await db.FeedbackTaskPPID
+                .Where(f => f.PermohonanPPIDID == vm.PermohonanPPIDID)
+                .Select(f => f.JenisTask)
+                .ToListAsync();
+
+            bool allFeedbacksDone = completedTaskJenis.Count > 0
+                && completedTaskJenis.All(j => filledFeedbackJenis.Contains(j));
+
+            if (allFeedbacksDone)
+            {
+                var lama             = p.StatusPPIDID;
+                p.StatusPPIDID       = StatusId.Selesai;
+                p.TanggalSelesai     = DateOnly.FromDateTime(DateTime.Today);
+                p.UpdatedAt          = now;
+
+                int jmlFeedback      = filledFeedbackJenis.Count;
+                db.AuditLog.Add(new AuditLogPPID
+                {
+                    PermohonanPPIDID = vm.PermohonanPPIDID,
+                    StatusLama       = lama,
+                    StatusBaru       = StatusId.Selesai,
+                    Keterangan       = $"Semua feedback tugas ({jmlFeedback}) telah diisi pemohon. " +
+                                       "Permohonan otomatis diselesaikan.",
+                    Operator         = "Pemohon",
+                    CreatedAt        = now
+                });
+
+                await db.SaveChangesAsync();
+
+                TempData["Success"] =
+                    $"Feedback <strong>{JenisTask.GetLabel(vm.JenisTask)}</strong> berhasil dikirim. " +
+                    "🎉 Semua feedback telah lengkap — permohonan dinyatakan <strong>Selesai</strong>!";
+
+                return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
+            }
+
+            // Hitung sisa feedback yang belum diisi
+            var sisaFeedback = completedTaskJenis
+                .Where(j => !filledFeedbackJenis.Contains(j))
+                .Select(JenisTask.GetLabel)
+                .ToList();
+
+            TempData["Success"] =
+                $"Feedback <strong>{JenisTask.GetLabel(vm.JenisTask)}</strong> berhasil dikirim. " +
+                (sisaFeedback.Count > 0
+                    ? $"Masih ada {sisaFeedback.Count} feedback yang perlu diisi: {string.Join(", ", sisaFeedback)}."
+                    : "Terima kasih!");
+        }
+        else
+        {
+            TempData["Success"] = $"Feedback {JenisTask.GetLabel(vm.JenisTask)} berhasil dikirim. Terima kasih!";
+        }
+
+        return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
     }
-
-    await db.SaveChangesAsync();
-
-    TempData["Success"] = $"Feedback {JenisTask.GetLabel(vm.JenisTask)} berhasil dikirim. Terima kasih!";
-    return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
-}
 }

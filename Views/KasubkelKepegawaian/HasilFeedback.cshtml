@@ -1,6 +1,6 @@
 @* ════════════════════════════════════════════════════════════════════════════
    Views/KasubkelKepegawaian/HasilFeedback.cshtml
-   Kasubkel Kepegawaian menerima dan melihat semua feedback per task dari pemohon.
+   Kasubkel Kepegawaian melihat semua feedback per task dan laporan final pemohon.
 ════════════════════════════════════════════════════════════════════════════ *@
 @model HasilFeedbackVm
 @{
@@ -10,6 +10,7 @@
 
     var p    = Model.Permohonan;
     var pr   = p.Pribadi;
+    var tugasDocs = ViewData["TugasDocs"] as List<DokumenPPID> ?? new();
 }
 
 <div class="max-w-3xl mx-auto">
@@ -30,20 +31,20 @@
             @if (Model.JumlahFeedback > 0)
             {
                 <div class="flex flex-col items-start sm:items-end gap-1">
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-0.5">
                         @for (int i = 1; i <= 5; i++)
                         {
                             <span class="text-xl @(i <= Math.Round(Model.RataRata) ? "text-amber-400" : "text-gray-200")">★</span>
                         }
                     </div>
                     <p class="text-sm font-bold text-gray-700">Rata-rata: @Model.RataRata.ToString("F1") / 5</p>
-                    <p class="text-xs text-gray-400">@Model.JumlahFeedback feedback diterima</p>
+                    <p class="text-xs text-gray-400">dari @Model.JumlahFeedback feedback</p>
                 </div>
             }
             else
             {
-                <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-400 font-medium">
-                    Belum ada feedback
+                <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-sm text-amber-700 font-medium">
+                    ⏳ Belum ada feedback
                 </div>
             }
         </div>
@@ -62,25 +63,31 @@
     <div class="space-y-4 mb-5">
         @foreach (var (jenis, icon, label, color) in taskTypes)
         {
-            var st  = Model.SubTasks.FirstOrDefault(t => t.JenisTask == jenis);
-            var fb  = Model.GetFeedback(jenis);
+            var st = Model.SubTasks.FirstOrDefault(t => t.JenisTask == jenis);
+            var fb = Model.GetFeedback(jenis);
 
-            // Hanya tampilkan jika task ini memang ada
-            bool taskAda = st != null;
-            if (!taskAda) continue;
+            // Hanya tampilkan task yang memang ada
+            if (st is null) continue;
 
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-50 flex items-center gap-3">
                     <div class="w-9 h-9 bg-@color-50 border border-@color-100 rounded-xl flex items-center justify-center text-xl">@icon</div>
                     <div class="flex-1">
                         <p class="font-bold text-gray-800 text-sm">@label</p>
-                        <p class="text-xs text-gray-400 mt-0.5">
-                            Sub-tugas: <span class="@(st!.IsSelesai ? "text-emerald-600" : st.IsDibatalkan ? "text-red-500" : "text-amber-600") font-medium">@SubTaskStatus.GetLabel(st.StatusTask)</span>
-                        </p>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-xs text-gray-400">Sub-tugas:</span>
+                            <span class="text-xs @(st.IsSelesai ? "text-emerald-600" : st.IsDibatalkan ? "text-red-500" : "text-amber-600") font-semibold">
+                                @SubTaskStatus.GetLabel(st.StatusTask)
+                            </span>
+                            @if (st.TanggalJadwal.HasValue)
+                            {
+                                <span class="text-[10px] text-gray-400">| 📅 @st.TanggalJadwal.Value.ToString("dd MMM yyyy")</span>
+                            }
+                        </div>
                     </div>
                     @if (fb != null)
                     {
-                        <div class="flex items-center gap-1">
+                        <div class="flex items-center gap-1 flex-shrink-0">
                             @for (int i = 1; i <= 5; i++)
                             {
                                 <span class="text-lg @(i <= fb.NilaiKepuasan ? "text-amber-400" : "text-gray-200")">★</span>
@@ -88,9 +95,15 @@
                             <span class="ml-1 text-sm font-bold text-gray-700">@fb.NilaiKepuasan/5</span>
                         </div>
                     }
+                    else if (st.IsSelesai)
+                    {
+                        <span class="text-xs bg-amber-50 border border-amber-200 text-amber-600 px-3 py-1 rounded-full font-medium flex-shrink-0">
+                            ⏳ Belum diisi
+                        </span>
+                    }
                     else
                     {
-                        <span class="text-xs bg-gray-100 text-gray-400 px-3 py-1 rounded-full font-medium">Belum diisi</span>
+                        <span class="text-xs bg-gray-100 text-gray-400 px-3 py-1 rounded-full font-medium flex-shrink-0">Tidak tersedia</span>
                     }
                 </div>
 
@@ -118,18 +131,18 @@
                             @if (!string.IsNullOrEmpty(fb.Catatan))
                             {
                                 <div>
-                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Catatan Pemohon</p>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Masukan / Saran Pemohon</p>
                                     <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
                                         <p class="text-sm text-gray-700 leading-relaxed">@fb.Catatan</p>
                                     </div>
                                 </div>
                             }
 
-                            <!-- File laporan -->
+                            <!-- File laporan per task -->
                             @if (!string.IsNullOrEmpty(fb.FileLaporan))
                             {
                                 <div>
-                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">File yang Diunggah</p>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">File / Laporan yang Diunggah</p>
                                     <div class="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
                                         <span class="text-emerald-500 flex-shrink-0">📎</span>
                                         <p class="text-xs font-medium text-emerald-800 flex-1 truncate">@(fb.NamaFile ?? "File laporan")</p>
@@ -141,17 +154,17 @@
                                 </div>
                             }
 
-                            <!-- Tanggal feedback -->
                             <p class="text-[10px] text-gray-300">Diisi: @fb.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
                         </div>
                     }
-                    else if (st!.IsSelesai)
+                    else if (st.IsSelesai)
                     {
                         <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-2 items-start">
                             <span class="text-amber-500 flex-shrink-0">⏳</span>
                             <p class="text-xs text-amber-700 leading-relaxed">
-                                Tugas @label sudah selesai, namun pemohon belum mengisi feedback.
-                                Pemohon dapat mengisi feedback dari portal publik dengan nomor permohonan mereka.
+                                Tugas <strong>@label</strong> sudah selesai, namun pemohon belum mengisi feedback.
+                                Pemohon dapat mengisi feedback dari portal publik menggunakan nomor permohonan
+                                <strong class="font-mono">@p.NoPermohonan</strong>.
                             </p>
                         </div>
                     }
@@ -174,17 +187,63 @@
         }
     </div>
 
-    <!-- Info portal -->
-    @if (Model.Feedbacks.Count < Model.SubTasks.Count(t => t.IsSelesai && !t.IsDibatalkan))
+    <!-- Laporan / Tugas Final (unggahan pemohon dari portal publik) -->
+    @if (tugasDocs.Any())
+    {
+        <div class="bg-white rounded-2xl border border-indigo-200 shadow-sm p-5 mb-5">
+            <div class="flex items-center gap-2 mb-4">
+                <div class="w-8 h-8 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-center">📤</div>
+                <div>
+                    <p class="font-bold text-gray-800 text-sm">Laporan Final Pemohon</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Diunggah langsung oleh pemohon via portal publik</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                @foreach (var f in tugasDocs)
+                {
+                    <div class="flex items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2.5">
+                        <span class="text-indigo-500 flex-shrink-0">📎</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-indigo-800 truncate">@f.NamaDokumenPPID</p>
+                            <p class="text-[10px] text-indigo-400 mt-0.5">@f.CreatedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                        </div>
+                        <a href="@f.UploadDokumenPPID" target="_blank"
+                           class="flex-shrink-0 text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
+                            Unduh
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (p.StatusPPIDID >= StatusId.DataSiap)
+    {
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-5 flex gap-2 items-start">
+            <span class="text-gray-400 flex-shrink-0 mt-0.5">ℹ️</span>
+            <p class="text-xs text-gray-500 leading-relaxed">
+                Pemohon belum mengunggah laporan/tugas final. Pemohon dapat mengunggah dari portal publik
+                menggunakan nomor <strong class="font-mono">@p.NoPermohonan</strong>.
+            </p>
+        </div>
+    }
+
+    <!-- Info portal jika ada feedback yang belum terisi -->
+    @{
+        int selesaiTasks   = Model.SubTasks.Count(t => t.IsSelesai);
+        int fbTerisi       = Model.JumlahFeedback;
+        bool adaSisaFb     = fbTerisi < selesaiTasks;
+    }
+
+    @if (adaSisaFb)
     {
         <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4 flex gap-3 items-start">
             <span class="text-blue-500 flex-shrink-0 mt-0.5">ℹ️</span>
             <div>
-                <p class="text-sm font-bold text-blue-800">Ada feedback yang belum diisi</p>
+                <p class="text-sm font-bold text-blue-800">@(selesaiTasks - fbTerisi) Feedback Belum Diisi</p>
                 <p class="text-xs text-blue-600 mt-1 leading-relaxed">
-                    Informasikan kepada pemohon untuk membuka portal publik, masukkan nomor
+                    Ingatkan pemohon untuk membuka portal publik, masukkan nomor
                     <span class="font-mono font-bold">@p.NoPermohonan</span>, lalu klik tombol
-                    "Isi Feedback" di setiap tugas yang sudah selesai.
+                    "Isi Feedback" di setiap tugas yang sudah selesai pada alur proses.
                 </p>
             </div>
         </div>

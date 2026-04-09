@@ -284,31 +284,40 @@ public class KasubkelKepegawaianController(
 
     // ── GET /kasubkel-kepegawaian/feedback/{id} ───────────────────────────────
 [HttpGet("feedback/{id:guid}")]
-public async Task<IActionResult> HasilFeedback(Guid id)
-{
-    var p = await db.PermohonanPPID
-        .Include(x => x.Pribadi)
-        .Include(x => x.Status)
-        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-
-    if (p is null) return NotFound();
-
-    var feedbacks = await db.FeedbackTaskPPID
-        .Where(f => f.PermohonanPPIDID == id)
-        .ToListAsync();
-
-    var subTasks = await db.SubTaskPPID
-        .Where(t => t.PermohonanPPIDID == id)
-        .OrderBy(t => t.JenisTask)
-        .ToListAsync();
-
-    return View(new HasilFeedbackVm
+    public async Task<IActionResult> HasilFeedback(Guid id)
     {
-        Permohonan = p,
-        Feedbacks  = feedbacks,
-        SubTasks   = subTasks,
-    });
-}
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Status)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        var feedbacks = await db.FeedbackTaskPPID
+            .Where(f => f.PermohonanPPIDID == id)
+            .ToListAsync();
+
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id)
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+
+        // Laporan/tugas final yang diunggah pemohon via portal publik
+        var tugasDocs = await db.DokumenPPID
+            .Where(d => d.PermohonanPPIDID == id
+                     && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync();
+
+        ViewData["TugasDocs"] = tugasDocs;
+
+        return View(new HasilFeedbackVm
+        {
+            Permohonan = p,
+            Feedbacks  = feedbacks,
+            SubTasks   = subTasks,
+        });
+    }
 
     // ── Private helpers ───────────────────────────────────────────────────
 
