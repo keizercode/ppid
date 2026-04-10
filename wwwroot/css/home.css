@@ -219,16 +219,42 @@ body {
     -webkit-user-select: none;
 }
 
+/* ── Hero decorations ── */
 .hero-city {
     bottom: 0;
     left: 0;
     width: 100%;
     height: auto;
-    max-height: 220px;
+    max-height: 260px;
     object-fit: cover;
     object-position: bottom center;
-    opacity: 0.09;
+    opacity: 0;
     z-index: 0;
+    animation: cityReveal 1.8s ease 0.3s forwards;
+}
+
+.hero-monas {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    height: clamp(200px, 24vw, 360px);
+    opacity: 0;
+    filter: brightness(0) invert(1);
+    animation:
+        monasReveal 1.4s ease 0.8s forwards,
+        monasFloat 9s ease-in-out 2.2s infinite;
+    z-index: 1;
+}
+
+.hero-bundaran {
+    bottom: 10px;
+    left: 36%;
+    height: clamp(90px, 11vw, 160px);
+    opacity: 0;
+    animation:
+        bundReveal 1.3s ease 1.1s forwards,
+        bundFloat 7s ease-in-out 2.4s infinite;
+    z-index: 1;
 }
 
 .hero-ondel {
@@ -255,16 +281,64 @@ body {
 }
 
 .hero-pancoran {
-    bottom: 48px;
-    right: 14%;
-    height: clamp(140px, 16vw, 240px);
+    bottom: 10px;
+    left: 62%;
+    height: clamp(90px, 11vw, 160px);
     opacity: 0;
     filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
     animation:
-        pancoranReveal 1.4s ease 1s forwards,
-        pancoranFloat 7s ease-in-out 2.4s infinite;
+        pancoranReveal 1.4s ease 1.2s forwards,
+        pancoranFloat 8s ease-in-out 2.6s infinite;
+    z-index: 1;
 }
 
+/* ── Keyframes ── */
+@keyframes cityReveal {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 0.07;
+    }
+}
+@keyframes monasReveal {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 0.13;
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+}
+@keyframes monasFloat {
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(-8px);
+    }
+}
+@keyframes bundReveal {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.94);
+    }
+    to {
+        opacity: 0.15;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes bundFloat {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-7px);
+    }
+}
 @keyframes ondelRevealL {
     from {
         opacity: 0;
@@ -325,19 +399,24 @@ body {
 
 /* Sembunyikan dekorasi di layar kecil agar tidak berantakan */
 @media (max-width: 639px) {
+    .hero-monas {
+        height: clamp(140px, 34vw, 220px);
+    }
+    .hero-bundaran {
+        display: none;
+    }
+    .hero-pancoran {
+        right: 3%;
+        height: 110px;
+    }
     .hero-ondel {
         height: clamp(160px, 40vw, 240px);
-        opacity: 0 !important;
     }
     .hero-ondel-l {
         animation: ondelRevealL 1.2s ease 0.5s forwards;
     }
     .hero-ondel-r {
         animation: ondelRevealR 1.2s ease 0.7s forwards;
-    }
-    .hero-pancoran {
-        right: 4%;
-        height: 120px;
     }
 }
 @keyframes blobFloat {
