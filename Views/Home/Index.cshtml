@@ -50,6 +50,22 @@
     </div>
 </header>
 
+<!-- ══ MOBILE NAV ══ -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<nav class="mobile-nav" id="mobileNav">
+    <a href="/" class="mobile-nav-link active">Beranda</a>
+    <a href="#tentang" class="mobile-nav-link" id="mn-tentang">Tentang PPID</a>
+    <a href="#alur" class="mobile-nav-link" id="mn-alur">Alur</a>
+    <a href="#syarat" class="mobile-nav-link" id="mn-syarat">Persyaratan</a>
+    <a href="#lacak" class="mobile-nav-link" id="mn-lacak">Lacak</a>
+    <a href="#lacak" class="btn-primary mobile-nav-cta" id="mn-cta">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+        </svg>
+        Lacak Permohonan
+    </a>
+</nav>
+
 <!-- ══ HERO ══ -->
 <section class="hero">
     <div class="hero-grid"></div>
@@ -462,3 +478,25 @@
         </div>
     </div>
 </section>
+
+@section Scripts {
+    <script>
+        const hamburger = document.getElementById('navHamburger');
+        const mobileNav = document.getElementById('mobileNav');
+        const overlay   = document.getElementById('mobileNavOverlay');
+
+        function toggleMenu(open) {
+            hamburger.classList.toggle('open', open);
+            mobileNav.classList.toggle('open', open);
+            overlay.classList.toggle('open', open);
+            document.body.style.overflow = open ? 'hidden' : '';
+        }
+
+        hamburger.addEventListener('click', () => toggleMenu(!mobileNav.classList.contains('open')));
+        overlay.addEventListener('click', () => toggleMenu(false));
+
+        document.querySelectorAll('.mobile-nav-link, .mobile-nav-cta').forEach(el =>
+            el.addEventListener('click', () => toggleMenu(false))
+        );
+    </script>
+}
