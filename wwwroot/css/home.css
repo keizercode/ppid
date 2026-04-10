@@ -210,6 +210,136 @@ body {
     background: var(--bg);
     clip-path: ellipse(55% 100% at 50% 100%);
 }
+
+.hero-deco {
+    position: absolute;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+    -webkit-user-select: none;
+}
+
+.hero-city {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: 220px;
+    object-fit: cover;
+    object-position: bottom center;
+    opacity: 0.09;
+    z-index: 0;
+}
+
+.hero-ondel {
+    bottom: 30px;
+    height: clamp(240px, 28vw, 400px);
+    opacity: 0;
+    animation: ondelReveal 1.2s ease 0.5s forwards;
+}
+
+.hero-ondel-l {
+    left: -8px;
+    transform-origin: bottom center;
+    animation:
+        ondelRevealL 1.2s ease 0.5s forwards,
+        ondelSwayL 5s ease-in-out 1.7s infinite;
+}
+
+.hero-ondel-r {
+    right: -8px;
+    transform-origin: bottom center;
+    animation:
+        ondelRevealR 1.2s ease 0.7s forwards,
+        ondelSwayR 6s ease-in-out 1.9s infinite;
+}
+
+.hero-pancoran {
+    bottom: 48px;
+    right: 14%;
+    height: clamp(140px, 16vw, 240px);
+    opacity: 0;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
+    animation:
+        pancoranReveal 1.4s ease 1s forwards,
+        pancoranFloat 7s ease-in-out 2.4s infinite;
+}
+
+@keyframes ondelRevealL {
+    from {
+        opacity: 0;
+        transform: translateX(-20px) rotate(-3deg);
+    }
+    to {
+        opacity: 0.18;
+        transform: translateX(0) rotate(-1deg);
+    }
+}
+@keyframes ondelRevealR {
+    from {
+        opacity: 0;
+        transform: translateX(20px) scaleX(-1) rotate(-3deg);
+    }
+    to {
+        opacity: 0.14;
+        transform: translateX(0) scaleX(-1) rotate(-1deg);
+    }
+}
+@keyframes ondelSwayL {
+    0%,
+    100% {
+        transform: rotate(-1.5deg);
+    }
+    50% {
+        transform: rotate(1.5deg);
+    }
+}
+@keyframes ondelSwayR {
+    0%,
+    100% {
+        transform: scaleX(-1) rotate(-1.5deg);
+    }
+    50% {
+        transform: scaleX(-1) rotate(1.5deg);
+    }
+}
+@keyframes pancoranReveal {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.95);
+    }
+    to {
+        opacity: 0.15;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes pancoranFloat {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Sembunyikan dekorasi di layar kecil agar tidak berantakan */
+@media (max-width: 639px) {
+    .hero-ondel {
+        height: clamp(160px, 40vw, 240px);
+        opacity: 0 !important;
+    }
+    .hero-ondel-l {
+        animation: ondelRevealL 1.2s ease 0.5s forwards;
+    }
+    .hero-ondel-r {
+        animation: ondelRevealR 1.2s ease 0.7s forwards;
+    }
+    .hero-pancoran {
+        right: 4%;
+        height: 120px;
+    }
+}
 @keyframes blobFloat {
     0%,
     100% {
