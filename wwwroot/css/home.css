@@ -1,4 +1,4 @@
-@@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
     --oren: #f49827;
@@ -43,7 +43,7 @@ body {
     display: inline-block;
     animation: ticker 30s linear infinite;
 }
-@@keyframes ticker {
+@keyframes ticker {
     0% {
         transform: translateX(0);
     }
@@ -210,7 +210,7 @@ body {
     background: var(--bg);
     clip-path: ellipse(55% 100% at 50% 100%);
 }
-@@keyframes blobFloat {
+@keyframes blobFloat {
     0%,
     100% {
         transform: translate(0, 0) scale(1);
@@ -254,7 +254,7 @@ body {
     background: #4ade80;
     animation: pulseDot 2s ease-in-out infinite;
 }
-@@keyframes pulseDot {
+@keyframes pulseDot {
     0%,
     100% {
         box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5);
@@ -1165,7 +1165,7 @@ body {
 }
 
 /* ── ANIMATIONS ── */
-@@keyframes fadeUp {
+@keyframes fadeUp {
     from {
         opacity: 0;
         transform: translateY(24px);
@@ -1201,7 +1201,7 @@ body {
 }
 
 /* ── RESPONSIVE ── */
-@@media (max-width:1023px) {
+@media (max-width: 1023px) {
     .steps-grid {
         grid-template-columns: 1fr 1fr;
         gap: 20px;
@@ -1225,7 +1225,7 @@ body {
         grid-template-columns: 1fr 1fr;
     }
 }
-@@media (max-width:639px) {
+@media (max-width: 639px) {
     .steps-grid {
         grid-template-columns: 1fr;
     }
