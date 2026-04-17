@@ -1,6 +1,6 @@
 @model SuratIzinVm
 @{
-    ViewData["Title"] = "Terbitkan Surat Izin";
+    ViewData["Title"] = "Upload Surat Izin";
     ViewData["Role"]  = "Kasubkel Kepegawaian";
     Layout = "_LayoutAdmin";
 }
@@ -11,7 +11,7 @@
     <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
         <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📄</div>
         <div>
-            <h3 class="font-bold text-gray-800">Terbitkan Surat Izin</h3>
+            <h3 class="font-bold text-gray-800">Upload Surat Izin</h3>
             <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
         </div>
     </div>
@@ -104,7 +104,7 @@
             <div class="flex gap-3">
                 <a href="/kasubkel-kepegawaian" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
                 <button type="submit" class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">
-                    Terbitkan Surat Izin →
+                   Upload Surat Izin→
                 </button>
             </div>
         </form>

@@ -385,11 +385,11 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             p.StatusPPIDID = StatusId.MenungguVerifikasi;
             p.UpdatedAt    = now;
             db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.MenungguVerifikasi,
-                "Dokumen TTD diupload Loket Umum, menunggu verifikasi Kasubkel Umum.", CurrentUser);
+                "Dokumen TTD diupload Loket Umum, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
         }
 
         await db.SaveChangesAsync();
-        TempData["Success"] = "Dokumen diupload. Diteruskan ke Kasubkel Umum untuk verifikasi.";
+        TempData["Success"] = "Dokumen diupload. Diteruskan ke Kasubkel Kepegawaian untuk verifikasi.";
         return RedirectToAction("Index");
     }
 

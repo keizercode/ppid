@@ -33,7 +33,7 @@ public class KasubkelKepegawaianController(
     {
         var allStatus = await db.PermohonanPPID
             .AsNoTracking()
-            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa")
+            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.LoketJenis == LoketJenis.Umum|| p.KategoriPemohon == "Mahasiswa")
             .Select(p => p.StatusPPIDID)
             .ToListAsync();
 
@@ -67,7 +67,7 @@ public class KasubkelKepegawaianController(
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
-            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa")
+            .Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.LoketJenis == LoketJenis.Umum|| p.KategoriPemohon == "Mahasiswa")
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
