@@ -57,7 +57,7 @@
             </div>
         }
 
-        <form action="/kasubkel-kdi/batal-subtask" method="post">
+        <form action="/@(ViewData["Prefix"] ?? "kasubkel-kdi")/batal-subtask" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="PermohonanPPIDID" />
             <input type="hidden" asp-for="NoPermohonan" />

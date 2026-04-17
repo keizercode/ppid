@@ -390,7 +390,7 @@ public class KasubkelKepegawaianController(
         if (p is null) return NotFound();
 
         var sub = await db.GetSubTask(id, JenisTask.Observasi);
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", new JadwalSubTaskVm
         {
             SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
@@ -480,7 +480,7 @@ public class KasubkelKepegawaianController(
         if (p is null) return NotFound();
 
         var sub = await db.GetSubTask(id, JenisTask.Observasi);
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
         {
             SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
@@ -572,7 +572,7 @@ public class KasubkelKepegawaianController(
 
         var sub       = await db.GetSubTask(id, JenisTask.Wawancara);
         var detailWaw = p.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara);
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", new JadwalSubTaskVm
         {
             SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
@@ -662,7 +662,7 @@ public class KasubkelKepegawaianController(
         if (p is null) return NotFound();
 
         var sub = await db.GetSubTask(id, JenisTask.Wawancara);
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
         {
             SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
@@ -769,7 +769,7 @@ public class KasubkelKepegawaianController(
             TempData["Error"] = "Buat jadwal terlebih dahulu sebelum melakukan reschedule.";
             return RedirectToAction(nameof(SubTasks), new { id });
         }
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/RescheduleSubTask.cshtml", new RescheduleSubTaskVm
         {
             PermohonanPPIDID = id,
@@ -857,7 +857,7 @@ public class KasubkelKepegawaianController(
             .ToListAsync();
         var activeTasks = allTasks.Where(t => !t.IsDibatalkan && t.SubTaskID != sub.SubTaskID).ToList();
         bool allOtherDone = activeTasks.Count == 0 || activeTasks.All(t => t.IsSelesai);
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/BatalSubTask.cshtml", new BatalSubTaskVm
         {
             PermohonanPPIDID   = id,
@@ -955,7 +955,7 @@ public class KasubkelKepegawaianController(
         bool needsRollback = p.StatusPPIDID == StatusId.DataSiap
                           || p.StatusPPIDID == StatusId.FeedbackPemohon
                           || p.StatusPPIDID == StatusId.Selesai;
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/ReopenSubTask.cshtml", new ReopenSubTaskVm
         {
             PermohonanPPIDID     = id,
@@ -1029,7 +1029,7 @@ public class KasubkelKepegawaianController(
             TempData["Error"] = "Sub-tugas tidak ditemukan atau sudah selesai.";
             return RedirectToAction(nameof(SubTasks), new { id });
         }
-
+        ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/UpdatePIC.cshtml", new UpdatePICVm
         {
             PermohonanPPIDID = id,

@@ -13,7 +13,8 @@
     Layout = "_LayoutAdmin";
     string icon    = isWaw ? "🎤" : "🔍";
     string color   = isWaw ? "violet" : "orange";
-    string postUrl = isWaw ? "/kasubkel-kdi/jadwal-wawancara" : "/kasubkel-kdi/jadwal-observasi";
+    var prefix = ViewData["Prefix"] as string ?? "kasubkel-kdi";
+    string postUrl = isWaw ? $"/{prefix}/jadwal-wawancara" : $"/{prefix}/jadwal-observasi";
 }
 
 <div class="max-w-xl mx-auto">
@@ -118,7 +119,7 @@
             </div>
 
             <div class="flex gap-3">
-                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID"
+                <a href="/@(ViewData["Prefix"] ?? "kasubkel-kdi")/subtasks/@Model.PermohonanPPIDID"
                    class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
                 <button type="submit"
                         class="flex-grow bg-@color-600 hover:bg-@color-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
