@@ -1,0 +1,229 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/PetugasLoket/Batalkan.cshtml
+   Konfirmasi pembatalan permohonan oleh Petugas Loket Kepegawaian.
+
+   Guard: hanya tersedia untuk status ≤ MenungguSuratIzin
+   (TerdaftarSistem | IdentifikasiAwal | MenungguVerifikasi | MenungguSuratIzin)
+
+   Setelah SuratIzinTerbit, data sudah masuk ke pipeline KDI/Kepegawaian
+   sehingga pembatalan harus melalui otorisasi Kasubkel — bukan Loket.
+════════════════════════════════════════════════════════════════════════════ *@
+@model BatalkanPermohonanVm
+@{
+    ViewData["Title"] = $"Batalkan Permohonan — {Model.NoPermohonan}";
+    ViewData["Role"]  = "Petugas Loket";
+    Layout = "_LayoutAdmin";
+
+    // Label status dengan warna kontekstual
+    string statusBadge = Model.StatusPPIDID switch
+    {
+        StatusId.TerdaftarSistem    => "bg-gray-100 text-gray-600",
+        StatusId.IdentifikasiAwal   => "bg-amber-50 text-amber-700",
+        StatusId.MenungguVerifikasi => "bg-violet-50 text-violet-700",
+        StatusId.MenungguSuratIzin  => "bg-blue-50 text-blue-700",
+        _                           => "bg-gray-100 text-gray-500"
+    };
+
+    // Apakah ada sub-tugas aktif yang ikut dibatalkan
+    bool adaDampakSubTask = Model.AdaSubTasks;
+}
+
+<div class="max-w-lg mx-auto">
+
+    @* ── Breadcrumb ──────────────────────────────────────────────────────── *@
+    <a href="/petugas-loket/detail/@Model.PermohonanPPIDID"
+       class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800
+              text-sm font-medium mb-5 transition-colors">
+        ← Kembali ke Detail
+    </a>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+        @* ── Header ──────────────────────────────────────────────────────── *@
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-xl">🚫</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Batalkan Permohonan</h3>
+                <p class="text-xs font-mono text-gray-400 mt-0.5">
+                    @Model.NoPermohonan · @Model.NamaPemohon
+                </p>
+            </div>
+        </div>
+
+        <div class="p-6">
+
+            @* ── Ringkasan Permohonan ────────────────────────────────────── *@
+            <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                    Ringkasan Permohonan
+                </p>
+                <dl class="space-y-2">
+                    <div class="flex items-start gap-3">
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold w-28 flex-shrink-0 mt-0.5">
+                            Nomor
+                        </dt>
+                        <dd class="font-mono font-bold text-blue-700 text-sm">@Model.NoPermohonan</dd>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold w-28 flex-shrink-0 mt-0.5">
+                            Pemohon
+                        </dt>
+                        <dd class="text-gray-800 font-semibold text-sm">@Model.NamaPemohon</dd>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold w-28 flex-shrink-0 mt-0.5">
+                            Kategori
+                        </dt>
+                        <dd class="text-gray-700 text-sm">@Model.Kategori</dd>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.JudulPenelitian))
+                    {
+                        <div class="flex items-start gap-3">
+                            <dt class="text-[10px] text-gray-400 uppercase font-semibold w-28 flex-shrink-0 mt-0.5">
+                                Judul
+                            </dt>
+                            <dd class="text-gray-700 text-sm leading-snug">@Model.JudulPenelitian</dd>
+                        </div>
+                    }
+                    <div class="flex items-center gap-3">
+                        <dt class="text-[10px] text-gray-400 uppercase font-semibold w-28 flex-shrink-0">
+                            Status Saat Ini
+                        </dt>
+                        <dd>
+                            <span class="text-xs @statusBadge px-2.5 py-0.5 rounded-full font-semibold">
+                                @Model.StatusLabel
+                            </span>
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            @* ── Warning: pembatalan bersifat permanen ───────────────────── *@
+            <div class="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-5">
+                <div class="flex items-start gap-3">
+                    <span class="text-red-500 text-xl flex-shrink-0">⚠️</span>
+                    <div>
+                        <p class="font-bold text-red-800 text-sm">
+                            Pembatalan Bersifat Permanen
+                        </p>
+                        <ul class="mt-2 space-y-1 text-red-700 text-xs leading-relaxed">
+                            <li>• Status permohonan akan berubah menjadi <strong>Dibatalkan</strong></li>
+                            <li>• Dokumen dan riwayat aktivitas tetap tersimpan untuk keperluan audit</li>
+                            <li>• Pemohon perlu mendaftar ulang jika masih ingin melanjutkan</li>
+                            @if (adaDampakSubTask)
+                            {
+                                <li class="font-semibold text-red-800">
+                                    • <strong>@Model.JumlahSubTasks sub-tugas aktif</strong>
+                                    akan ikut dibatalkan secara otomatis
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Info: hanya boleh sebelum surat izin terbit ─────────────── *@
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 flex gap-2 items-start">
+                <span class="text-blue-400 flex-shrink-0 mt-0.5">ℹ️</span>
+                <p class="text-xs text-blue-700 leading-relaxed">
+                    Pembatalan dari Loket hanya tersedia sebelum surat izin terbit.
+                    Setelah proses berlanjut ke Kasubkel, pembatalan memerlukan otorisasi tingkat lebih tinggi.
+                </p>
+            </div>
+
+            @* ── Form ─────────────────────────────────────────────────────── *@
+            <form asp-action="BatalkanPost" asp-controller="PetugasLoket" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="PermohonanPPIDID" />
+                <input type="hidden" asp-for="NoPermohonan" />
+                <input type="hidden" asp-for="NamaPemohon" />
+                <input type="hidden" asp-for="Kategori" />
+                <input type="hidden" asp-for="JudulPenelitian" />
+                <input type="hidden" asp-for="StatusPPIDID" />
+                <input type="hidden" asp-for="StatusLabel" />
+                <input type="hidden" asp-for="AdaSubTasks" />
+                <input type="hidden" asp-for="JumlahSubTasks" />
+
+                @* Alasan Pembatalan *@
+                <div class="mb-4">
+                    <label class="lbl">
+                        Alasan Pembatalan <span class="req">*</span>
+                    </label>
+                    <textarea asp-for="AlasanBatal"
+                              rows="4"
+                              class="fld resize-none"
+                              placeholder="Jelaskan alasan pembatalan secara lengkap. Minimal 15 karakter.&#10;Contoh: Pemohon membatalkan karena penelitian ditunda oleh pembimbing. Akan mendaftar kembali pada semester berikutnya.">
+                    </textarea>
+                    <span asp-validation-for="AlasanBatal" class="err"></span>
+                    <p class="text-[11px] text-gray-400 mt-1">
+                        Alasan ini tercatat permanen di audit log dan tidak dapat diubah.
+                    </p>
+                </div>
+
+                @* Konfirmasi ─ wajib dicentang *@
+                <div class="mb-5">
+                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-gray-200
+                                  cursor-pointer transition-all
+                                  has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                        <input asp-for="KonfirmasiPembatalan"
+                               type="checkbox"
+                               class="mt-0.5 flex-shrink-0 accent-red-600 w-4 h-4" />
+                        <span class="text-sm text-gray-700 leading-relaxed">
+                            Saya memahami bahwa pembatalan ini
+                            <strong class="text-red-700">tidak dapat diurungkan</strong>
+                            dan pemohon perlu mendaftar ulang jika ingin melanjutkan permohonan.
+                        </span>
+                    </label>
+                    <span asp-validation-for="KonfirmasiPembatalan" class="err mt-1"></span>
+                </div>
+
+                @* Tombol Aksi *@
+                <div class="flex gap-3">
+                    <a href="/petugas-loket/detail/@Model.PermohonanPPIDID"
+                       class="flex-1 text-center border border-gray-200 text-gray-600
+                              font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50
+                              transition-colors">
+                        ← Batal, Kembali
+                    </a>
+                    <button type="submit"
+                            onclick="return confirm('Yakin ingin membatalkan permohonan @Model.NoPermohonan? Tindakan ini tidak dapat diurungkan.')"
+                            class="flex-grow bg-red-600 hover:bg-red-700 text-white
+                                   font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm
+                                   transition-colors">
+                        🚫 Batalkan Permohonan →
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .lbl  { display:block; font-size:11px; font-weight:700; color:#6b7280;
+            text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px }
+    .req  { color:#f87171 }
+    .fld  { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px;
+            padding:9px 14px; font-size:13.5px; background:#fafafa; outline:none;
+            transition:all .15s }
+    .fld:focus { box-shadow:0 0 0 2.5px #ef4444; border-color:transparent; background:white }
+    .err  { color:#ef4444; font-size:11px; margin-top:3px; display:block }
+</style>
+
+@section Scripts {
+<script>
+    // Real-time karakter counter untuk textarea alasan
+    const ta   = document.querySelector('[name="AlasanBatal"]');
+    const hint = ta?.nextElementSibling?.nextElementSibling;
+    if (ta && hint) {
+        ta.addEventListener('input', () => {
+            const len  = ta.value.trim().length;
+            const ok   = len >= 15;
+            hint.textContent = ok
+                ? `✓ ${len} karakter — tersimpan di audit log.`
+                : `${len} / 15 karakter minimum.`;
+            hint.className = `text-[11px] mt-1 ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+        });
+    }
+</script>
+}
