@@ -2,6 +2,9 @@
    Views/KasubkelKepegawaian/SubTasks.cshtml
    Hub manajemen sub-tugas Observasi + Wawancara (Kepegawaian).
    PermintaanData TIDAK ditampilkan di sini — dikelola KDI.
+
+   FIX: File ini menggantikan SubTsks.cshtml yang typo — ASP.NET Core mencari
+        SubTasks.cshtml sesuai nama action, bukan SubTsks.cshtml.
 ════════════════════════════════════════════════════════════════════════════ *@
 @model ParallelTasksVm
 @{
@@ -98,6 +101,23 @@
 
     <!-- Sub-task Cards -->
     <div class="grid grid-cols-1 @(Model.TotalTasks == 2 ? "md:grid-cols-2" : "") gap-4 mb-4">
+
+        @if (!Model.SubTasks.Any())
+        {
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+                <div class="text-3xl mb-2">📋</div>
+                <p class="text-gray-500 text-sm font-medium">Belum ada sub-tugas Obs/Waw untuk permohonan ini.</p>
+                <p class="text-gray-400 text-xs mt-1 leading-relaxed">
+                    Sub-tugas dibuat otomatis saat Surat Izin diterbitkan dengan keperluan Observasi/Wawancara.
+                    Pastikan surat izin sudah diterbitkan dengan keperluan yang sesuai.
+                </p>
+                <a href="/kasubkel-kepegawaian/surat-izin/@p.PermohonanPPIDID"
+                   class="inline-flex items-center gap-2 mt-4 bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-bold px-4 py-2 rounded-xl">
+                    📄 Terbitkan Surat Izin →
+                </a>
+            </div>
+        }
+
         @foreach (var st in Model.SubTasks)
         {
             string jenis    = st.JenisTask;
@@ -207,10 +227,10 @@
                 }
                 else if (!st.IsSelesai)
                 {
-                    <div class="flex gap-1.5 flex-col">
+                    <div class="flex flex-col gap-1.5">
                         <a href="@actionUrl"
                            class="w-full flex items-center justify-center gap-2 @(st.IsInProgress ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#002d7a] hover:bg-blue-900") text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
-                            @(st.IsPending ? "Buat Jadwal →" : "Konfirmasi Selesai →")
+                            @(st.IsPending ? $"📅 Buat Jadwal {jenisLbl} →" : $"✓ Konfirmasi {jenisLbl} Selesai →")
                         </a>
                         <div class="flex gap-1.5">
                             @if (st.IsInProgress)
@@ -301,6 +321,12 @@
                     </dd>
                 </div>
             }
+            <div>
+                <dt class="text-[10px] text-gray-400 uppercase font-semibold">Batas Waktu</dt>
+                <dd class="text-sm @(p.IsOverdue ? "text-red-600 font-semibold" : "text-gray-700")">
+                    @(p.BatasWaktu?.ToString("dd MMM yyyy") ?? "—") @(p.IsOverdue ? " ⚠" : "")
+                </dd>
+            </div>
         </dl>
     </div>
 
@@ -314,6 +340,13 @@
             <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
                class="inline-flex items-center gap-2 border border-blue-200 text-blue-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-50 transition-colors">
                 📊 Subtask Data (KDI) →
+            </a>
+        }
+        @if (isDataSiap || isFeedback)
+        {
+            <a href="/kasubkel-kepegawaian/feedback/@p.PermohonanPPIDID"
+               class="inline-flex items-center gap-2 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-amber-50 transition-colors">
+                📋 Lihat Feedback Pemohon
             </a>
         }
     </div>

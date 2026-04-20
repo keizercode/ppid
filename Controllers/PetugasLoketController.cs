@@ -181,7 +181,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
                 {
                     var now = DateTime.UtcNow;
 
-                    // 1. Pribadi (upsert by NIK)
                     var pribadi = await db.Pribadi.FirstOrDefaultAsync(p => p.NIK == vm.NIK);
                     if (pribadi == null)
                     {
@@ -206,7 +205,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
                     }
                     await db.SaveChangesAsync();
 
-                    // 2. PribadiPPID (upsert)
                     var pribadiPPID = await db.PribadiPPID
                         .FirstOrDefaultAsync(p => p.PribadiID == pribadi.PribadiID);
 
@@ -234,7 +232,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
                         pribadiPPID.UpdatedAt    = now;
                     }
 
-                    // 3. PermohonanPPID
                     var permohonan = new PermohonanPPID
                     {
                         PribadiID         = pribadi.PribadiID,
@@ -261,7 +258,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
                     db.PermohonanPPID.Add(permohonan);
                     await db.SaveChangesAsync();
 
-                    // 4. Detail keperluan
                     if (vm.IsObservasi)
                         db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
                         {
@@ -289,14 +285,12 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
                             CreatedAt        = now
                         });
 
-                    // 5. Upload dokumen ke temp (dicommit setelah DB commit)
                     Directory.CreateDirectory(tempDir);
                     await StageDokumen(permohonan.PermohonanPPIDID, vm.FileKTP,             JenisDokumenId.KTP,             "KTP",             now, tempDir, movers);
                     await StageDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now, tempDir, movers);
                     await StageDokumen(permohonan.PermohonanPPIDID, vm.FileProposal,        JenisDokumenId.Proposal,        "Proposal",         now, tempDir, movers);
                     await StageDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris,     JenisDokumenId.AktaNotaris,     "Akta Notaris",     now, tempDir, movers);
 
-                    // 6. Audit log
                     db.AddAuditLog(permohonan.PermohonanPPIDID, null, StatusId.TerdaftarSistem,
                         $"Permohonan didaftarkan loket [{vm.LoketJenis}]. Keperluan: " +
                         $"{(vm.IsObservasi ? "Observasi " : "")}" +
@@ -348,6 +342,13 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         var p = await db.PermohonanPPID.FindAsync(id);
         if (p == null) return NotFound();
 
+        // Guard: hanya dari TerdaftarSistem yang bisa input identifikasi
+        if (p.StatusPPIDID != StatusId.TerdaftarSistem)
+        {
+            TempData["Error"] = "Identifikasi awal sudah pernah diinput sebelumnya.";
+            return RedirectToAction("Detail", new { id });
+        }
+
         var statusLama = p.StatusPPIDID;
         p.StatusPPIDID = StatusId.IdentifikasiAwal;
         p.UpdatedAt    = DateTime.UtcNow;
@@ -374,6 +375,13 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     }
 
     // ── UPLOAD TTD ────────────────────────────────────────────────────────
+    //
+    // FIX: Tambah guard status agar tidak terjadi looping.
+    // Upload TTD hanya diizinkan dari status IdentifikasiAwal (3).
+    // Setelah TTD diupload → MenungguVerifikasi (14) → tidak bisa upload lagi.
+    // Kasubkel memverifikasi → MenungguSuratIzin (4) → alur berlanjut maju.
+    // Tanpa guard ini, operator bisa navigasi langsung ke URL dan mereset status
+    // mundur ke MenungguVerifikasi, merusak progress verifikasi Kasubkel.
 
     [HttpGet("upload-ttd/{id:guid}")]
     public async Task<IActionResult> UploadTTD(Guid id)
@@ -381,6 +389,17 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         var p = await db.PermohonanPPID.Include(x => x.Pribadi)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+
+        // ── Guard: cegah loop — hanya IdentifikasiAwal yang boleh upload TTD ──
+        if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
+        {
+            TempData["Error"] = p.StatusPPIDID < StatusId.IdentifikasiAwal
+                ? "Input identifikasi awal terlebih dahulu sebelum upload TTD."
+                : $"Upload TTD tidak dapat dilakukan — permohonan sudah berada di tahap " +
+                  $"<strong>{p.Status?.NamaStatusPPID ?? "lebih lanjut"}</strong>. " +
+                  "Tidak ada aksi yang diperlukan dari Loket pada tahap ini.";
+            return RedirectToAction("Detail", new { id });
+        }
 
         return View(new UploadTTDVm
         {
@@ -396,6 +415,20 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     {
         if (!ModelState.IsValid) return View("UploadTTD", vm);
 
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p == null) return NotFound();
+
+        // ── Guard idempoten: cegah looping status ──────────────────────────
+        // Tanpa guard ini, POST langsung ke URL bisa mereset status dari
+        // MenungguVerifikasi / MenungguSuratIzin kembali ke MenungguVerifikasi,
+        // menghapus progress verifikasi Kasubkel Kepegawaian.
+        if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
+        {
+            TempData["Error"] = "Upload TTD tidak diizinkan — permohonan sudah berada di tahap " +
+                                $"lebih lanjut (status: {p.StatusPPIDID}). Tidak ada aksi yang diperlukan.";
+            return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
+        }
+
         var now   = DateTime.UtcNow;
         var error = await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD,
             JenisDokumenId.IdentifikasiSigned, "Identifikasi TTD", now);
@@ -406,15 +439,11 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
             return View("UploadTTD", vm);
         }
 
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null)
-        {
-            var statusLama = p.StatusPPIDID;
-            p.StatusPPIDID = StatusId.MenungguVerifikasi;
-            p.UpdatedAt    = now;
-            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguVerifikasi,
-                "Dokumen identifikasi TTD diupload, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
-        }
+        var statusLama = p.StatusPPIDID;
+        p.StatusPPIDID = StatusId.MenungguVerifikasi;
+        p.UpdatedAt    = now;
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguVerifikasi,
+            "Dokumen identifikasi TTD diupload, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
 
         await db.SaveChangesAsync();
         TempData["Success"] = "Dokumen berhasil diupload. Permohonan diteruskan ke Kasubkel Kepegawaian untuk verifikasi.";
@@ -504,9 +533,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
     }
 
-    // ── BATALKAN PERMOHONAN ───────────────────────────────────────────────────
-    // Tersedia hanya untuk permohonan dengan status ≤ MenungguSuratIzin.
-    // Setelah SuratIzinTerbit, pembatalan memerlukan otorisasi Kasubkel.
+    // ── BATALKAN PERMOHONAN ───────────────────────────────────────────────
 
     [HttpGet("batalkan/{id:guid}")]
     public async Task<IActionResult> Batalkan(Guid id)
@@ -518,7 +545,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
 
         if (p is null) return NotFound();
 
-        // Guard: hanya status tertentu yang boleh dibatalkan
         if (!StatusId.IsBatalkanAllowed(p.StatusPPIDID))
         {
             TempData["Error"] =
@@ -528,7 +554,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
             return RedirectToAction("Detail", new { id });
         }
 
-        // Cek apakah ada sub-tugas aktif (informasi untuk operator)
         var subTasks = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == id
                      && t.StatusTask != SubTaskStatus.Dibatalkan)
@@ -553,7 +578,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     {
         if (!ModelState.IsValid)
         {
-            // Re-populate data yang hilang setelah POST
             var pReload = await db.PermohonanPPID
                 .Include(x => x.Pribadi)
                 .Include(x => x.Status)
@@ -583,7 +607,30 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
             return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
         }
 
-        await db.SaveChangesAsync();
+        // ── Wrap SaveChanges dalam try-catch ──────────────────────────────
+        // Tangkap kemungkinan DbUpdateException (FK violation, missing column
+        // akibat migration belum diapply, dsb.) agar tidak jatuh ke 500 error page.
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+        {
+            // Log detail untuk debugging admin
+            var inner = dbEx.InnerException?.Message ?? dbEx.Message;
+            TempData["Error"] =
+                $"Terjadi kesalahan database saat membatalkan permohonan. " +
+                $"Pastikan migrasi <em>AddBatalkanPermohonan</em> sudah dijalankan (<code>dotnet ef database update</code>). " +
+                $"Ref: {DateTime.UtcNow:yyyyMMddHHmmss}";
+            return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
+        }
+        catch (Exception)
+        {
+            TempData["Error"] =
+                $"Terjadi kesalahan tidak terduga saat menyimpan pembatalan. " +
+                $"Ref: {DateTime.UtcNow:yyyyMMddHHmmss}";
+            return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
+        }
 
         TempData["Success"] =
             $"Permohonan <strong>{vm.NoPermohonan}</strong> berhasil dibatalkan. " +

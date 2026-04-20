@@ -350,9 +350,22 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
     [HttpGet("upload-ttd/{id:guid}")]
     public async Task<IActionResult> UploadTTD(Guid id)
     {
-        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Status)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+
+        // ── Guard: cegah loop — hanya IdentifikasiAwal yang boleh upload TTD ──
+        if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
+        {
+            TempData["Error"] = p.StatusPPIDID < StatusId.IdentifikasiAwal
+                ? "Input identifikasi awal terlebih dahulu sebelum upload TTD."
+                : $"Upload TTD tidak dapat dilakukan — permohonan sudah berada di tahap " +
+                  $"<strong>{p.Status?.NamaStatusPPID ?? "lebih lanjut"}</strong>. " +
+                  "Tidak ada aksi yang diperlukan dari Loket pada tahap ini.";
+            return RedirectToAction("Detail", new { id });
+        }
 
         return View("~/Views/PetugasLoket/UploadTTD.cshtml", new UploadTTDVm
         {
@@ -368,6 +381,17 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
     {
         if (!ModelState.IsValid) return View("~/Views/PetugasLoket/UploadTTD.cshtml", vm);
 
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p == null) return NotFound();
+
+        // ── Guard idempoten: cegah looping status ──────────────────────────
+        if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
+        {
+            TempData["Error"] = "Upload TTD tidak diizinkan — permohonan sudah berada di tahap " +
+                                "lebih lanjut. Tidak ada aksi yang diperlukan.";
+            return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
+        }
+
         var now   = DateTime.UtcNow;
         var error = await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD,
             JenisDokumenId.IdentifikasiSigned, "Identifikasi TTD", now);
@@ -378,15 +402,11 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             return View("~/Views/PetugasLoket/UploadTTD.cshtml", vm);
         }
 
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p != null)
-        {
-            var lama = p.StatusPPIDID;
-            p.StatusPPIDID = StatusId.MenungguVerifikasi;
-            p.UpdatedAt    = now;
-            db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.MenungguVerifikasi,
-                "Dokumen TTD diupload Loket Umum, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
-        }
+        var lama = p.StatusPPIDID;
+        p.StatusPPIDID = StatusId.MenungguVerifikasi;
+        p.UpdatedAt    = now;
+        db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.MenungguVerifikasi,
+            "Dokumen TTD diupload Loket Umum, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
 
         await db.SaveChangesAsync();
         TempData["Success"] = "Dokumen diupload. Diteruskan ke Kasubkel Kepegawaian untuk verifikasi.";

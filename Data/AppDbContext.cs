@@ -430,13 +430,20 @@ public async Task<(bool Success, string? ErrorMessage)> BatalkanPermohonan(
     string alasanBatal,
     string operatorName)
 {
-    var p = await PermohonanPPID.FindAsync(permohonanId);
+    // ── Load DENGAN navigation property Status ────────────────────────────
+    // BUG FIX: FindAsync tidak load p.Status → error message berisi "null".
+    // Pakai FirstOrDefaultAsync + Include agar nama status tersedia.
+    var p = await PermohonanPPID
+        .Include(x => x.Status)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == permohonanId);
+
     if (p is null)
         return (false, "Permohonan tidak ditemukan.");
 
     if (!Models.StatusId.IsBatalkanAllowed(p.StatusPPIDID))
         return (false,
-            $"Pembatalan tidak diizinkan pada status '{p.Status?.NamaStatusPPID}'. " +
+            $"Pembatalan tidak diizinkan pada status " +
+            $"'<strong>{p.Status?.NamaStatusPPID ?? Models.StatusId.GetStepLabel(p.StatusPPIDID)}</strong>'. " +
             "Hanya permohonan yang belum diproses (≤ Menunggu Surat Izin) yang dapat dibatalkan.");
 
     var now  = DateTime.UtcNow;
@@ -473,7 +480,7 @@ public async Task<(bool Success, string? ErrorMessage)> BatalkanPermohonan(
         j.UpdatedAt = now;
     }
 
-    string keterangan = $"Permohonan dibatalkan oleh Loket Kepegawaian. Alasan: {alasanBatal}.";
+    string keterangan = $"Permohonan dibatalkan. Alasan: {alasanBatal}.";
     if (activeTasks.Count > 0)
         keterangan += $" {activeTasks.Count} sub-tugas ikut dibatalkan.";
     if (activeJadwal.Count > 0)
