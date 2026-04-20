@@ -88,7 +88,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             new StatusPPID { StatusPPIDID = 13, NamaStatusPPID = "Wawancara Selesai" },
             new StatusPPID { StatusPPIDID = 14, NamaStatusPPID = "Menunggu Verifikasi Kasubkel" },
             new StatusPPID { StatusPPIDID = 15, NamaStatusPPID = "Pengisian Feedback Pemohon" },
-            new StatusPPID { StatusPPIDID = 16, NamaStatusPPID = "Dibatalkan" },
+            new StatusPPID { StatusPPIDID = 16, NamaStatusPPID = "Dibatalkan" }
         );
 
     private static void SeedKeperluan(ModelBuilder m) =>

@@ -79,7 +79,7 @@ public class PermohonanPPID
     [Column("Sequance")]              public int?      Sequance          { get; set; }
     // Catatan: typo "CratedAt" dipertahankan agar sesuai skema database.
     [Column("CratedAt")]              public DateTime? CratedAt          { get; set; }
-    [Column("UpdatedAt")]             public DateTime? UpdatedAt         { get; set;
+    [Column("UpdatedAt")]             public DateTime? UpdatedAt         { get; set; }
     [Column("AlasanBatal")]    public string?   AlasanBatal    { get; set; }
     [Column("DibatalkanAt")]   public DateTime? DibatalkanAt   { get; set; }
     [Column("DibatalkanOleh")] public string?   DibatalkanOleh { get; set; }
