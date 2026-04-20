@@ -7,6 +7,18 @@ using PermintaanData.Models.ViewModels;
 
 namespace PermintaanData.Controllers;
 
+/// <summary>
+/// Loket Kepegawaian — mengelola pendaftaran pemohon DAN
+/// sub-tugas Observasi + Wawancara secara paralel.
+///
+/// Obs/Waw dipindah dari KasubkelKepegawaian ke sini karena
+/// petugas loket adalah ujung tombak penjadwalan lapangan.
+///
+/// Parallel flow:
+///   Loket mengelola Obs/Waw       ──┐
+///                                    ├─→ AdvanceIfAllSubTasksDone → DataSiap
+///   KDI mengelola PermintaanData  ──┘
+/// </summary>
 [Route("petugas-loket")]
 [Authorize(Roles = $"{AppRoles.Loket},{AppRoles.Admin}")]
 public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
@@ -14,7 +26,9 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
 {
     private string CurrentUser => User.Identity?.Name ?? AppRoles.Loket;
 
-    // ── DASHBOARD ─────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // DASHBOARD
+    // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q, int? status)
@@ -32,9 +46,40 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
             MonthlyStats = await db.GetMonthlyStats()
         };
 
+        // ── Antrian aktif Obs/Waw yang dikelola Loket ─────────────────────
+        var obsWawAktif = await db.PermohonanPPID
+            .Include(p => p.Pribadi)
+            .Include(p => p.Status)
+            .Where(p =>
+                (p.IsObservasi || p.IsWawancara) &&
+                (p.StatusPPIDID == StatusId.DiProses             ||
+                 p.StatusPPIDID == StatusId.Didisposisi          ||
+                 p.StatusPPIDID == StatusId.ObservasiDijadwalkan ||
+                 p.StatusPPIDID == StatusId.ObservasiSelesai     ||
+                 p.StatusPPIDID == StatusId.WawancaraDijadwalkan ||
+                 p.StatusPPIDID == StatusId.WawancaraSelesai     ||
+                 p.StatusPPIDID == StatusId.DataSiap             ||
+                 p.StatusPPIDID == StatusId.FeedbackPemohon))
+            .OrderByDescending(p => p.UpdatedAt)
+            .ToListAsync();
+
+        var obsWawIds   = obsWawAktif.Select(p => p.PermohonanPPIDID).ToList();
+        var obsWawTasks = await db.SubTaskPPID
+            .Where(t => obsWawIds.Contains(t.PermohonanPPIDID) &&
+                        (t.JenisTask == JenisTask.Observasi ||
+                         t.JenisTask == JenisTask.Wawancara))
+            .ToListAsync();
+
+        ViewData["ObsWawAktif"]   = obsWawAktif;
+        ViewData["ObsWawTaskMap"] = obsWawTasks
+            .GroupBy(t => t.PermohonanPPIDID)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // ── Daftar permohonan utama ───────────────────────────────────────
         var query = db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
+            .Include(p => p.Jadwal)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
@@ -114,7 +159,9 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
-    // ── IDENTIFIKASI ──────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // IDENTIFIKASI
+    // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("identifikasi")]
     public IActionResult Identifikasi() => View(new IdentifikasiPemohonVm());
@@ -137,7 +184,9 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("DaftarPemohon", new { kategori = model.Kategori, loketJenis });
     }
 
-    // ── DAFTAR PEMOHON ────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // DAFTAR PEMOHON
+    // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("daftar")]
     public IActionResult DaftarPemohon(string kategori, string loketJenis)
@@ -323,7 +372,9 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("InputIdentifikasi", new { id = lastId });
     }
 
-    // ── INPUT IDENTIFIKASI ────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // INPUT IDENTIFIKASI
+    // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("input-identifikasi/{id:guid}")]
     public async Task<IActionResult> InputIdentifikasi(Guid id)
@@ -342,7 +393,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         var p = await db.PermohonanPPID.FindAsync(id);
         if (p == null) return NotFound();
 
-        // Guard: hanya dari TerdaftarSistem yang bisa input identifikasi
         if (p.StatusPPIDID != StatusId.TerdaftarSistem)
         {
             TempData["Error"] = "Identifikasi awal sudah pernah diinput sebelumnya.";
@@ -361,7 +411,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("CetakIdentifikasi", new { id });
     }
 
-    // ── CETAK IDENTIFIKASI ────────────────────────────────────────────────
+    // ── Cetak Identifikasi ────────────────────────────────────────────────
 
     [HttpGet("cetak-identifikasi/{id:guid}")]
     public async Task<IActionResult> CetakIdentifikasi(Guid id)
@@ -374,14 +424,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return View(p);
     }
 
-    // ── UPLOAD TTD ────────────────────────────────────────────────────────
-    //
-    // FIX: Tambah guard status agar tidak terjadi looping.
-    // Upload TTD hanya diizinkan dari status IdentifikasiAwal (3).
-    // Setelah TTD diupload → MenungguVerifikasi (14) → tidak bisa upload lagi.
-    // Kasubkel memverifikasi → MenungguSuratIzin (4) → alur berlanjut maju.
-    // Tanpa guard ini, operator bisa navigasi langsung ke URL dan mereset status
-    // mundur ke MenungguVerifikasi, merusak progress verifikasi Kasubkel.
+    // ── Upload TTD ────────────────────────────────────────────────────────
 
     [HttpGet("upload-ttd/{id:guid}")]
     public async Task<IActionResult> UploadTTD(Guid id)
@@ -390,7 +433,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
 
-        // ── Guard: cegah loop — hanya IdentifikasiAwal yang boleh upload TTD ──
         if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
         {
             TempData["Error"] = p.StatusPPIDID < StatusId.IdentifikasiAwal
@@ -418,10 +460,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
-        // ── Guard idempoten: cegah looping status ──────────────────────────
-        // Tanpa guard ini, POST langsung ke URL bisa mereset status dari
-        // MenungguVerifikasi / MenungguSuratIzin kembali ke MenungguVerifikasi,
-        // menghapus progress verifikasi Kasubkel Kepegawaian.
         if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
         {
             TempData["Error"] = "Upload TTD tidak diizinkan — permohonan sudah berada di tahap " +
@@ -450,7 +488,777 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("Index");
     }
 
-    // ── DETAIL ────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // SUB-TUGAS OBSERVASI + WAWANCARA (dikelola Loket Kepegawaian)
+    // Parallel dengan PermintaanData yang dikelola KDI.
+    // ══════════════════════════════════════════════════════════════════════
+
+    [HttpGet("subtasks/{id:guid}")]
+    public async Task<IActionResult> SubTasks(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
+            .Include(x => x.Status)
+            .Include(x => x.Detail).ThenInclude(d => d.Keperluan)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        // Loket mengelola Obs/Waw; tampilkan status PermintaanData dari KDI sebagai info
+        var tasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id &&
+                        (t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara))
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+
+        var tugasDocs = await db.DokumenPPID
+            .Where(d => d.PermohonanPPIDID == id &&
+                        d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync();
+
+        // Info sub-tugas KDI (PermintaanData) — read-only untuk Loket
+        var kdiTask = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id && t.JenisTask == JenisTask.PermintaanData)
+            .ToListAsync();
+
+        ViewData["TugasDocs"] = tugasDocs;
+        ViewData["KdiTask"]   = kdiTask;
+        ViewData["Prefix"]    = "petugas-loket";
+
+        return View(new ParallelTasksVm { Permohonan = p, SubTasks = tasks });
+    }
+
+    // ── Jadwal Observasi ──────────────────────────────────────────────────
+
+    [HttpGet("jadwal-observasi/{id:guid}")]
+    public async Task<IActionResult> JadwalObservasi(Guid id)
+    {
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub = await db.GetSubTask(id, JenisTask.Observasi);
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", new JadwalSubTaskVm
+        {
+            SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
+            PermohonanPPIDID  = id,
+            NoPermohonan      = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon       = p.Pribadi?.Nama   ?? string.Empty,
+            JudulPenelitian   = p.JudulPenelitian ?? string.Empty,
+            JenisTask         = JenisTask.Observasi,
+            NamaBidangTerkait = p.NamaBidang,
+            Tanggal           = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
+            Waktu             = sub?.WaktuJadwal   ?? new TimeOnly(9, 0),
+            NamaPIC           = sub?.NamaPIC       ?? string.Empty,
+            TeleponPIC        = sub?.TeleponPIC,
+            LokasiJenis       = sub?.LokasiJenis   ?? "Offline",
+            LokasiDetail      = sub?.LokasiDetail,
+        });
+    }
+
+    [HttpPost("jadwal-observasi"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
+    {
+        if (!ModelState.IsValid)
+            return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", vm);
+
+        var now = DateTime.UtcNow;
+
+        db.JadwalPPID.Add(new JadwalPPID
+        {
+            PermohonanPPIDID = vm.PermohonanPPIDID,
+            JenisJadwal      = "Observasi",
+            Tanggal          = vm.Tanggal,
+            Waktu            = vm.Waktu,
+            NamaPIC          = vm.NamaPIC,
+            TeleponPIC       = vm.TeleponPIC,
+            LokasiJenis      = vm.LokasiJenis,
+            LokasiDetail     = vm.LokasiDetail,
+            CreatedAt        = now
+        });
+
+        var sub = vm.SubTaskID != Guid.Empty
+            ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
+            : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Observasi);
+
+        if (sub is not null)
+        {
+            sub.StatusTask    = SubTaskStatus.InProgress;
+            sub.TanggalJadwal = vm.Tanggal;
+            sub.WaktuJadwal   = vm.Waktu;
+            sub.NamaPIC       = vm.NamaPIC;
+            sub.TeleponPIC    = vm.TeleponPIC;
+            sub.LokasiJenis   = vm.LokasiJenis;
+            sub.LokasiDetail  = vm.LokasiDetail;
+            sub.Operator      = CurrentUser;
+            sub.UpdatedAt     = now;
+        }
+
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is not null)
+        {
+            var lama = p.StatusPPIDID;
+            bool isObsOnly = p.IsObservasi && !p.IsPermintaanData && !p.IsWawancara;
+            if (isObsOnly && p.StatusPPIDID == StatusId.DiProses)
+                p.StatusPPIDID = StatusId.ObservasiDijadwalkan;
+
+            p.UpdatedAt = now;
+            db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
+                $"Observasi dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
+                $"PIC: {vm.NamaPIC}. Dikelola Loket Kepegawaian." +
+                (isObsOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
+                CurrentUser);
+        }
+
+        await db.SaveChangesAsync();
+        TempData["Success"] =
+            $"Jadwal observasi: <strong>{vm.Tanggal:dd MMM yyyy}</strong> pukul {vm.Waktu:HH:mm}";
+
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Selesai Observasi ─────────────────────────────────────────────────
+
+    [HttpGet("selesai-observasi/{id:guid}")]
+    public async Task<IActionResult> SelesaiObservasi(Guid id)
+    {
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub = await db.GetSubTask(id, JenisTask.Observasi);
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
+        {
+            SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
+            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+            JenisTask        = JenisTask.Observasi,
+            TanggalJadwal    = sub?.TanggalJadwal,
+            WaktuJadwal      = sub?.WaktuJadwal,
+            NamaPIC          = sub?.NamaPIC,
+            TeleponPIC       = sub?.TeleponPIC,
+        });
+    }
+
+    [HttpPost("selesai-observasi"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SelesaiObservasiPost(SelesaiSubTaskVm vm)
+    {
+        var now = DateTime.UtcNow;
+        var p   = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is null) return NotFound();
+
+        var lama     = p.StatusPPIDID;
+        string? fp   = null;
+        string? nama = null;
+
+        if (vm.FileHasil?.Length > 0)
+        {
+            var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
+            Directory.CreateDirectory(dir);
+            var fn = $"observasi_{Path.GetFileName(vm.FileHasil.FileName)}";
+            await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
+            await vm.FileHasil.CopyToAsync(s);
+            fp   = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+            nama = vm.FileHasil.FileName;
+
+            db.DokumenPPID.Add(new DokumenPPID
+            {
+                PermohonanPPIDID   = vm.PermohonanPPIDID,
+                NamaDokumenPPID    = "Hasil Observasi",
+                UploadDokumenPPID  = fp,
+                JenisDokumenPPIDID = JenisDokumenId.DataHasil,
+                CreatedAt          = now
+            });
+        }
+
+        var sub = vm.SubTaskID != Guid.Empty
+            ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
+            : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Observasi);
+
+        if (sub is not null)
+        {
+            sub.StatusTask = SubTaskStatus.Selesai;
+            sub.FilePath   = fp;
+            sub.NamaFile   = nama;
+            sub.Catatan    = vm.Catatan;
+            sub.Operator   = CurrentUser;
+            sub.SelesaiAt  = now;
+            sub.UpdatedAt  = now;
+        }
+
+        p.UpdatedAt = now;
+        db.AddAuditLog(vm.PermohonanPPIDID, lama, lama ?? StatusId.DiProses,
+            $"Sub-tugas Observasi selesai (Loket). File: {nama ?? "tidak ada"}. Catatan: {vm.Catatan}",
+            CurrentUser);
+
+        await db.SaveChangesAsync();
+
+        var advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = advanced
+            ? "Observasi selesai. Semua tugas paralel selesai — status menjadi <strong>Data Siap</strong>!"
+            : "Observasi selesai. Tugas paralel lain (KDI/Wawancara) masih berjalan.";
+
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Jadwal Wawancara ──────────────────────────────────────────────────
+
+    [HttpGet("jadwal-wawancara/{id:guid}")]
+    public async Task<IActionResult> JadwalWawancara(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Detail)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub       = await db.GetSubTask(id, JenisTask.Wawancara);
+        var detailWaw = p.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara);
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", new JadwalSubTaskVm
+        {
+            SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
+            PermohonanPPIDID  = id,
+            NoPermohonan      = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon       = p.Pribadi?.Nama   ?? string.Empty,
+            JudulPenelitian   = p.JudulPenelitian ?? string.Empty,
+            JenisTask         = JenisTask.Wawancara,
+            DetailKeperluan   = detailWaw?.DetailKeperluan,
+            NamaBidangTerkait = p.NamaBidang ?? p.NamaProdusenData,
+            Tanggal           = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
+            Waktu             = sub?.WaktuJadwal   ?? new TimeOnly(9, 0),
+            NamaPIC           = sub?.NamaPIC       ?? string.Empty,
+            TeleponPIC        = sub?.TeleponPIC,
+            LokasiJenis       = sub?.LokasiJenis   ?? "Offline",
+            LokasiDetail      = sub?.LokasiDetail,
+        });
+    }
+
+    [HttpPost("jadwal-wawancara"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
+    {
+        if (!ModelState.IsValid)
+            return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", vm);
+
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is null) return NotFound();
+
+        var now  = DateTime.UtcNow;
+        var lama = p.StatusPPIDID;
+
+        db.JadwalPPID.Add(new JadwalPPID
+        {
+            PermohonanPPIDID = vm.PermohonanPPIDID,
+            JenisJadwal      = "Wawancara",
+            Tanggal          = vm.Tanggal,
+            Waktu            = vm.Waktu,
+            NamaPIC          = vm.NamaPIC,
+            TeleponPIC       = vm.TeleponPIC,
+            LokasiJenis      = vm.LokasiJenis,
+            LokasiDetail     = vm.LokasiDetail,
+            CreatedAt        = now
+        });
+
+        var sub = vm.SubTaskID != Guid.Empty
+            ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
+            : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Wawancara);
+
+        if (sub is not null)
+        {
+            sub.StatusTask    = SubTaskStatus.InProgress;
+            sub.TanggalJadwal = vm.Tanggal;
+            sub.WaktuJadwal   = vm.Waktu;
+            sub.NamaPIC       = vm.NamaPIC;
+            sub.TeleponPIC    = vm.TeleponPIC;
+            sub.LokasiJenis   = vm.LokasiJenis;
+            sub.LokasiDetail  = vm.LokasiDetail;
+            sub.Operator      = CurrentUser;
+            sub.UpdatedAt     = now;
+        }
+
+        bool isWawOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
+        if (isWawOnly && p.StatusPPIDID == StatusId.DiProses)
+            p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
+
+        p.UpdatedAt = now;
+        db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
+            $"Wawancara dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
+            $"PIC: {vm.NamaPIC}. Dikelola Loket Kepegawaian." +
+            (isWawOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
+            CurrentUser);
+
+        await db.SaveChangesAsync();
+        TempData["Success"] =
+            $"Jadwal wawancara: <strong>{vm.Tanggal:dd MMM yyyy}</strong> pukul {vm.Waktu:HH:mm}";
+
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Selesai Wawancara ─────────────────────────────────────────────────
+
+    [HttpGet("selesai-wawancara/{id:guid}")]
+    public async Task<IActionResult> SelesaiWawancara(Guid id)
+    {
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub = await db.GetSubTask(id, JenisTask.Wawancara);
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
+        {
+            SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
+            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+            JenisTask        = JenisTask.Wawancara,
+            TanggalJadwal    = sub?.TanggalJadwal,
+            WaktuJadwal      = sub?.WaktuJadwal,
+            NamaPIC          = sub?.NamaPIC,
+            TeleponPIC       = sub?.TeleponPIC,
+        });
+    }
+
+    [HttpPost("selesai-wawancara"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SelesaiWawancaraPost(SelesaiSubTaskVm vm)
+    {
+        var now = DateTime.UtcNow;
+        var p   = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is null) return NotFound();
+
+        var lama     = p.StatusPPIDID;
+        string? fp   = null;
+        string? nama = null;
+
+        if (vm.FileHasil?.Length > 0)
+        {
+            var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
+            Directory.CreateDirectory(dir);
+            var fn = $"wawancara_{Path.GetFileName(vm.FileHasil.FileName)}";
+            await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
+            await vm.FileHasil.CopyToAsync(s);
+            fp   = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+            nama = vm.FileHasil.FileName;
+
+            db.DokumenPPID.Add(new DokumenPPID
+            {
+                PermohonanPPIDID   = vm.PermohonanPPIDID,
+                NamaDokumenPPID    = "Hasil Wawancara",
+                UploadDokumenPPID  = fp,
+                JenisDokumenPPIDID = JenisDokumenId.DataHasil,
+                CreatedAt          = now
+            });
+        }
+
+        var sub = vm.SubTaskID != Guid.Empty
+            ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
+            : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Wawancara);
+
+        if (sub is not null)
+        {
+            sub.StatusTask = SubTaskStatus.Selesai;
+            sub.FilePath   = fp;
+            sub.NamaFile   = nama;
+            sub.Catatan    = vm.Catatan;
+            sub.Operator   = CurrentUser;
+            sub.SelesaiAt  = now;
+            sub.UpdatedAt  = now;
+        }
+
+        p.UpdatedAt = now;
+        db.AddAuditLog(vm.PermohonanPPIDID, lama, lama ?? StatusId.DiProses,
+            $"Sub-tugas Wawancara selesai (Loket). File: {nama ?? "tidak ada"}. Catatan: {vm.Catatan}",
+            CurrentUser);
+
+        await db.SaveChangesAsync();
+
+        var advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = advanced
+            ? "Wawancara selesai. Semua tugas paralel selesai — status menjadi <strong>Data Siap</strong>!"
+            : "Wawancara selesai. Tugas paralel lain (KDI/Observasi) masih berjalan.";
+
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Reschedule ────────────────────────────────────────────────────────
+
+    [HttpGet("reschedule/{id:guid}/{jenisTask}")]
+    public async Task<IActionResult> Reschedule(Guid id, string jenisTask)
+    {
+        if (jenisTask == JenisTask.PermintaanData)
+            return BadRequest("Permintaan Data tidak dikelola oleh Loket.");
+
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub = await db.GetSubTask(id, jenisTask);
+        if (sub is null)
+        {
+            TempData["Error"] = "Sub-tugas tidak ditemukan.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+        if (sub.IsTerminal)
+        {
+            TempData["Error"] = $"Sub-tugas {JenisTask.GetLabel(jenisTask)} sudah selesai/dibatalkan.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+        if (sub.IsPending)
+        {
+            TempData["Error"] = "Buat jadwal terlebih dahulu sebelum melakukan reschedule.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/RescheduleSubTask.cshtml", new RescheduleSubTaskVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
+            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+            JenisTask        = jenisTask,
+            TanggalLama      = sub.TanggalJadwal,
+            WaktuLama        = sub.WaktuJadwal,
+            NamaPICLama      = sub.NamaPIC,
+            RescheduleCount  = sub.RescheduleCount,
+            TanggalBaru      = DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
+            WaktuBaru        = sub.WaktuJadwal ?? new TimeOnly(9, 0),
+            NamaPICBaru      = sub.NamaPIC     ?? string.Empty,
+            TeleponPICBaru   = sub.TeleponPIC,
+            LokasiJenisLama  = sub.LokasiJenis,
+            LokasiDetailLama = sub.LokasiDetail,
+        });
+    }
+
+    [HttpPost("reschedule"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReschedulePost(RescheduleSubTaskVm vm)
+    {
+        if (!ModelState.IsValid)
+            return View("~/Views/KasubkelKdi/RescheduleSubTask.cshtml", vm);
+
+        if (vm.TanggalBaru < DateOnly.FromDateTime(DateTime.Today))
+        {
+            ModelState.AddModelError(nameof(vm.TanggalBaru), "Tanggal baru tidak boleh di masa lalu.");
+            return View("~/Views/KasubkelKdi/RescheduleSubTask.cshtml", vm);
+        }
+
+        var success = await db.RescheduleSubTask(
+            vm.PermohonanPPIDID, vm.JenisTask,
+            vm.TanggalBaru, vm.WaktuBaru,
+            vm.NamaPICBaru, vm.TeleponPICBaru,
+            vm.LokasiJenis, vm.LokasiDetail,
+            vm.AlasanReschedule, CurrentUser);
+
+        if (!success)
+        {
+            TempData["Error"] = "Reschedule gagal — sub-tugas tidak ditemukan atau sudah selesai.";
+            return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+        }
+
+        await db.SaveChangesAsync();
+
+        string rescheduleKe = vm.RescheduleCount + 1 > 1
+            ? $" (reschedule ke-{vm.RescheduleCount + 1})" : "";
+
+        TempData["Success"] =
+            $"Jadwal {JenisTask.GetLabel(vm.JenisTask)} diperbarui{rescheduleKe}: " +
+            $"<strong>{vm.TanggalBaru:dd MMM yyyy}</strong> pukul {vm.WaktuBaru:HH:mm}.";
+
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Batalkan SubTask ──────────────────────────────────────────────────
+
+    [HttpGet("batal-subtask/{id:guid}/{jenisTask}")]
+    public async Task<IActionResult> BatalSubTask(Guid id, string jenisTask)
+    {
+        if (jenisTask == JenisTask.PermintaanData)
+            return BadRequest("Permintaan Data dikelola oleh KDI.");
+
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub = await db.GetSubTask(id, jenisTask);
+        if (sub is null)
+        {
+            TempData["Error"] = "Sub-tugas tidak ditemukan.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+        if (sub.IsDibatalkan)
+        {
+            TempData["Error"] = "Sub-tugas ini sudah dalam status dibatalkan.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+
+        var allTasks    = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id &&
+                        (t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara))
+            .ToListAsync();
+        var activeTasks = allTasks.Where(t => !t.IsDibatalkan && t.SubTaskID != sub.SubTaskID).ToList();
+        bool allOtherDone = activeTasks.Count == 0 || activeTasks.All(t => t.IsSelesai);
+
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/BatalSubTask.cshtml", new BatalSubTaskVm
+        {
+            PermohonanPPIDID   = id,
+            NoPermohonan       = p.NoPermohonan  ?? string.Empty,
+            NamaPemohon        = p.Pribadi?.Nama ?? string.Empty,
+            JenisTask          = jenisTask,
+            StatusSaatIni      = SubTaskStatus.GetLabel(sub.StatusTask),
+            AkanAdvanceStatus  = allOtherDone && !sub.IsSelesai,
+            AkanRollbackStatus = sub.IsSelesai && (
+                p.StatusPPIDID == StatusId.DataSiap ||
+                p.StatusPPIDID == StatusId.FeedbackPemohon ||
+                p.StatusPPIDID == StatusId.Selesai),
+        });
+    }
+
+    [HttpPost("batal-subtask"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> BatalSubTaskPost(BatalSubTaskVm vm)
+    {
+        if (!ModelState.IsValid)
+            return View("~/Views/KasubkelKdi/BatalSubTask.cshtml", vm);
+
+        var subBefore = await db.GetSubTask(vm.PermohonanPPIDID, vm.JenisTask);
+        bool wasSelesai = subBefore?.IsSelesai ?? false;
+
+        var pBefore = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        bool statusWasTerminal = pBefore is not null && (
+            pBefore.StatusPPIDID == StatusId.DataSiap ||
+            pBefore.StatusPPIDID == StatusId.FeedbackPemohon ||
+            pBefore.StatusPPIDID == StatusId.Selesai);
+
+        var success = await db.BatalSubTask(
+            vm.PermohonanPPIDID, vm.JenisTask, vm.AlasanBatal, CurrentUser);
+
+        if (!success)
+        {
+            TempData["Error"] = "Pembatalan gagal — sub-tugas tidak ditemukan atau sudah dibatalkan.";
+            return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+        }
+
+        await db.SaveChangesAsync();
+
+        bool advanced   = false;
+        bool rolledBack = false;
+
+        if (wasSelesai && statusWasTerminal)
+        {
+            var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+            if (p is not null)
+            {
+                var lama       = p.StatusPPIDID;
+                p.StatusPPIDID = StatusId.DiProses;
+                p.UpdatedAt    = DateTime.UtcNow;
+                db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
+                    $"Status di-rollback ke DiProses karena {JenisTask.GetLabel(vm.JenisTask)} " +
+                    $"dibatalkan (Loket). Alasan: {vm.AlasanBatal}", CurrentUser);
+                await db.SaveChangesAsync();
+                rolledBack = true;
+            }
+        }
+        else
+        {
+            advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
+            await db.SaveChangesAsync();
+        }
+
+        string msg = rolledBack
+            ? $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} dibatalkan. Status dimundurkan ke <strong>Sedang Diproses</strong>."
+            : advanced
+                ? $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} dibatalkan. Task lain selesai — status menjadi <strong>Data Siap</strong>."
+                : $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} berhasil dibatalkan.";
+
+        TempData["Success"] = msg;
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Reopen SubTask ────────────────────────────────────────────────────
+
+    [HttpGet("reopen-subtask/{id:guid}/{jenisTask}")]
+    public async Task<IActionResult> ReopenSubTask(Guid id, string jenisTask)
+    {
+        if (jenisTask == JenisTask.PermintaanData)
+            return BadRequest("Permintaan Data dikelola oleh KDI.");
+
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub = await db.GetSubTask(id, jenisTask);
+        if (sub is null || !sub.IsTerminal)
+        {
+            TempData["Error"] = "Hanya sub-tugas yang sudah selesai atau dibatalkan yang bisa di-reopen.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+
+        bool needsRollback = p.StatusPPIDID == StatusId.DataSiap
+                          || p.StatusPPIDID == StatusId.FeedbackPemohon
+                          || p.StatusPPIDID == StatusId.Selesai;
+
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/ReopenSubTask.cshtml", new ReopenSubTaskVm
+        {
+            PermohonanPPIDID     = id,
+            NoPermohonan         = p.NoPermohonan  ?? string.Empty,
+            NamaPemohon          = p.Pribadi?.Nama ?? string.Empty,
+            JenisTask            = jenisTask,
+            StatusSaatIni        = p.StatusPPIDID ?? StatusId.TerdaftarSistem,
+            StatusAkanDiRollback = needsRollback,
+        });
+    }
+
+    [HttpPost("reopen-subtask"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReopenSubTaskPost(ReopenSubTaskVm vm)
+    {
+        if (vm.StatusAkanDiRollback && !vm.KonfirmasiRollback)
+        {
+            ModelState.AddModelError(nameof(vm.KonfirmasiRollback),
+                "Centang konfirmasi untuk melanjutkan karena status permohonan akan mundur.");
+        }
+
+        if (!ModelState.IsValid)
+            return View("~/Views/KasubkelKdi/ReopenSubTask.cshtml", vm);
+
+        var (success, needsRollback) = await db.ReopenSubTask(
+            vm.PermohonanPPIDID, vm.JenisTask, vm.AlasanReopen, CurrentUser);
+
+        if (!success)
+        {
+            TempData["Error"] = "Reopen gagal — sub-tugas tidak ditemukan atau tidak dalam status terminal.";
+            return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+        }
+
+        if (needsRollback)
+        {
+            var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+            if (p is not null)
+            {
+                var lama       = p.StatusPPIDID;
+                p.StatusPPIDID = StatusId.DiProses;
+                p.UpdatedAt    = DateTime.UtcNow;
+                db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
+                    $"Status di-rollback ke DiProses karena {JenisTask.GetLabel(vm.JenisTask)} " +
+                    $"di-reopen (Loket). Alasan: {vm.AlasanReopen}", CurrentUser);
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        string msg = $"Sub-tugas {JenisTask.GetLabel(vm.JenisTask)} berhasil di-reopen.";
+        if (needsRollback) msg += " Status dimundurkan ke <strong>Sedang Diproses</strong>.";
+
+        TempData["Success"] = msg;
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Update PIC ────────────────────────────────────────────────────────
+
+    [HttpGet("update-pic/{id:guid}/{jenisTask}")]
+    public async Task<IActionResult> UpdatePIC(Guid id, string jenisTask)
+    {
+        if (jenisTask == JenisTask.PermintaanData)
+            return BadRequest("Permintaan Data dikelola oleh KDI.");
+
+        var p = await db.PermohonanPPID.Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var sub = await db.GetSubTask(id, jenisTask);
+        if (sub is null || sub.IsTerminal)
+        {
+            TempData["Error"] = "Sub-tugas tidak ditemukan atau sudah selesai.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+
+        ViewData["Prefix"] = "petugas-loket";
+        return View("~/Views/KasubkelKdi/UpdatePIC.cshtml", new UpdatePICVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan  ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama ?? string.Empty,
+            JenisTask        = jenisTask,
+            NamaPICSaatIni   = sub.NamaPIC,
+            NamaPICBaru      = sub.NamaPIC     ?? string.Empty,
+            TeleponPICBaru   = sub.TeleponPIC,
+        });
+    }
+
+    [HttpPost("update-pic"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdatePICPost(UpdatePICVm vm)
+    {
+        if (!ModelState.IsValid)
+            return View("~/Views/KasubkelKdi/UpdatePIC.cshtml", vm);
+
+        var success = await db.UpdatePICSubTask(
+            vm.PermohonanPPIDID, vm.JenisTask,
+            vm.NamaPICBaru, vm.TeleponPICBaru,
+            vm.CatatanPerubahan, CurrentUser);
+
+        if (!success)
+        {
+            TempData["Error"] = "Update PIC gagal.";
+            return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+        }
+
+        await db.SaveChangesAsync();
+        TempData["Success"] = $"PIC {JenisTask.GetLabel(vm.JenisTask)} berhasil diperbarui: " +
+                              $"<strong>{vm.NamaPICBaru}</strong>.";
+
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
+
+    // ── Hasil Feedback (view-only untuk Loket) ────────────────────────────
+
+    [HttpGet("feedback/{id:guid}")]
+    public async Task<IActionResult> HasilFeedback(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Status)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        var feedbacks = await db.FeedbackTaskPPID
+            .Where(f => f.PermohonanPPIDID == id)
+            .ToListAsync();
+
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id)
+            .OrderBy(t => t.JenisTask)
+            .ToListAsync();
+
+        var tugasDocs = await db.DokumenPPID
+            .Where(d => d.PermohonanPPIDID == id &&
+                        d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync();
+
+        ViewData["TugasDocs"] = tugasDocs;
+
+        return View("~/Views/KasubkelKepegawaian/HasilFeedback.cshtml", new HasilFeedbackVm
+        {
+            Permohonan = p,
+            Feedbacks  = feedbacks,
+            SubTasks   = subTasks,
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // DETAIL + EDIT + BATALKAN
+    // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("detail/{id:guid}")]
     public async Task<IActionResult> Detail(Guid id)
@@ -471,8 +1279,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
 
         return View(p);
     }
-
-    // ── EDIT ──────────────────────────────────────────────────────────────
 
     [HttpGet("edit/{id:guid}")]
     public async Task<IActionResult> Edit(Guid id)
@@ -533,8 +1339,6 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
     }
 
-    // ── BATALKAN PERMOHONAN ───────────────────────────────────────────────
-
     [HttpGet("batalkan/{id:guid}")]
     public async Task<IActionResult> Batalkan(Guid id)
     {
@@ -555,8 +1359,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         }
 
         var subTasks = await db.SubTaskPPID
-            .Where(t => t.PermohonanPPIDID == id
-                     && t.StatusTask != SubTaskStatus.Dibatalkan)
+            .Where(t => t.PermohonanPPIDID == id && t.StatusTask != SubTaskStatus.Dibatalkan)
             .ToListAsync();
 
         return View(new BatalkanPermohonanVm
@@ -607,27 +1410,15 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
             return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
         }
 
-        // ── Wrap SaveChanges dalam try-catch ──────────────────────────────
-        // Tangkap kemungkinan DbUpdateException (FK violation, missing column
-        // akibat migration belum diapply, dsb.) agar tidak jatuh ke 500 error page.
         try
         {
             await db.SaveChangesAsync();
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
         {
-            // Log detail untuk debugging admin
             var inner = dbEx.InnerException?.Message ?? dbEx.Message;
             TempData["Error"] =
                 $"Terjadi kesalahan database saat membatalkan permohonan. " +
-                $"Pastikan migrasi <em>AddBatalkanPermohonan</em> sudah dijalankan (<code>dotnet ef database update</code>). " +
-                $"Ref: {DateTime.UtcNow:yyyyMMddHHmmss}";
-            return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
-        }
-        catch (Exception)
-        {
-            TempData["Error"] =
-                $"Terjadi kesalahan tidak terduga saat menyimpan pembatalan. " +
                 $"Ref: {DateTime.UtcNow:yyyyMMddHHmmss}";
             return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
         }
@@ -639,7 +1430,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("Index");
     }
 
-    // ── MENU DATA ─────────────────────────────────────────────────────────
+    // ── Menu Data ─────────────────────────────────────────────────────────
 
     [HttpGet("data")]
     public async Task<IActionResult> MenuData(string? q, string? export)

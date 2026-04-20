@@ -135,6 +135,110 @@
     </div>
 }
 
+@{
+    var obsWawAktif   = ViewData["ObsWawAktif"]   as List<PermohonanPPID> ?? new();
+    var obsWawTaskMap = ViewData["ObsWawTaskMap"] as Dictionary<Guid, List<SubTaskPPID>> ?? new();
+    var obsWawBaru    = obsWawAktif.Where(p => p.StatusPPIDID == StatusId.DiProses
+                                            || p.StatusPPIDID == StatusId.Didisposisi).ToList();
+}
+
+@if (obsWawAktif.Any())
+{
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-5">
+        <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+            <div>
+                <p class="font-bold text-gray-700 text-sm">Antrian Obs/Waw — Kelola Jadwal</p>
+                <p class="text-xs text-gray-400 mt-0.5">Observasi &amp; Wawancara yang menjadi tanggung jawab Loket</p>
+            </div>
+            <div class="flex gap-2">
+                @if (obsWawBaru.Any())
+                { <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">@obsWawBaru.Count belum dijadwalkan</span> }
+                <span class="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">@obsWawAktif.Count aktif</span>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-50">
+                        <th class="col-th">No Permohonan</th>
+                        <th class="col-th">Pemohon</th>
+                        <th class="col-th">Keperluan</th>
+                        <th class="col-th">Batas Waktu</th>
+                        <th class="col-th">Status</th>
+                        <th class="col-th">Progress Obs/Waw</th>
+                        <th class="col-th">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var p in obsWawAktif)
+                    {
+                        obsWawTaskMap.TryGetValue(p.PermohonanPPIDID, out var tasks);
+                        int done  = tasks?.Count(t => t.StatusTask == SubTaskStatus.Selesai) ?? 0;
+                        int total = tasks?.Count ?? 0;
+                        bool isBaru = p.StatusPPIDID == StatusId.DiProses || p.StatusPPIDID == StatusId.Didisposisi;
+
+                        string badgeCls = p.StatusPPIDID switch {
+                            StatusId.DiProses             => "bg-amber-50 text-amber-700",
+                            StatusId.Didisposisi          => "bg-cyan-50 text-cyan-700",
+                            StatusId.ObservasiDijadwalkan => "bg-orange-50 text-orange-700",
+                            StatusId.WawancaraDijadwalkan => "bg-violet-50 text-violet-700",
+                            StatusId.DataSiap             => "bg-emerald-50 text-emerald-700",
+                            StatusId.FeedbackPemohon      => "bg-amber-50 text-amber-700",
+                            _                             => "bg-gray-100 text-gray-500"
+                        };
+
+                        <tr class="hover:bg-blue-50/20 transition-colors group @(isBaru ? "bg-amber-50/30" : "")">
+                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">
+                                @p.NoPermohonan
+                                @if (isBaru) { <span class="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">BARU</span> }
+                            </td>
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-gray-800 text-sm">@p.Pribadi?.Nama</p>
+                                <p class="text-[10px] text-gray-400">@p.KategoriPemohon</p>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex flex-wrap gap-1">
+                                    @if (p.IsObservasi) { <span class="text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-1.5 py-0.5 rounded-full">Obs</span> }
+                                    @if (p.IsWawancara) { <span class="text-[10px] bg-violet-50 text-violet-700 border border-violet-100 px-1.5 py-0.5 rounded-full">Waw</span> }
+                                    @if (p.IsPermintaanData) { <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-full">Data(KDI)</span> }
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-xs @(p.IsOverdue ? "text-red-600 font-semibold" : "text-gray-500")">
+                                @(p.BatasWaktu?.ToString("dd MMM yyyy") ?? "—")
+                                @if (p.IsOverdue) { <span class="block text-[10px] text-red-400">⚠ Terlambat @Math.Abs(p.HariSisa??0) hari</span> }
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-[11px] @badgeCls px-2 py-0.5 rounded-full font-medium">
+                                    @p.Status?.NamaStatusPPID
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if (total > 0)
+                                {
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-20 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="@(done==total?"bg-emerald-500":"bg-violet-500") h-full rounded-full"
+                                                 style="width:@(total > 0 ? done*100/total : 0)%"></div>
+                                        </div>
+                                        <span class="text-[11px] font-semibold @(done==total?"text-emerald-600":"text-gray-500")">@done/@total</span>
+                                    </div>
+                                }
+                                else { <span class="text-[10px] text-gray-400 italic">Belum ada sub-tugas</span> }
+                            </td>
+                            <td class="px-4 py-3">
+                                <a href="/petugas-loket/subtasks/@p.PermohonanPPIDID"
+                                   class="text-[11px] bg-[#002d7a] hover:bg-blue-900 text-white px-2.5 py-1 rounded-lg font-bold">
+                                    ⚙️ Kelola Obs/Waw
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
 <!-- ══ STAT CARDS ══ -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
     <div class="rounded-2xl p-5 relative overflow-hidden shadow-md min-h-[110px] flex flex-col justify-between" style="background:#0f1f4a">
