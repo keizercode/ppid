@@ -79,7 +79,12 @@ public class PermohonanPPID
     [Column("Sequance")]              public int?      Sequance          { get; set; }
     // Catatan: typo "CratedAt" dipertahankan agar sesuai skema database.
     [Column("CratedAt")]              public DateTime? CratedAt          { get; set; }
-    [Column("UpdatedAt")]             public DateTime? UpdatedAt         { get; set; }
+    [Column("UpdatedAt")]             public DateTime? UpdatedAt         { get; set;
+    [Column("AlasanBatal")]    public string?   AlasanBatal    { get; set; }
+    [Column("DibatalkanAt")]   public DateTime? DibatalkanAt   { get; set; }
+    [Column("DibatalkanOleh")] public string?   DibatalkanOleh { get; set; }
+
+// Computed helper
     [Column("BidangID")]              public Guid?     BidangID          { get; set; }
     [Column("NamaBidang")]            public string?   NamaBidang        { get; set; }
     [Column("NamaProdusenData")]      public string?   NamaProdusenData  { get; set; }
@@ -93,6 +98,7 @@ public class PermohonanPPID
     public ICollection<JadwalPPID>           Jadwal   { get; set; } = [];
     public ICollection<AuditLogPPID>         AuditLog { get; set; } = [];
 
+    public bool IsDibatalkan => StatusPPIDID == StatusId.Dibatalkan;
     // ── Computed helpers ─────────────────────────────────────────────────
     public bool IsOverdue => BatasWaktu.HasValue
         && StatusPPIDID < StatusId.Selesai
@@ -415,6 +421,20 @@ public static class StatusId
     public const int MenungguVerifikasi   = 14;
     public const int FeedbackPemohon      = 15;
 
+    public const int Dibatalkan = 16;
+
+/// <summary>
+/// Status yang boleh dibatalkan oleh Loket (sebelum SuratIzinTerbit).
+/// </summary>
+public static bool IsBatalkanAllowed(int? statusId) => statusId is
+    TerdaftarSistem    or
+    IdentifikasiAwal   or
+    MenungguVerifikasi or
+    MenungguSuratIzin;
+
+/// <summary>True jika permohonan dalam status Dibatalkan.</summary>
+public static bool IsDibatalkanStatus(int? id) => id == Dibatalkan;
+
     public static string GetStepLabel(int? statusId) => statusId switch
     {
         TerdaftarSistem                              => "1. Permohonan",
@@ -427,7 +447,8 @@ public static class StatusId
             or DataSiap                              => "7. Data Tersedia / Selesai Obs/Waw",
         FeedbackPemohon                              => "8. Pengisian Feedback",
         Selesai                                      => "9. Selesai",
-        _                                            => "—"
+        _                                            => "—",
+        Dibatalkan => "Dibatalkan",
     };
 
     /// <summary>True jika permohonan sedang dalam proses (belum selesai, sudah terdaftar).</summary>

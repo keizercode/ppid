@@ -87,7 +87,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             new StatusPPID { StatusPPIDID = 12, NamaStatusPPID = "Wawancara Dijadwalkan" },
             new StatusPPID { StatusPPIDID = 13, NamaStatusPPID = "Wawancara Selesai" },
             new StatusPPID { StatusPPIDID = 14, NamaStatusPPID = "Menunggu Verifikasi Kasubkel" },
-            new StatusPPID { StatusPPIDID = 15, NamaStatusPPID = "Pengisian Feedback Pemohon" }
+            new StatusPPID { StatusPPIDID = 15, NamaStatusPPID = "Pengisian Feedback Pemohon" },
+            new StatusPPID { StatusPPIDID = 16, NamaStatusPPID = "Dibatalkan" },
         );
 
     private static void SeedKeperluan(ModelBuilder m) =>
@@ -422,6 +423,64 @@ public async Task<bool> BatalSubTask(
             operatorName);
 
     return true;
+}
+
+public async Task<(bool Success, string? ErrorMessage)> BatalkanPermohonan(
+    Guid   permohonanId,
+    string alasanBatal,
+    string operatorName)
+{
+    var p = await PermohonanPPID.FindAsync(permohonanId);
+    if (p is null)
+        return (false, "Permohonan tidak ditemukan.");
+
+    if (!Models.StatusId.IsBatalkanAllowed(p.StatusPPIDID))
+        return (false,
+            $"Pembatalan tidak diizinkan pada status '{p.Status?.NamaStatusPPID}'. " +
+            "Hanya permohonan yang belum diproses (≤ Menunggu Surat Izin) yang dapat dibatalkan.");
+
+    var now  = DateTime.UtcNow;
+    var lama = p.StatusPPIDID;
+
+    p.StatusPPIDID   = Models.StatusId.Dibatalkan;
+    p.AlasanBatal    = alasanBatal;
+    p.DibatalkanAt   = now;
+    p.DibatalkanOleh = operatorName;
+    p.UpdatedAt      = now;
+
+    // Batalkan semua sub-tugas aktif
+    var activeTasks = await SubTaskPPID
+        .Where(t => t.PermohonanPPIDID == permohonanId
+                 && t.StatusTask != Models.SubTaskStatus.Dibatalkan)
+        .ToListAsync();
+
+    foreach (var task in activeTasks)
+    {
+        task.StatusTask  = Models.SubTaskStatus.Dibatalkan;
+        task.BatalAlasan = $"Permohonan dibatalkan oleh Loket: {alasanBatal}";
+        task.Operator    = operatorName;
+        task.UpdatedAt   = now;
+    }
+
+    // Nonaktifkan semua jadwal aktif
+    var activeJadwal = await JadwalPPID
+        .Where(j => j.PermohonanPPIDID == permohonanId && j.IsAktif)
+        .ToListAsync();
+
+    foreach (var j in activeJadwal)
+    {
+        j.IsAktif   = false;
+        j.UpdatedAt = now;
+    }
+
+    string keterangan = $"Permohonan dibatalkan oleh Loket Kepegawaian. Alasan: {alasanBatal}.";
+    if (activeTasks.Count > 0)
+        keterangan += $" {activeTasks.Count} sub-tugas ikut dibatalkan.";
+    if (activeJadwal.Count > 0)
+        keterangan += $" {activeJadwal.Count} jadwal dinonaktifkan.";
+
+    AddAuditLog(permohonanId, lama, Models.StatusId.Dibatalkan, keterangan, operatorName);
+    return (true, null);
 }
 
     // ════════════════════════════════════════════════════════════════════════

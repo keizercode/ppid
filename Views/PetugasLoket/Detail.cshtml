@@ -169,6 +169,15 @@
                         ✍️ Upload Dokumen TTD
                     </a>
                 }
+                @if (StatusId.IsBatalkanAllowed(Model.StatusPPIDID))
+   {
+       <a href="/petugas-loket/batalkan/@Model.PermohonanPPIDID"
+          class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100
+                 border border-red-200 text-red-700 text-sm font-bold
+                 px-4 py-2.5 rounded-xl transition-colors">
+           🚫 Batalkan Permohonan
+       </a>
+   }
                 <a href="/petugas-loket/edit/@Model.PermohonanPPIDID"
                    class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
                     ✏️ Edit

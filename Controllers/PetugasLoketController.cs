@@ -504,6 +504,94 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
     }
 
+    // ── BATALKAN PERMOHONAN ───────────────────────────────────────────────────
+    // Tersedia hanya untuk permohonan dengan status ≤ MenungguSuratIzin.
+    // Setelah SuratIzinTerbit, pembatalan memerlukan otorisasi Kasubkel.
+
+    [HttpGet("batalkan/{id:guid}")]
+    public async Task<IActionResult> Batalkan(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Status)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        // Guard: hanya status tertentu yang boleh dibatalkan
+        if (!StatusId.IsBatalkanAllowed(p.StatusPPIDID))
+        {
+            TempData["Error"] =
+                $"Permohonan <strong>{p.NoPermohonan}</strong> tidak dapat dibatalkan dari loket. " +
+                $"Status saat ini: <strong>{p.Status?.NamaStatusPPID}</strong>. " +
+                "Pembatalan hanya tersedia sebelum surat izin terbit.";
+            return RedirectToAction("Detail", new { id });
+        }
+
+        // Cek apakah ada sub-tugas aktif (informasi untuk operator)
+        var subTasks = await db.SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == id
+                     && t.StatusTask != SubTaskStatus.Dibatalkan)
+            .ToListAsync();
+
+        return View(new BatalkanPermohonanVm
+        {
+            PermohonanPPIDID   = id,
+            NoPermohonan       = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon        = p.Pribadi?.Nama   ?? string.Empty,
+            Kategori           = p.KategoriPemohon ?? string.Empty,
+            JudulPenelitian    = p.JudulPenelitian ?? string.Empty,
+            StatusPPIDID       = p.StatusPPIDID    ?? StatusId.TerdaftarSistem,
+            StatusLabel        = p.Status?.NamaStatusPPID ?? "—",
+            AdaSubTasks        = subTasks.Count > 0,
+            JumlahSubTasks     = subTasks.Count,
+        });
+    }
+
+    [HttpPost("batalkan"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> BatalkanPost(BatalkanPermohonanVm vm)
+    {
+        if (!ModelState.IsValid)
+        {
+            // Re-populate data yang hilang setelah POST
+            var pReload = await db.PermohonanPPID
+                .Include(x => x.Pribadi)
+                .Include(x => x.Status)
+                .FirstOrDefaultAsync(x => x.PermohonanPPIDID == vm.PermohonanPPIDID);
+
+            if (pReload is not null)
+            {
+                vm.StatusLabel     = pReload.Status?.NamaStatusPPID ?? "—";
+                vm.JudulPenelitian = pReload.JudulPenelitian ?? string.Empty;
+                vm.Kategori        = pReload.KategoriPemohon ?? string.Empty;
+
+                var subCount = await db.SubTaskPPID
+                    .CountAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
+                                  && t.StatusTask != SubTaskStatus.Dibatalkan);
+                vm.AdaSubTasks    = subCount > 0;
+                vm.JumlahSubTasks = subCount;
+            }
+            return View("Batalkan", vm);
+        }
+
+        var (success, errorMsg) = await db.BatalkanPermohonan(
+            vm.PermohonanPPIDID, vm.AlasanBatal, CurrentUser);
+
+        if (!success)
+        {
+            TempData["Error"] = errorMsg ?? "Pembatalan gagal. Refresh dan coba kembali.";
+            return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
+        }
+
+        await db.SaveChangesAsync();
+
+        TempData["Success"] =
+            $"Permohonan <strong>{vm.NoPermohonan}</strong> berhasil dibatalkan. " +
+            "Dokumen dan riwayat tetap tersimpan untuk keperluan audit.";
+
+        return RedirectToAction("Index");
+    }
+
     // ── MENU DATA ─────────────────────────────────────────────────────────
 
     [HttpGet("data")]

@@ -218,6 +218,15 @@
     </a>
 </div>
 
+   @if (StatusId.IsBatalkanAllowed(item.StatusPPIDID))
+   {
+       <a href="/petugas-loket/batalkan/@item.PermohonanPPIDID"
+          class="text-[11px] bg-red-50 hover:bg-red-100 text-red-600
+                 border border-red-100 px-2 py-1 rounded-lg font-medium">
+           🚫 Batalkan
+       </a>
+   }
+
 <!-- ══ TABLE ══ -->
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
@@ -293,6 +302,15 @@
                                     <a href="/petugas-loket/detail/@item.PermohonanPPIDID" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-lg">Detail</a>
                                     <a href="/petugas-loket/edit/@item.PermohonanPPIDID"   class="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">Edit</a>
                                     @if(item.StatusPPIDID==StatusId.TerdaftarSistem){<a href="/petugas-loket/input-identifikasi/@item.PermohonanPPIDID" class="text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded-lg">Input ID</a>}
+
+                                    @if (StatusId.IsBatalkanAllowed(item.StatusPPIDID))
+{
+    <a href="/petugas-loket/batalkan/@item.PermohonanPPIDID"
+       class="text-[11px] bg-red-50 hover:bg-red-100 text-red-600
+              border border-red-100 px-2 py-1 rounded-lg font-medium">
+        🚫 Batalkan
+    </a>
+}
                                     @if(item.StatusPPIDID==StatusId.IdentifikasiAwal){<a href="/petugas-loket/cetak-identifikasi/@item.PermohonanPPIDID" class="text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded-lg">Cetak ID</a>}
                                     @if(item.StatusPPIDID==StatusId.IdentifikasiAwal){<a href="/petugas-loket/upload-ttd/@item.PermohonanPPIDID" class="text-[11px] bg-orange-100 hover:bg-orange-200 text-orange-700 px-2 py-1 rounded-lg">Upload TTD</a>}
                                     @if(item.StatusPPIDID>=StatusId.MenungguSuratIzin){<a href="/petugas-loket/cetak-identifikasi/@item.PermohonanPPIDID" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-lg">Cetak Surat</a>}

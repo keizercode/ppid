@@ -789,3 +789,28 @@ public class HasilFeedbackVm
     public double RataRata    =>
         Feedbacks.Count > 0 ? Feedbacks.Average(f => f.NilaiKepuasan) : 0;
 }
+
+// ── PEMBATALAN PERMOHONAN (Loket Kepegawaian) ─────────────────────────────
+public class BatalkanPermohonanVm
+{
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string Kategori         { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+    public int    StatusPPIDID     { get; set; }
+    public string StatusLabel      { get; set; } = string.Empty;
+    public bool   AdaSubTasks      { get; set; }
+    public int    JumlahSubTasks   { get; set; }
+
+    [Required(ErrorMessage = "Alasan pembatalan wajib diisi")]
+    [MinLength(15, ErrorMessage = "Alasan pembatalan minimal 15 karakter")]
+    [Display(Name = "Alasan Pembatalan")]
+    public string AlasanBatal { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Konfirmasi wajib dicentang")]
+    [Range(typeof(bool), "true", "true",
+        ErrorMessage = "Centang konfirmasi untuk melanjutkan")]
+    [Display(Name = "Konfirmasi Pembatalan")]
+    public bool KonfirmasiPembatalan { get; set; }
+}
