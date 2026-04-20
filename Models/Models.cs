@@ -447,8 +447,8 @@ public static bool IsDibatalkanStatus(int? id) => id == Dibatalkan;
             or DataSiap                              => "7. Data Tersedia / Selesai Obs/Waw",
         FeedbackPemohon                              => "8. Pengisian Feedback",
         Selesai                                      => "9. Selesai",
-        _                                            => "—",
         Dibatalkan => "Dibatalkan",
+        _                                            => "—",
     };
 
     /// <summary>True jika permohonan sedang dalam proses (belum selesai, sudah terdaftar).</summary>
