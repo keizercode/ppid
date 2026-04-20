@@ -1,6 +1,7 @@
 @* ════════════════════════════════════════════════════════════════════════
-   Views/PetugasLoket/DaftarPemohon.cshtml  [UPDATE — hapus section Unit Kerja]
-   Point 1: Unit Kerja DIHAPUS dari form — disposisi dilakukan oleh Kepegawaian
+   Views/PetugasLoket/DaftarPemohon.cshtml
+   FIX: Semua label, placeholder, dan quick-fill button kini kontekstual
+        berdasarkan kategori pemohon (Mahasiswa vs LSM/Organisasi).
    ════════════════════════════════════════════════════════════════════════ *@
 @model DaftarPemohonVm
 @{
@@ -8,6 +9,18 @@
     ViewData["Role"]  = "Petugas Loket";
     Layout = "_LayoutAdmin";
     bool isMahasiswa = Model.Kategori == "Mahasiswa";
+
+    // ── Label & placeholder adaptif per kategori ──────────────────────────
+    string labelPengampu       = isMahasiswa ? "Dosen Pembimbing / Pengampu" : "Penanggung Jawab / Kontak PIC";
+    string phPengampu          = isMahasiswa ? "Nama dosen pembimbing / pengampu" : "Nama penanggung jawab lembaga";
+    string labelTeleponPengampu= isMahasiswa ? "No. Telepon Dosen Pembimbing / Pengampu" : "No. Telepon Penanggung Jawab / PIC";
+    string labelJudul          = isMahasiswa ? "Judul Penelitian" : "Judul / Topik Permohonan";
+    string phJudul             = isMahasiswa ? "Judul penelitian / tujuan permintaan data" : "Topik permohonan atau nama program/kegiatan";
+    string labelLatarBelakang  = isMahasiswa ? "Latar Belakang Penelitian" : "Latar Belakang / Urgensi Permohonan";
+    string phLatarBelakang     = isMahasiswa ? "Jelaskan latar belakang penelitian..." : "Jelaskan urgensi, konteks kegiatan, atau program lembaga...";
+    string labelTujuan         = isMahasiswa ? "Tujuan Permohonan" : "Tujuan / Kepentingan Permohonan";
+    string phTujuan            = isMahasiswa ? "Atau ketik tujuan lainnya..." : "Atau ketik tujuan lainnya...";
+    string prefixBadge         = LoketJenis.GetPrefix(Model.LoketJenis);
 }
 
 <div class="max-w-3xl mx-auto">
@@ -17,9 +30,11 @@
         <span class="text-xl">@(isMahasiswa ? "🎓" : "🏢")</span>
         <div>
             <p class="text-xs text-blue-500 font-medium">Kategori Pemohon</p>
-            <p class="text-blue-800 font-bold">@(isMahasiswa ? "Mahasiswa / Pelajar" : "LSM / Organisasi")</p>
+            <p class="text-blue-800 font-bold">@(isMahasiswa ? "Mahasiswa / Pelajar" : "LSM / Organisasi / Perusahaan")</p>
         </div>
-        <span class="ml-auto text-xs font-mono bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold">Prefix: MHS</span>
+        <span class="ml-auto text-xs font-mono bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold">
+            Prefix: @prefixBadge
+        </span>
     </div>
 
     <!-- NIK Lookup -->
@@ -103,7 +118,7 @@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
             <div class="sec-header">
                 <span class="sec-num">3</span>
-                <p class="sec-title">@(isMahasiswa ? "Data Perguruan Tinggi / Sekolah" : "Data Organisasi")</p>
+                <p class="sec-title">@(isMahasiswa ? "Data Perguruan Tinggi / Sekolah" : "Data Lembaga / Organisasi")</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 @if (isMahasiswa) {
@@ -112,8 +127,15 @@
                     <div><label class="lbl">Fakultas</label><input asp-for="Fakultas" id="f-fakultas" class="fld" placeholder="Fakultas Ilmu Komputer"/></div>
                     <div><label class="lbl">Program Studi / Jurusan</label><input asp-for="Jurusan" id="f-jurusan" class="fld" placeholder="Sistem Informasi"/></div>
                 } else {
-                    <div class="md:col-span-2"><label class="lbl">Nama Lembaga / Organisasi</label><input asp-for="Lembaga" id="f-lembaga" class="fld" placeholder="LSM"/></div>
-                    <div class="md:col-span-2"><label class="lbl">Jabatan / Pekerjaan</label><input asp-for="Pekerjaan" id="f-pekerjaan" class="fld" placeholder="LSM"/></div>
+                    <div class="md:col-span-2">
+                        <label class="lbl">Nama Lembaga / Organisasi / Perusahaan</label>
+                        <input asp-for="Lembaga" id="f-lembaga" class="fld" placeholder="Contoh: Yayasan Peduli Lingkungan, PT. Maju Bersama"/>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="lbl">Jabatan / Posisi dalam Lembaga</label>
+                        <input asp-for="Pekerjaan" id="f-pekerjaan" class="fld" placeholder="Contoh: Direktur Eksekutif, Koordinator Program, Peneliti"/>
+                    </div>
+
                 }
             </div>
         </div>
@@ -124,7 +146,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="lbl">No. Surat Permohonan <span class="req">*</span></label>
-                    <input asp-for="NoSuratPermohonan" class="fld" placeholder="001/SURAT/2024"/>
+                    <input asp-for="NoSuratPermohonan" class="fld" placeholder="@(isMahasiswa ? "001/SURAT/2024" : "001/LSM-XYZ/I/2025")"/>
                     <span asp-validation-for="NoSuratPermohonan" class="err"></span>
                 </div>
                 <div>
@@ -132,36 +154,66 @@
                     <input asp-for="TanggalPermohonan" type="date" class="fld"/>
                     <span asp-validation-for="TanggalPermohonan" class="err"></span>
                 </div>
+
+                @* ── Pengampu / PIC — label & placeholder adaptif ── *@
                 <div class="md:col-span-2">
-                    <label class="lbl">Pengampu / PIC <span class="req">*</span></label>
-                    <input asp-for="Pengampu" class="fld" placeholder="Nama dosen pembimbing / pengampu"
-                    required />
+                    <label class="lbl">@labelPengampu <span class="req">*</span></label>
+                    @if (!isMahasiswa)
+                    {
+                        <p class="text-[11px] text-gray-400 mb-1.5">
+                            Person yang dapat dihubungi terkait permohonan ini.
+                        </p>
+                    }
+                    <input asp-for="Pengampu" class="fld" placeholder="@phPengampu" required />
                     <span asp-validation-for="Pengampu" class="err"></span>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="lbl">No. Telepon Pengampu / PIC <span class="req">*</span></label>
-                    <input asp-for="TeleponPengampu" class="fld" placeholder="08xxxxxxxxxx"
-                    required />
+                    <label class="lbl">@labelTeleponPengampu <span class="req">*</span></label>
+                    <input asp-for="TeleponPengampu" class="fld" placeholder="08xxxxxxxxxx" required />
                     <span asp-validation-for="TeleponPengampu" class="err"></span>
                 </div>
+
+                @* ── Judul — adaptif ── *@
                 <div class="md:col-span-2">
-                    <label class="lbl">Judul Penelitian <span class="req">*</span></label>
-                    <input asp-for="JudulPenelitian" class="fld" placeholder="Judul penelitian / tujuan permintaan data"/>
+                    <label class="lbl">@labelJudul <span class="req">*</span></label>
+                    <input asp-for="JudulPenelitian" class="fld" placeholder="@phJudul"/>
                     <span asp-validation-for="JudulPenelitian" class="err"></span>
                 </div>
+
+                @* ── Latar Belakang — adaptif ── *@
                 <div class="md:col-span-2">
-                    <label class="lbl">Latar Belakang Penelitian <span class="req">*</span></label>
-                    <textarea asp-for="LatarBelakang" rows="3" class="fld resize-none" placeholder="Jelaskan latar belakang penelitian..."></textarea>
+                    <label class="lbl">@labelLatarBelakang <span class="req">*</span></label>
+                    <textarea asp-for="LatarBelakang" rows="3" class="fld resize-none" placeholder="@phLatarBelakang"></textarea>
                     <span asp-validation-for="LatarBelakang" class="err"></span>
                 </div>
+
+                @* ── Tujuan Permohonan — quick-fill adaptif ── *@
                 <div class="md:col-span-2">
-                    <label class="lbl">Tujuan Permohonan <span class="req">*</span></label>
-                    <div class="flex flex-wrap gap-2 mt-1.5 mb-2">
-                        <button type="button" class="tujuan-btn" data-value="Tugas Mata Kuliah">Tugas Mata Kuliah</button>
-                        <button type="button" class="tujuan-btn" data-value="Pembuatan Tugas Akhir">Tugas Akhir</button>
-                        <button type="button" class="tujuan-btn" data-value="Pembuatan Skripsi">Skripsi</button>
-                    </div>
-                    <input asp-for="TujuanPermohonan" id="f-tujuan" class="fld" placeholder="Atau ketik tujuan lainnya..."/>
+                    <label class="lbl">@labelTujuan <span class="req">*</span></label>
+
+                    @if (isMahasiswa)
+                    {
+                        <div class="flex flex-wrap gap-2 mt-1.5 mb-2">
+                            <button type="button" class="tujuan-btn" data-value="Tugas Mata Kuliah">📚 Tugas Mata Kuliah</button>
+                            <button type="button" class="tujuan-btn" data-value="Pembuatan Tugas Akhir">📝 Tugas Akhir</button>
+                            <button type="button" class="tujuan-btn" data-value="Pembuatan Skripsi">🎓 Skripsi</button>
+                            <button type="button" class="tujuan-btn" data-value="Pembuatan Tesis">🏫 Tesis</button>
+                            <button type="button" class="tujuan-btn" data-value="Pembuatan Disertasi">🔬 Disertasi</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="flex flex-wrap gap-2 mt-1.5 mb-2">
+                            <button type="button" class="tujuan-btn" data-value="Penelitian dan Kajian Kebijakan">🔍 Kajian Kebijakan</button>
+                            <button type="button" class="tujuan-btn" data-value="Pemantauan dan Advokasi Lingkungan">🌿 Advokasi Lingkungan</button>
+                            <button type="button" class="tujuan-btn" data-value="Penyusunan Laporan Program">📋 Laporan Program</button>
+                            <button type="button" class="tujuan-btn" data-value="Keperluan Publikasi / Media">📰 Publikasi / Media</button>
+                            <button type="button" class="tujuan-btn" data-value="Kerja Sama Kelembagaan">🤝 Kerja Sama Lembaga</button>
+                            <button type="button" class="tujuan-btn" data-value="Keperluan Hukum / Litigasi">⚖️ Keperluan Hukum</button>
+                        </div>
+                    }
+
+                    <input asp-for="TujuanPermohonan" id="f-tujuan" class="fld" placeholder="@phTujuan"/>
                     <span asp-validation-for="TujuanPermohonan" class="err"></span>
                 </div>
             </div>
@@ -176,48 +228,87 @@
             <div class="space-y-3">
                 <div class="border border-gray-100 rounded-xl overflow-hidden">
                     <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
-                        <input asp-for="IsObservasi"      type="checkbox" onchange="toggleDetail('det-obs',this)"  class="w-4 h-4 rounded accent-blue-600"/>
-                        <span class="font-semibold text-gray-700 text-sm">🔍 Observasi</span>
+                        <input asp-for="IsObservasi" type="checkbox" onchange="toggleDetail('det-obs',this)" class="w-4 h-4 rounded accent-blue-600"/>
+                        <div>
+                            <span class="font-semibold text-gray-700 text-sm">🔍 Observasi Lapangan</span>
+                            @if (!isMahasiswa)
+                            {
+                                <p class="text-[11px] text-gray-400 leading-tight mt-0.5">Kunjungan langsung ke lokasi / fasilitas DLH</p>
+                            }
+                        </div>
                     </label>
                     <div id="det-obs" class="@(!Model.IsObservasi ? "hidden" : "") px-4 pb-4">
-                        <textarea asp-for="DetailObservasi" rows="2" class="fld resize-none text-sm" placeholder="Jelaskan observasi yang diperlukan..."></textarea>
+                        <textarea asp-for="DetailObservasi" rows="2" class="fld resize-none text-sm"
+                                  placeholder="@(isMahasiswa ? "Jelaskan observasi yang diperlukan..." : "Jelaskan tujuan observasi, lokasi yang ingin dikunjungi, dan aspek yang akan diamati...")"></textarea>
                     </div>
                 </div>
+
                 <div class="border border-gray-100 rounded-xl overflow-hidden">
                     <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
                         <input asp-for="IsPermintaanData" type="checkbox" onchange="toggleDetail('det-data',this)" class="w-4 h-4 rounded accent-blue-600"/>
-                        <span class="font-semibold text-gray-700 text-sm">📊 Permintaan Data</span>
+                        <div>
+                            <span class="font-semibold text-gray-700 text-sm">📊 Permintaan Data</span>
+                            @if (!isMahasiswa)
+                            {
+                                <p class="text-[11px] text-gray-400 leading-tight mt-0.5">Data statistik, dokumen, atau informasi publik DLH</p>
+                            }
+                        </div>
                     </label>
                     <div id="det-data" class="@(!Model.IsPermintaanData ? "hidden" : "") px-4 pb-4">
-                        <textarea asp-for="DetailPermintaanData" rows="2" class="fld resize-none text-sm" placeholder="Jelaskan data yang diperlukan..."></textarea>
+                        <textarea asp-for="DetailPermintaanData" rows="2" class="fld resize-none text-sm"
+                                  placeholder="@(isMahasiswa ? "Jelaskan data yang diperlukan..." : "Jelaskan data/dokumen yang dibutuhkan, periode data, format yang diinginkan, dan relevansinya dengan kegiatan lembaga...")"></textarea>
                     </div>
                 </div>
+
                 <div class="border border-gray-100 rounded-xl overflow-hidden">
                     <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
-                        <input asp-for="IsWawancara"      type="checkbox" onchange="toggleDetail('det-waw',this)"  class="w-4 h-4 rounded accent-blue-600"/>
-                        <span class="font-semibold text-gray-700 text-sm">🎤 Wawancara</span>
+                        <input asp-for="IsWawancara" type="checkbox" onchange="toggleDetail('det-waw',this)" class="w-4 h-4 rounded accent-blue-600"/>
+                        <div>
+                            <span class="font-semibold text-gray-700 text-sm">🎤 Wawancara</span>
+                            @if (!isMahasiswa)
+                            {
+                                <p class="text-[11px] text-gray-400 leading-tight mt-0.5">Narasumber dari pejabat atau pegawai DLH Jakarta</p>
+                            }
+                        </div>
                     </label>
                     <div id="det-waw" class="@(!Model.IsWawancara ? "hidden" : "") px-4 pb-4">
-                        <textarea asp-for="DetailWawancara" rows="2" class="fld resize-none text-sm" placeholder="Jelaskan topik wawancara yang diperlukan..."></textarea>
+                        <textarea asp-for="DetailWawancara" rows="2" class="fld resize-none text-sm"
+                                  placeholder="@(isMahasiswa ? "Jelaskan topik wawancara yang diperlukan..." : "Jelaskan topik wawancara, jabatan narasumber yang diinginkan, dan relevansinya dengan kegiatan lembaga...")"></textarea>
                     </div>
                 </div>
             </div>
-
-            @* POINT 1: Unit Kerja DIHAPUS dari sini.
-               Disposisi unit kerja dilakukan oleh Kepegawaian saat menerbitkan Surat Izin.
-               Lihat: Views/Kepegawaian/SuratIzin.cshtml — Disposisi bisa pilih lebih dari satu. *@
         </div>
 
         <!-- ── 6. UPLOAD DOKUMEN ── -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
             <div class="sec-header"><span class="sec-num">6</span><p class="sec-title">Upload Dokumen Persyaratan</p></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div><label class="lbl">📄 KTP</label><input asp-for="FileKTP" type="file" accept=".pdf,.jpg,.jpeg,.png" class="file-fld"/></div>
-                <div><label class="lbl">📄 Surat Permohonan</label><input asp-for="FileSuratPermohonan" type="file" accept=".pdf" class="file-fld"/></div>
+                <div>
+                    <label class="lbl">📄 KTP</label>
+                    <input asp-for="FileKTP" type="file" accept=".pdf,.jpg,.jpeg,.png" class="file-fld"/>
+                </div>
+                <div>
+                    <label class="lbl">📄 Surat Permohonan Resmi</label>
+                    <input asp-for="FileSuratPermohonan" type="file" accept=".pdf" class="file-fld"/>
+                </div>
                 @if (isMahasiswa) {
-                    <div class="md:col-span-2"><label class="lbl">📄 Proposal Penelitian Awal</label><input asp-for="FileProposal" type="file" accept=".pdf" class="file-fld"/></div>
+                    <div class="md:col-span-2">
+                        <label class="lbl">📄 Proposal Penelitian Awal</label>
+                        <input asp-for="FileProposal" type="file" accept=".pdf" class="file-fld"/>
+                    </div>
                 } else {
-                    <div class="md:col-span-2"><label class="lbl">📄 Akta Notaris Lembaga</label><input asp-for="FileAktaNotaris" type="file" accept=".pdf" class="file-fld"/></div>
+                    <div class="md:col-span-2">
+                        <label class="lbl">
+                            📄 Akta Notaris / Dokumen Legalitas Lembaga
+                            <span class="font-normal text-gray-400 normal-case ml-1"></span>
+                        </label>
+                        <input asp-for="FileAktaNotaris" type="file" accept=".pdf" class="file-fld"/>
+                    </div>
+                    <div class="md:col-span-2">
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-[11px] text-blue-600">
+                            <strong>Tips:</strong> Pastikan surat permohonan menggunakan kop lembaga resmi, ditandatangani oleh pimpinan, dan mencantumkan tujuan permohonan secara jelas.
+                        </div>
+                    </div>
                 }
             </div>
         </div>
@@ -225,8 +316,14 @@
         <div asp-validation-summary="ModelOnly" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-700 text-xs"></div>
 
         <div class="flex gap-3 mb-10">
-            <a asp-action="Index" asp-controller="PetugasLoket" class="flex-1 text-center border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold py-3 rounded-xl text-sm transition-colors">Batal</a>
-            <button type="submit" class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 px-8 rounded-xl text-sm transition-colors shadow-sm">Simpan & Lanjutkan →</button>
+            <a asp-action="Index" asp-controller="PetugasLoket"
+               class="flex-1 text-center border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold py-3 rounded-xl text-sm transition-colors">
+                Batal
+            </a>
+            <button type="submit"
+                    class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 px-8 rounded-xl text-sm transition-colors shadow-sm">
+                Simpan & Lanjutkan →
+            </button>
         </div>
     </form>
 </div>
