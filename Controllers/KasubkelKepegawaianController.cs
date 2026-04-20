@@ -11,22 +11,15 @@ namespace PermintaanData.Controllers;
 /// Kasubkel Kepegawaian — verifikasi, surat izin, dan manajemen
 /// sub-tugas Observasi + Wawancara secara paralel.
 ///
-/// Route map:
-///   GET  /kasubkel-kepegawaian                          → Dashboard
-///   GET  /kasubkel-kepegawaian/permohonan               → Daftar permohonan
-///   GET  /kasubkel-kepegawaian/detail/{id}              → Detail
-///   GET/POST /kasubkel-kepegawaian/verifikasi/{id}      → Verifikasi identifikasi awal
-///   GET/POST /kasubkel-kepegawaian/surat-izin/{id}      → Terbitkan surat izin
-///   GET  /kasubkel-kepegawaian/subtasks/{id}            → Hub sub-tugas Obs/Waw
-///   GET/POST /kasubkel-kepegawaian/jadwal-observasi/{id} → Jadwal observasi
-///   GET/POST /kasubkel-kepegawaian/selesai-observasi/{id}→ Konfirmasi observasi selesai
-///   GET/POST /kasubkel-kepegawaian/jadwal-wawancara/{id} → Jadwal wawancara
-///   GET/POST /kasubkel-kepegawaian/selesai-wawancara/{id}→ Konfirmasi wawancara selesai
-///   GET/POST /kasubkel-kepegawaian/reschedule/{id}/{jenis} → Reschedule jadwal
-///   GET/POST /kasubkel-kepegawaian/batal-subtask/{id}/{jenis}  → Batalkan sub-tugas
-///   GET/POST /kasubkel-kepegawaian/reopen-subtask/{id}/{jenis} → Buka kembali sub-tugas
-///   GET/POST /kasubkel-kepegawaian/update-pic/{id}/{jenis}     → Ganti PIC
-///   GET  /kasubkel-kepegawaian/feedback/{id}            → Hasil feedback pemohon
+/// Cakupan permohonan (semua loket):
+///   - LoketJenis.Kepegawaian  (prefix MHS — mahasiswa)
+///   - LoketJenis.Umum         (prefix UMM — LSM/organisasi/perusahaan)
+///   - KategoriPemohon = "Mahasiswa" (legacy fallback)
+///
+/// Paralel flow:
+///   Kepegawaian mengelola Obs/Waw  ──┐
+///                                     ├─→ AdvanceIfAllSubTasksDone → DataSiap
+///   KDI mengelola PermintaanData   ──┘
 /// </summary>
 [Route("kasubkel-kepegawaian")]
 [Authorize(Roles = $"{AppRoles.KasubkelKepegawaian},{AppRoles.Admin}")]
@@ -37,11 +30,17 @@ public class KasubkelKepegawaianController(
     private string CurrentUser =>
         User.Identity?.Name ?? AppRoles.KasubkelKepegawaian;
 
-    // ── Dashboard ─────────────────────────────────────────────────────────
+    // ── Predicate: cakupan permohonan yang menjadi tanggung jawab Kepegawaian ─
+    private static bool IsInScope(PermohonanPPID p) =>
+        p.LoketJenis == LoketJenis.Kepegawaian ||
+        p.LoketJenis == LoketJenis.Umum        ||
+        p.KategoriPemohon == "Mahasiswa";
 
+    // ── Dashboard ─────────────────────────────────────────────────────────────
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
+        // ── Total statistik (semua loket) ─────────────────────────────────────
         var allStatus = await db.PermohonanPPID
             .AsNoTracking()
             .Where(p => p.LoketJenis == LoketJenis.Kepegawaian
@@ -58,19 +57,26 @@ public class KasubkelKepegawaianController(
             MonthlyStats = await db.GetMonthlyStats()
         };
 
-        // ── Antrian verifikasi / surat izin ──────────────────────────────
+        // ── FIX: Antrian verifikasi/surat izin — semua loket, bukan hanya Kepegawaian ──
+        // BUG SEBELUMNYA: filter hanya mencakup LoketJenis.Kepegawaian + Mahasiswa,
+        // sehingga permohonan Loket Umum (LSM/organisasi) tidak muncul di dashboard.
         ViewData["MenungguVerifikasi"] = await db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
             .Where(p =>
-                (p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa") &&
+                // Cakupan: semua loket yang diverifikasi Kepegawaian
+                (p.LoketJenis == LoketJenis.Kepegawaian ||
+                 p.LoketJenis == LoketJenis.Umum        ||
+                 p.KategoriPemohon == "Mahasiswa")
+                &&
+                // Status yang memerlukan tindakan
                 (p.StatusPPIDID == StatusId.MenungguVerifikasi ||
                  p.StatusPPIDID == StatusId.IdentifikasiAwal   ||
                  p.StatusPPIDID == StatusId.MenungguSuratIzin))
             .OrderByDescending(p => p.CratedAt)
             .ToListAsync();
 
-        // ── Antrian sub-tugas Observasi / Wawancara aktif ─────────────────
+        // ── Antrian sub-tugas Obs/Waw aktif (semua loket) ─────────────────────
         var obsWawAktif = await db.PermohonanPPID
             .Include(p => p.Pribadi)
             .Include(p => p.Status)
@@ -87,10 +93,11 @@ public class KasubkelKepegawaianController(
             .OrderByDescending(p => p.UpdatedAt)
             .ToListAsync();
 
-        var obsWawIds  = obsWawAktif.Select(p => p.PermohonanPPIDID).ToList();
+        var obsWawIds   = obsWawAktif.Select(p => p.PermohonanPPIDID).ToList();
         var obsWawTasks = await db.SubTaskPPID
             .Where(t => obsWawIds.Contains(t.PermohonanPPIDID)
-                     && (t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara))
+                     && (t.JenisTask == JenisTask.Observasi
+                      || t.JenisTask == JenisTask.Wawancara))
             .ToListAsync();
 
         ViewData["ObsWawAktif"] = obsWawAktif;
@@ -101,8 +108,7 @@ public class KasubkelKepegawaianController(
         return View(vm);
     }
 
-    // ── Daftar permohonan ─────────────────────────────────────────────────
-
+    // ── Daftar permohonan ─────────────────────────────────────────────────────
     [HttpGet("permohonan")]
     public async Task<IActionResult> Permohonan(string? q, int? status)
     {
@@ -127,8 +133,7 @@ public class KasubkelKepegawaianController(
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
-    // ── Detail ────────────────────────────────────────────────────────────
-
+    // ── Detail ────────────────────────────────────────────────────────────────
     [HttpGet("detail/{id:guid}")]
     public async Task<IActionResult> Detail(Guid id)
     {
@@ -150,8 +155,7 @@ public class KasubkelKepegawaianController(
         return View(p);
     }
 
-    // ── Verifikasi identifikasi awal ──────────────────────────────────────
-
+    // ── Verifikasi identifikasi awal ──────────────────────────────────────────
     [HttpGet("verifikasi/{id:guid}")]
     public async Task<IActionResult> Verifikasi(Guid id)
     {
@@ -215,8 +219,7 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(Index));
     }
 
-    // ── Surat Izin ────────────────────────────────────────────────────────
-
+    // ── Surat Izin ────────────────────────────────────────────────────────────
     [HttpGet("surat-izin/{id:guid}")]
     public async Task<IActionResult> SuratIzin(Guid id)
     {
@@ -287,7 +290,9 @@ public class KasubkelKepegawaianController(
             $"Surat izin diterbitkan: {vm.NoSuratIzin}.",
             CurrentUser);
 
-        // ── Buat sub-tugas Obs/Waw langsung di sini (Kepegawaian mengelola) ──
+        // ── Buat sub-tugas Obs/Waw secara paralel jika diperlukan ─────────────
+        // Kepegawaian hanya membuat sub-tugas untuk Obs/Waw.
+        // PermintaanData dibuat oleh KDI saat menerima disposisi.
         if (vm.IsObservasi || vm.IsWawancara)
         {
             var existingObsWaw = await db.SubTaskPPID
@@ -304,33 +309,33 @@ public class KasubkelKepegawaianController(
                     operatorName: CurrentUser);
         }
 
-        // ── Routing berdasarkan keperluan ────────────────────────────────
+        // ── Routing status berdasarkan keperluan ──────────────────────────────
         int    statusTujuan;
         string routeKet;
         string successMsg;
 
         if (vm.IsPermintaanData)
         {
-            // Ada komponen data → disposisi ke KDI
+            // Ada komponen data → disposisi ke KDI (paralel dengan Obs/Waw jika ada)
             p.StatusPPIDID = StatusId.Didisposisi;
             p.NamaBidang   = vm.NamaBidangPrimary;
             statusTujuan   = StatusId.Didisposisi;
-            routeKet       = $"Permintaan Data → KDI (bidang: {p.NamaBidang ?? "PSMDI"})." +
-                             (vm.IsObservasi || vm.IsWawancara
-                                ? " Obs/Waw → dikelola Kepegawaian."
-                                : "");
-            successMsg     = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
-                             $"Permintaan Data diteruskan KDI ({p.NamaBidang ?? "PSMDI"})." +
-                             (vm.IsObservasi || vm.IsWawancara
-                                ? " Obs/Waw dikelola Kepegawaian."
-                                : "");
+            routeKet = $"Permintaan Data → disposisi KDI (bidang: {p.NamaBidang ?? "PSMDI"})." +
+                       (vm.IsObservasi || vm.IsWawancara
+                           ? " Obs/Waw → dikelola Kepegawaian (paralel)."
+                           : "");
+            successMsg = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
+                         $"Permintaan Data diteruskan KDI ({p.NamaBidang ?? "PSMDI"})." +
+                         (vm.IsObservasi || vm.IsWawancara
+                             ? " Obs/Waw dikelola Kepegawaian secara paralel."
+                             : "");
         }
         else
         {
-            // Hanya Obs/Waw — Kepegawaian mengelola langsung
+            // Hanya Obs/Waw — Kepegawaian mengelola langsung, tidak perlu disposisi KDI
             p.StatusPPIDID = StatusId.DiProses;
             statusTujuan   = StatusId.DiProses;
-            routeKet       = "Obs/Waw-only → dikelola Kepegawaian, tidak perlu disposisi KDI.";
+            routeKet       = "Obs/Waw-only → dikelola Kepegawaian, tidak ada disposisi KDI.";
             successMsg     = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
                              "Obs/Waw dikelola langsung oleh Kepegawaian.";
         }
@@ -344,11 +349,9 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(Index));
     }
 
-    // ════════════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════════
     // SUB-TUGAS OBSERVASI + WAWANCARA
-    // ════════════════════════════════════════════════════════════════════════
-
-    // ── Hub Sub-tugas ─────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════════════════════
 
     [HttpGet("subtasks/{id:guid}")]
     public async Task<IActionResult> SubTasks(Guid id)
@@ -361,14 +364,14 @@ public class KasubkelKepegawaianController(
 
         if (p is null) return NotFound();
 
-        // Hanya tampilkan Obs/Waw (Kepegawaian tidak mengelola PermintaanData)
+        // Kepegawaian hanya menampilkan dan mengelola Obs/Waw
         var tasks = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == id &&
                         (t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara))
             .OrderBy(t => t.JenisTask)
             .ToListAsync();
 
-        // Laporan final pemohon
+        // Dokumen laporan final pemohon (untuk ditampilkan di sisi Kepegawaian)
         var tugasDocs = await db.DokumenPPID
             .Where(d => d.PermohonanPPIDID == id
                      && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
@@ -380,8 +383,7 @@ public class KasubkelKepegawaianController(
         return View(new ParallelTasksVm { Permohonan = p, SubTasks = tasks });
     }
 
-    // ── Jadwal Observasi ──────────────────────────────────────────────────
-
+    // ── Jadwal Observasi ──────────────────────────────────────────────────────
     [HttpGet("jadwal-observasi/{id:guid}")]
     public async Task<IActionResult> JadwalObservasi(Guid id)
     {
@@ -395,8 +397,8 @@ public class KasubkelKepegawaianController(
         {
             SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
             PermohonanPPIDID  = id,
-            NoPermohonan      = p.NoPermohonan   ?? string.Empty,
-            NamaPemohon       = p.Pribadi?.Nama  ?? string.Empty,
+            NoPermohonan      = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon       = p.Pribadi?.Nama   ?? string.Empty,
             JudulPenelitian   = p.JudulPenelitian ?? string.Empty,
             JenisTask         = JenisTask.Observasi,
             NamaBidangTerkait = p.NamaBidang,
@@ -451,15 +453,15 @@ public class KasubkelKepegawaianController(
         if (p is not null)
         {
             var lama = p.StatusPPIDID;
-            // Hanya ubah status jika ini observasi-only dan tidak ada PermintaanData
+            // Status hanya diubah ke ObservasiDijadwalkan jika ini observasi-only
             bool isObsOnly = p.IsObservasi && !p.IsPermintaanData && !p.IsWawancara;
             if (isObsOnly && p.StatusPPIDID == StatusId.DiProses)
                 p.StatusPPIDID = StatusId.ObservasiDijadwalkan;
 
             p.UpdatedAt = now;
             db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
-                $"Observasi dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, PIC: {vm.NamaPIC}" +
-                (isObsOnly ? "" : " [parallel mode]"),
+                $"Observasi dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
+                $"PIC: {vm.NamaPIC}" + (isObsOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
                 CurrentUser);
         }
 
@@ -470,8 +472,7 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Selesai Observasi ─────────────────────────────────────────────────
-
+    // ── Selesai Observasi ─────────────────────────────────────────────────────
     [HttpGet("selesai-observasi/{id:guid}")]
     public async Task<IActionResult> SelesaiObservasi(Guid id)
     {
@@ -485,8 +486,8 @@ public class KasubkelKepegawaianController(
         {
             SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan   ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama  ?? string.Empty,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
             JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
             JenisTask        = JenisTask.Observasi,
             TanggalJadwal    = sub?.TanggalJadwal,
@@ -549,18 +550,18 @@ public class KasubkelKepegawaianController(
 
         await db.SaveChangesAsync();
 
+        // Cek apakah semua sub-tugas (termasuk PermintaanData di KDI) sudah selesai
         var advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
         await db.SaveChangesAsync();
 
         TempData["Success"] = advanced
-            ? "Observasi selesai. Semua tugas selesai — status menjadi <strong>Data Siap</strong>!"
-            : "Observasi selesai. Tugas lain masih berjalan — status permohonan belum berubah.";
+            ? "Observasi selesai. Semua tugas paralel selesai — status menjadi <strong>Data Siap</strong>!"
+            : "Observasi selesai. Tugas paralel lain (KDI/Wawancara) masih berjalan.";
 
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Jadwal Wawancara ──────────────────────────────────────────────────
-
+    // ── Jadwal Wawancara ──────────────────────────────────────────────────────
     [HttpGet("jadwal-wawancara/{id:guid}")]
     public async Task<IActionResult> JadwalWawancara(Guid id)
     {
@@ -577,8 +578,8 @@ public class KasubkelKepegawaianController(
         {
             SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
             PermohonanPPIDID  = id,
-            NoPermohonan      = p.NoPermohonan   ?? string.Empty,
-            NamaPemohon       = p.Pribadi?.Nama  ?? string.Empty,
+            NoPermohonan      = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon       = p.Pribadi?.Nama   ?? string.Empty,
             JudulPenelitian   = p.JudulPenelitian ?? string.Empty,
             JenisTask         = JenisTask.Wawancara,
             DetailKeperluan   = detailWaw?.DetailKeperluan,
@@ -634,15 +635,15 @@ public class KasubkelKepegawaianController(
             sub.UpdatedAt     = now;
         }
 
-        // Hanya update status ke WawancaraDijadwalkan untuk wawancara-only
+        // Status hanya diubah ke WawancaraDijadwalkan jika wawancara-only
         bool isWawOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
         if (isWawOnly && p.StatusPPIDID == StatusId.DiProses)
             p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
 
         p.UpdatedAt = now;
         db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
-            $"Wawancara dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, PIC: {vm.NamaPIC}" +
-            (isWawOnly ? "" : " [parallel mode]"),
+            $"Wawancara dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
+            $"PIC: {vm.NamaPIC}" + (isWawOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
             CurrentUser);
 
         await db.SaveChangesAsync();
@@ -652,8 +653,7 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Selesai Wawancara ─────────────────────────────────────────────────
-
+    // ── Selesai Wawancara ─────────────────────────────────────────────────────
     [HttpGet("selesai-wawancara/{id:guid}")]
     public async Task<IActionResult> SelesaiWawancara(Guid id)
     {
@@ -667,8 +667,8 @@ public class KasubkelKepegawaianController(
         {
             SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan   ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama  ?? string.Empty,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
             JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
             JenisTask        = JenisTask.Wawancara,
             TanggalJadwal    = sub?.TanggalJadwal,
@@ -735,14 +735,13 @@ public class KasubkelKepegawaianController(
         await db.SaveChangesAsync();
 
         TempData["Success"] = advanced
-            ? "Wawancara selesai. Semua tugas selesai — status menjadi <strong>Data Siap</strong>!"
-            : "Wawancara selesai. Tugas lain masih berjalan — status permohonan belum berubah.";
+            ? "Wawancara selesai. Semua tugas paralel selesai — status menjadi <strong>Data Siap</strong>!"
+            : "Wawancara selesai. Tugas paralel lain (KDI/Observasi) masih berjalan.";
 
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Reschedule ────────────────────────────────────────────────────────
-
+    // ── Reschedule ────────────────────────────────────────────────────────────
     [HttpGet("reschedule/{id:guid}/{jenisTask}")]
     public async Task<IActionResult> Reschedule(Guid id, string jenisTask)
     {
@@ -773,8 +772,8 @@ public class KasubkelKepegawaianController(
         return View("~/Views/KasubkelKdi/RescheduleSubTask.cshtml", new RescheduleSubTaskVm
         {
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan   ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama  ?? string.Empty,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
             JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
             JenisTask        = jenisTask,
             TanggalLama      = sub.TanggalJadwal,
@@ -827,8 +826,7 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Batalkan SubTask ──────────────────────────────────────────────────
-
+    // ── Batalkan SubTask ──────────────────────────────────────────────────────
     [HttpGet("batal-subtask/{id:guid}/{jenisTask}")]
     public async Task<IActionResult> BatalSubTask(Guid id, string jenisTask)
     {
@@ -857,6 +855,7 @@ public class KasubkelKepegawaianController(
             .ToListAsync();
         var activeTasks = allTasks.Where(t => !t.IsDibatalkan && t.SubTaskID != sub.SubTaskID).ToList();
         bool allOtherDone = activeTasks.Count == 0 || activeTasks.All(t => t.IsSelesai);
+
         ViewData["Prefix"] = "kasubkel-kepegawaian";
         return View("~/Views/KasubkelKdi/BatalSubTask.cshtml", new BatalSubTaskVm
         {
@@ -899,8 +898,8 @@ public class KasubkelKepegawaianController(
 
         await db.SaveChangesAsync();
 
-        bool advanced    = false;
-        bool rolledBack  = false;
+        bool advanced   = false;
+        bool rolledBack = false;
 
         if (wasSelesai && statusWasTerminal)
         {
@@ -933,8 +932,7 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Reopen SubTask ────────────────────────────────────────────────────
-
+    // ── Reopen SubTask ────────────────────────────────────────────────────────
     [HttpGet("reopen-subtask/{id:guid}/{jenisTask}")]
     public async Task<IActionResult> ReopenSubTask(Guid id, string jenisTask)
     {
@@ -1011,8 +1009,7 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Update PIC ────────────────────────────────────────────────────────
-
+    // ── Update PIC ────────────────────────────────────────────────────────────
     [HttpGet("update-pic/{id:guid}/{jenisTask}")]
     public async Task<IActionResult> UpdatePIC(Guid id, string jenisTask)
     {
@@ -1066,8 +1063,7 @@ public class KasubkelKepegawaianController(
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Hasil Feedback ────────────────────────────────────────────────────
-
+    // ── Hasil Feedback ────────────────────────────────────────────────────────
     [HttpGet("feedback/{id:guid}")]
     public async Task<IActionResult> HasilFeedback(Guid id)
     {
@@ -1103,8 +1099,7 @@ public class KasubkelKepegawaianController(
         });
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────
-
+    // ── Private helpers ───────────────────────────────────────────────────────
     private static bool IsVerifikasiAllowed(int? statusId) =>
         statusId is StatusId.MenungguVerifikasi
                  or StatusId.IdentifikasiAwal

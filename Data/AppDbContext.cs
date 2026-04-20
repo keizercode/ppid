@@ -243,51 +243,64 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     //   nomor ID-nya kebetulan lebih besar dari DataSiap(10) karena ditambah belakangan.
     // ════════════════════════════════════════════════════════════════════════
     public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
-    {
-        // Advisory lock mencegah race condition di concurrent request.
-        await Database.ExecuteSqlAsync(
-            $"SELECT pg_advisory_xact_lock(20250003, {permohonanId.GetHashCode()})");
+{
+    // ── Advisory lock: mencegah race condition ────────────────────────────
+    // Menggunakan dua komponen 32-bit dari GUID bytes untuk membentuk int64 unik.
+    // Lebih aman dari GetHashCode() yang dapat menghasilkan collision antar GUID berbeda.
+    var bytes = permohonanId.ToByteArray();
+    long lockKey = (long)BitConverter.ToUInt32(bytes, 0) << 32
+                 | BitConverter.ToUInt32(bytes, 8);
 
-        // Re-read state SETELAH lock diperoleh.
-        var tasks = await SubTaskPPID
-            .Where(t => t.PermohonanPPIDID == permohonanId)
-            .ToListAsync();
+    await Database.ExecuteSqlAsync(
+        $"SELECT pg_advisory_xact_lock({lockKey})");
 
-        // Hanya task non-dibatalkan yang diperhitungkan.
-        var activeTasks = tasks.Where(t => t.StatusTask != SubTaskStatus.Dibatalkan).ToList();
+    // ── Re-read SETELAH lock diperoleh ───────────────────────────────────
+    var tasks = await SubTaskPPID
+        .Where(t => t.PermohonanPPIDID == permohonanId)
+        .ToListAsync();
 
-        if (activeTasks.Count == 0)
-            return false;
+    // Hanya task yang tidak dibatalkan yang diperhitungkan
+    var activeTasks = tasks.Where(t => t.StatusTask != SubTaskStatus.Dibatalkan).ToList();
 
-        // Semua active task harus Selesai.
-        if (!activeTasks.All(t => t.IsSelesai))
-            return false;
+    if (activeTasks.Count == 0)
+        return false;
 
-        var p = await PermohonanPPID.FindAsync(permohonanId);
+    // Semua active task harus Selesai
+    if (!activeTasks.All(t => t.IsSelesai))
+        return false;
 
-        // FIX: hanya skip jika sudah di status terminal yang benar.
-        // JANGAN pakai >= DataSiap karena WawancaraDijadwalkan(12), WawancaraSelesai(13),
-        // MenungguVerifikasi(14), FeedbackPemohon(15) semua > DataSiap(10) secara angka
-        // padahal bukan terminal state — ini root cause bug status tidak pernah maju.
-        if (p is null
-            || p.StatusPPIDID == Models.StatusId.DataSiap
-            || p.StatusPPIDID == Models.StatusId.FeedbackPemohon
-            || p.StatusPPIDID == Models.StatusId.Selesai)
-            return false;
+    var p = await PermohonanPPID.FindAsync(permohonanId);
 
-        var lama       = p.StatusPPIDID;
-        p.StatusPPIDID = Models.StatusId.DataSiap;
-        p.UpdatedAt    = DateTime.UtcNow;
+    // ── Guard: hanya advance jika belum di status terminal ────────────────
+    // JANGAN gunakan >= DataSiap karena:
+    //   WawancaraDijadwalkan(12) dan WawancaraSelesai(13) > DataSiap(10) secara angka
+    //   tapi BUKAN terminal state — ini adalah bug EC-CORE-1 yang sudah diperbaiki.
+    if (p is null
+        || p.StatusPPIDID == Models.StatusId.DataSiap
+        || p.StatusPPIDID == Models.StatusId.FeedbackPemohon
+        || p.StatusPPIDID == Models.StatusId.Selesai)
+        return false;
 
-        int selesaiCount = activeTasks.Count;
-        int batalCount   = tasks.Count(t => t.IsDibatalkan);
-        string keterangan = $"Semua sub-tugas aktif selesai ({selesaiCount} selesai" +
-                            (batalCount > 0 ? $", {batalCount} dibatalkan" : "") +
-                            ") — data siap diunduh pemohon.";
+    var lama       = p.StatusPPIDID;
+    p.StatusPPIDID = Models.StatusId.DataSiap;
+    p.UpdatedAt    = DateTime.UtcNow;
 
-        AddAuditLog(permohonanId, lama, Models.StatusId.DataSiap, keterangan, operatorName);
-        return true;
-    }
+    int selesaiCount = activeTasks.Count;
+    int batalCount   = tasks.Count(t => t.IsDibatalkan);
+
+    // Detail per jenis task untuk audit log
+    var detailPerJenis = activeTasks
+        .Select(t => $"{Models.JenisTask.GetLabel(t.JenisTask)} (oleh: {t.Operator ?? "—"})")
+        .ToList();
+
+    string keterangan = $"Semua sub-tugas paralel selesai ({selesaiCount} selesai" +
+                        (batalCount > 0 ? $", {batalCount} dibatalkan" : "") +
+                        $"): {string.Join("; ", detailPerJenis)}. " +
+                        "Status otomatis maju ke Data Siap.";
+
+    AddAuditLog(permohonanId, lama, Models.StatusId.DataSiap, keterangan, operatorName);
+    return true;
+}
 
     public async Task<JadwalPPID?> GetJadwalAktif(Guid permohonanId, string jenisJadwal) =>
         await JadwalPPID.FirstOrDefaultAsync(j =>

@@ -1,0 +1,163 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/Shared/Partials/_ParallelTaskStatus.cshtml
+   Partial reusable yang menampilkan progress sub-tugas paralel lintas controller.
+
+   Parameter (via ViewData atau @Model):
+     - allTasks     : List<SubTaskPPID>   — semua sub-tugas permohonan
+     - permohonanId : Guid
+     - currentUser  : string ("Kepegawaian" | "KDI")  — menentukan aksi yang ditampilkan
+
+   Usage:
+     <partial name="Partials/_ParallelTaskStatus" model="@allSubTasks" />
+     + ViewData["PermohonanId"] = p.PermohonanPPIDID;
+     + ViewData["CurrentUser"]  = "Kepegawaian"; // atau "KDI"
+════════════════════════════════════════════════════════════════════════════ *@
+@model List<SubTaskPPID>
+
+@{
+    var permohonanId = (Guid)(ViewData["PermohonanId"] ?? Guid.Empty);
+    var currentUser  = (string)(ViewData["CurrentUserScope"] ?? "");
+
+    // Kelompokkan sub-tugas berdasarkan jenis dan pengelola
+    var byKepegawaian = Model.Where(t =>
+        t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara).ToList();
+    var byKDI = Model.Where(t =>
+        t.JenisTask == JenisTask.PermintaanData).ToList();
+
+    int totalAktif    = Model.Count(t => !t.IsDibatalkan);
+    int totalSelesai  = Model.Count(t => t.IsSelesai);
+    int pctSelesai    = totalAktif > 0 ? (int)Math.Round(totalSelesai * 100.0 / totalAktif) : 0;
+    bool allDone      = totalAktif > 0 && totalSelesai == totalAktif;
+}
+
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Progress Sub-tugas Paralel</p>
+        <span class="text-xs font-bold @(allDone ? "text-emerald-600" : "text-gray-500")">
+            @totalSelesai / @totalAktif selesai
+        </span>
+    </div>
+
+    <!-- Progress bar keseluruhan -->
+    <div class="w-full bg-gray-100 rounded-full h-2.5 mb-4 overflow-hidden">
+        <div class="h-full rounded-full transition-all duration-700
+            @(allDone ? "bg-emerald-500" : "bg-violet-500")"
+             style="width:@pctSelesai%"></div>
+    </div>
+
+    <!-- Jalur Kepegawaian (Obs/Waw) -->
+    @if (byKepegawaian.Any())
+    {
+        <div class="mb-3">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="w-2 h-2 rounded-full bg-teal-400 flex-shrink-0"></span>
+                <p class="text-[10px] font-bold text-teal-700 uppercase tracking-widest">
+                    Kepegawaian — Observasi / Wawancara
+                </p>
+            </div>
+            <div class="space-y-1.5 ml-4">
+                @foreach (var st in byKepegawaian)
+                {
+                    string badgeBg = st.StatusTask switch {
+                        SubTaskStatus.Selesai    => "bg-emerald-100 text-emerald-700",
+                        SubTaskStatus.InProgress => "bg-amber-100 text-amber-700",
+                        SubTaskStatus.Dibatalkan => "bg-red-100 text-red-600",
+                        _                        => "bg-gray-100 text-gray-500"
+                    };
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="text-base">@JenisTask.GetIcon(st.JenisTask)</span>
+                        <span class="font-medium text-gray-700 flex-1">@JenisTask.GetLabel(st.JenisTask)</span>
+                        <span class="@badgeBg px-2 py-0.5 rounded-full text-[11px] font-semibold">
+                            @SubTaskStatus.GetLabel(st.StatusTask)
+                        </span>
+                        @if (st.TanggalJadwal.HasValue && !st.IsTerminal)
+                        {
+                            <span class="text-gray-400">@st.TanggalJadwal.Value.ToString("dd MMM")</span>
+                        }
+                        <!-- Link aksi kontekstual -->
+                        @if (currentUser == "KDI" && !st.IsTerminal)
+                        {
+                            <a href="/kasubkel-kepegawaian/subtasks/@permohonanId"
+                               class="text-[10px] text-violet-500 hover:underline">Kepegawaian →</a>
+                        }
+                        else if (currentUser == "Kepegawaian" && st.IsSelesai)
+                        {
+                            <span class="text-emerald-500 text-[11px]">✓</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Jalur KDI (Permintaan Data) -->
+    @if (byKDI.Any())
+    {
+        <div class="@(byKepegawaian.Any() ? "pt-3 border-t border-gray-100" : "")">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0"></span>
+                <p class="text-[10px] font-bold text-blue-700 uppercase tracking-widest">
+                    KDI — Permintaan Data
+                </p>
+            </div>
+            <div class="space-y-1.5 ml-4">
+                @foreach (var st in byKDI)
+                {
+                    string badgeBg = st.StatusTask switch {
+                        SubTaskStatus.Selesai    => "bg-emerald-100 text-emerald-700",
+                        SubTaskStatus.InProgress => "bg-amber-100 text-amber-700",
+                        SubTaskStatus.Dibatalkan => "bg-red-100 text-red-600",
+                        _                        => "bg-gray-100 text-gray-500"
+                    };
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="text-base">📊</span>
+                        <span class="font-medium text-gray-700 flex-1">Permintaan Data</span>
+                        <span class="@badgeBg px-2 py-0.5 rounded-full text-[11px] font-semibold">
+                            @SubTaskStatus.GetLabel(st.StatusTask)
+                        </span>
+                        @if (st.HasFile && !st.IsTerminal)
+                        {
+                            <span class="text-blue-400 text-[10px]">ada file</span>
+                        }
+                        <!-- Link kontekstual berdasarkan scope -->
+                        @if (currentUser == "Kepegawaian" && !st.IsTerminal)
+                        {
+                            <a href="/kasubkel-kdi/subtasks/@permohonanId"
+                               class="text-[10px] text-blue-500 hover:underline">KDI →</a>
+                        }
+                        else if (currentUser == "KDI" && st.IsSelesai)
+                        {
+                            <span class="text-emerald-500 text-[11px]">✓</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Pesan kontekstual -->
+    <div class="mt-4 pt-3 border-t border-gray-100">
+        @if (allDone)
+        {
+            <div class="flex items-center gap-2 text-xs text-emerald-600 font-semibold">
+                <span>🏁</span>
+                <span>Semua sub-tugas paralel selesai — permohonan siap maju ke Data Siap.</span>
+            </div>
+        }
+        else if (!Model.Any(t => !t.IsTerminal))
+        {
+            <p class="text-xs text-amber-600">Semua sub-tugas sudah dibatalkan atau selesai.</p>
+        }
+        else
+        {
+            var sisa = Model.Where(t => !t.IsTerminal && !t.IsSelesai).ToList();
+            <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
+                <span>
+                    @sisa.Count sub-tugas masih berjalan:
+                    @string.Join(", ", sisa.Select(t => JenisTask.GetLabel(t.JenisTask)))
+                </span>
+            </div>
+        }
+    </div>
+</div>
