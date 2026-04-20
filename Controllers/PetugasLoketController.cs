@@ -31,71 +31,57 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("")]
-    public async Task<IActionResult> Index(string? q, int? status)
+public async Task<IActionResult> Index(string? q, int? status)
+{
+    var allStatus = await db.PermohonanPPID
+        .AsNoTracking()
+        .Select(p => p.StatusPPIDID)
+        .ToListAsync();
+
+    ViewData["DashVm"] = new DashboardVm
     {
-        var allStatus = await db.PermohonanPPID
-            .AsNoTracking()
-            .Select(p => p.StatusPPIDID)
-            .ToListAsync();
+        Total        = allStatus.Count,
+        Proses       = allStatus.Count(s => StatusId.IsProses(s)),
+        Selesai      = allStatus.Count(s => StatusId.IsSelesai(s)),
+        MonthlyStats = await db.GetMonthlyStats()
+    };
 
-        ViewData["DashVm"] = new DashboardVm
-        {
-            Total        = allStatus.Count,
-            Proses       = allStatus.Count(s => StatusId.IsProses(s)),
-            Selesai      = allStatus.Count(s => StatusId.IsSelesai(s)),
-            MonthlyStats = await db.GetMonthlyStats()
-        };
+    // ── Hanya hitung antrian untuk badge navigasi, tidak load full list ──
+    var obsWawSummary = await db.PermohonanPPID
+        .AsNoTracking()
+        .Where(p =>
+            (p.IsObservasi || p.IsWawancara) &&
+            (p.StatusPPIDID == StatusId.DiProses             ||
+             p.StatusPPIDID == StatusId.Didisposisi          ||
+             p.StatusPPIDID == StatusId.ObservasiDijadwalkan ||
+             p.StatusPPIDID == StatusId.WawancaraDijadwalkan))
+        .Select(p => new { p.IsObservasi, p.IsWawancara })
+        .ToListAsync();
 
-        // ── Antrian aktif Obs/Waw yang dikelola Loket ─────────────────────
-        var obsWawAktif = await db.PermohonanPPID
-            .Include(p => p.Pribadi)
-            .Include(p => p.Status)
-            .Where(p =>
-                (p.IsObservasi || p.IsWawancara) &&
-                (p.StatusPPIDID == StatusId.DiProses             ||
-                 p.StatusPPIDID == StatusId.Didisposisi          ||
-                 p.StatusPPIDID == StatusId.ObservasiDijadwalkan ||
-                 p.StatusPPIDID == StatusId.ObservasiSelesai     ||
-                 p.StatusPPIDID == StatusId.WawancaraDijadwalkan ||
-                 p.StatusPPIDID == StatusId.WawancaraSelesai     ||
-                 p.StatusPPIDID == StatusId.DataSiap             ||
-                 p.StatusPPIDID == StatusId.FeedbackPemohon))
-            .OrderByDescending(p => p.UpdatedAt)
-            .ToListAsync();
+    ViewData["ObsAntrian"] = obsWawSummary.Count(p => p.IsObservasi);
+    ViewData["WawAntrian"] = obsWawSummary.Count(p => p.IsWawancara);
 
-        var obsWawIds   = obsWawAktif.Select(p => p.PermohonanPPIDID).ToList();
-        var obsWawTasks = await db.SubTaskPPID
-            .Where(t => obsWawIds.Contains(t.PermohonanPPIDID) &&
-                        (t.JenisTask == JenisTask.Observasi ||
-                         t.JenisTask == JenisTask.Wawancara))
-            .ToListAsync();
+    // ── Daftar permohonan utama ───────────────────────────────────────
+    var query = db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Include(p => p.Status)
+        .Include(p => p.Jadwal)
+        .AsQueryable();
 
-        ViewData["ObsWawAktif"]   = obsWawAktif;
-        ViewData["ObsWawTaskMap"] = obsWawTasks
-            .GroupBy(t => t.PermohonanPPIDID)
-            .ToDictionary(g => g.Key, g => g.ToList());
+    if (!string.IsNullOrEmpty(q))
+        query = query.Where(p =>
+            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
+            (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.Contains(q)));
 
-        // ── Daftar permohonan utama ───────────────────────────────────────
-        var query = db.PermohonanPPID
-            .Include(p => p.Pribadi)
-            .Include(p => p.Status)
-            .Include(p => p.Jadwal)
-            .AsQueryable();
+    if (status.HasValue)
+        query = query.Where(p => p.StatusPPIDID == status.Value);
 
-        if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.Contains(q)));
+    ViewData["Q"]      = q;
+    ViewData["Status"] = status;
 
-        if (status.HasValue)
-            query = query.Where(p => p.StatusPPIDID == status.Value);
-
-        ViewData["Q"]      = q;
-        ViewData["Status"] = status;
-
-        return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
-    }
+    return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
+}
 
     // ── Sub-menu: Permintaan Data ─────────────────────────────────────────
 
@@ -120,44 +106,82 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     // ── Sub-menu: Wawancara ───────────────────────────────────────────────
 
     [HttpGet("wawancara")]
-    public async Task<IActionResult> Wawancara(string? q)
-    {
-        var query = db.PermohonanPPID
-            .Include(p => p.Pribadi)
-            .Include(p => p.Status)
-            .Include(p => p.Jadwal)
-            .Where(p => p.IsWawancara)
-            .AsQueryable();
+public async Task<IActionResult> Wawancara(string? q, string? filterStatus)
+{
+    var query = db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Include(p => p.Status)
+        .Include(p => p.Jadwal)
+        .Where(p => p.IsWawancara)
+        .AsQueryable();
 
-        if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+    if (!string.IsNullOrEmpty(q))
+        query = query.Where(p =>
+            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
 
-        ViewData["Q"] = q;
-        return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
-    }
+    // Filter cepat berdasarkan status sub-tugas
+    var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
+    var ids   = list.Select(p => p.PermohonanPPIDID).ToList();
 
-    // ── Sub-menu: Observasi ───────────────────────────────────────────────
+    var subTasks = await db.SubTaskPPID
+        .Where(t => ids.Contains(t.PermohonanPPIDID) && t.JenisTask == JenisTask.Wawancara)
+        .ToListAsync();
 
-    [HttpGet("observasi")]
-    public async Task<IActionResult> Observasi(string? q)
-    {
-        var query = db.PermohonanPPID
-            .Include(p => p.Pribadi)
-            .Include(p => p.Status)
-            .Include(p => p.Jadwal)
-            .Where(p => p.IsObservasi)
-            .AsQueryable();
+    var subTaskMap = subTasks.ToDictionary(t => t.PermohonanPPIDID, t => t);
 
-        if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+    // Filter by subtask status jika diminta
+    if (filterStatus == "pending")
+        list = list.Where(p => !subTaskMap.ContainsKey(p.PermohonanPPIDID) ||
+                               subTaskMap[p.PermohonanPPIDID].IsPending).ToList();
+    else if (filterStatus == "dijadwalkan")
+        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsInProgress).ToList();
+    else if (filterStatus == "selesai")
+        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsSelesai).ToList();
 
-        ViewData["Q"] = q;
-        return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
-    }
+    ViewData["Q"]           = q;
+    ViewData["FilterStatus"] = filterStatus;
+    ViewData["SubTaskMap"]  = subTaskMap;
+    return View(list);
+}
+
+[HttpGet("observasi")]
+public async Task<IActionResult> Observasi(string? q, string? filterStatus)
+{
+    var query = db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Include(p => p.Status)
+        .Include(p => p.Jadwal)
+        .Where(p => p.IsObservasi)
+        .AsQueryable();
+
+    if (!string.IsNullOrEmpty(q))
+        query = query.Where(p =>
+            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+
+    var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
+    var ids   = list.Select(p => p.PermohonanPPIDID).ToList();
+
+    var subTasks = await db.SubTaskPPID
+        .Where(t => ids.Contains(t.PermohonanPPIDID) && t.JenisTask == JenisTask.Observasi)
+        .ToListAsync();
+
+    var subTaskMap = subTasks.ToDictionary(t => t.PermohonanPPIDID, t => t);
+
+    if (filterStatus == "pending")
+        list = list.Where(p => !subTaskMap.ContainsKey(p.PermohonanPPIDID) ||
+                               subTaskMap[p.PermohonanPPIDID].IsPending).ToList();
+    else if (filterStatus == "dijadwalkan")
+        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsInProgress).ToList();
+    else if (filterStatus == "selesai")
+        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsSelesai).ToList();
+
+    ViewData["Q"]            = q;
+    ViewData["FilterStatus"] = filterStatus;
+    ViewData["SubTaskMap"]   = subTaskMap;
+    return View(list);
+}
 
     // ══════════════════════════════════════════════════════════════════════
     // IDENTIFIKASI
