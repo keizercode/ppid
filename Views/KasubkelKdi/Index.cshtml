@@ -1,8 +1,3 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/KasubkelKdi/Index.cshtml — FIXED
-   Perubahan utama: tambah antrian disposisi baru (ViewData["DisposisiAktif"])
-   yang di-populate controller tapi tidak pernah di-render di view lama.
-════════════════════════════════════════════════════════════════════════════ *@
 @model DashboardVm
 @{
     ViewData["Title"] = "Dashboard Kasubkel KDI";
@@ -15,21 +10,20 @@
     var disposisiAktif = ViewData["DisposisiAktif"] as List<PermohonanPPID> ?? new();
     var subTaskMap     = ViewData["SubTaskMap"] as Dictionary<Guid, List<SubTaskPPID>> ?? new();
 
-    // Pisah berdasarkan stage agar KDI tahu apa yang perlu dilakukan
     var baru       = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.Didisposisi).ToList();
     var diProses   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.DiProses
                                              || p.StatusPPIDID == StatusId.ObservasiDijadwalkan
                                              || p.StatusPPIDID == StatusId.ObservasiSelesai
                                              || p.StatusPPIDID == StatusId.WawancaraDijadwalkan
                                              || p.StatusPPIDID == StatusId.WawancaraSelesai).ToList();
-    var dataSiap   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.DataSiap
-                                             || p.StatusPPIDID == StatusId.FeedbackPemohon).ToList();
+    var dataSiap   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.DataSiap).ToList();
+    var feedback   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.FeedbackPemohon).ToList();
 }
 
-<!-- ══ ALERT: disposisi baru menunggu diterima ══ -->
+@* {{!-- ══ ALERT 1: Disposisi baru menunggu diterima ══ --}} *@
 @if (baru.Any())
 {
-    <div class="bg-cyan-50 border border-cyan-300 rounded-2xl p-4 mb-5 flex items-start gap-3">
+    <div class="bg-cyan-50 border border-cyan-300 rounded-2xl p-4 mb-4 flex items-start gap-3">
         <div class="w-8 h-8 bg-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
             <span class="text-white text-sm">📥</span>
         </div>
@@ -49,6 +43,68 @@
                     <a href="/kasubkel-kdi/permintaan-data?status=6"
                        class="text-xs font-semibold text-cyan-600 hover:underline self-center">
                         + @(baru.Count - 4) lainnya →
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@* {{!-- ══ ALERT 2: Data Siap — langkah selanjutnya jelas terlihat ══
+     FIX ISSUE 4: DataSiap callout yang menonjol agar KDI tidak melewatkan
+     tindak lanjut penting setelah semua sub-tugas selesai.
+     Sebelumnya tersembunyi di dalam tabel dan halaman SubTasks.
+--}} *@
+@if (dataSiap.Any())
+{
+    <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 mb-4">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-white text-sm">📦</span>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-emerald-800 text-sm">@dataSiap.Count permohonan siap — minta feedback pemohon</p>
+                <p class="text-emerald-600 text-xs mt-0.5 leading-relaxed">
+                    Semua sub-tugas selesai. Langkah berikutnya: minta pemohon mengisi kuesioner kepuasan
+                    di portal publik menggunakan nomor permohonan mereka.
+                </p>
+                <div class="flex flex-wrap gap-2 mt-2.5">
+                    @foreach (var p in dataSiap.Take(3))
+                    {
+                        <a href="/kasubkel-kdi/minta-feedback/@p.PermohonanPPIDID"
+                           class="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                            📨 @p.NoPermohonan
+                        </a>
+                    }
+                    @if (dataSiap.Count > 3)
+                    {
+                        <a href="/kasubkel-kdi/permintaan-data?status=10"
+                           class="text-xs font-semibold text-emerald-700 hover:underline self-center">
+                            + @(dataSiap.Count - 3) lainnya →
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* {{!-- ══ ALERT 3: Feedback menunggu respons pemohon ══ --}} *@
+@if (feedback.Any())
+{
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-4 flex items-start gap-3">
+        <span class="text-amber-500 text-lg mt-0.5 flex-shrink-0">⏳</span>
+        <div class="flex-1">
+            <p class="font-bold text-amber-800 text-sm">@feedback.Count permohonan menunggu kuesioner pemohon</p>
+            <p class="text-amber-600 text-xs mt-0.5">
+                Jika pemohon tidak merespons, gunakan "Tandai Selesai (Manual)" di halaman sub-tugas.
+            </p>
+            <div class="flex flex-wrap gap-2 mt-2">
+                @foreach (var p in feedback.Take(4))
+                {
+                    <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
+                       class="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-lg transition-colors">
+                        ⏳ @p.NoPermohonan
                     </a>
                 }
             </div>
@@ -97,9 +153,10 @@
                 <p class="text-xs text-gray-400 mt-0.5">Disposisi yang perlu diterima atau sedang dalam proses</p>
             </div>
             <div class="flex items-center gap-2">
-                @if (baru.Any())       { <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2.5 py-1 rounded-full">@baru.Count baru</span> }
-                @if (diProses.Any())   { <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">@diProses.Count diproses</span> }
-                @if (dataSiap.Any())   { <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">@dataSiap.Count siap</span> }
+                @if (baru.Any())     { <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2.5 py-1 rounded-full">@baru.Count baru</span> }
+                @if (diProses.Any()) { <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">@diProses.Count diproses</span> }
+                @if (dataSiap.Any()) { <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">@dataSiap.Count siap</span> }
+                @if (feedback.Any()) { <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">@feedback.Count menunggu feedback</span> }
             </div>
         </div>
 
@@ -127,7 +184,7 @@
                         int done  = tasks?.Count(t => t.StatusTask == SubTaskStatus.Selesai) ?? 0;
                         int total = tasks?.Count ?? 0;
 
-                        string rowBg = isNew ? "bg-cyan-50/60" : "";
+                        string rowBg = isNew ? "bg-cyan-50/60" : isDataSiap ? "bg-emerald-50/40" : "";
                         string badgeCls = p.StatusPPIDID switch
                         {
                             StatusId.Didisposisi          => "bg-cyan-50 text-cyan-700",
@@ -144,7 +201,8 @@
                         <tr class="hover:bg-blue-50/20 transition-colors group @rowBg">
                             <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">
                                 @p.NoPermohonan
-                                @if (isNew) { <span class="ml-1 text-[10px] bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded font-bold">BARU</span> }
+                                @if (isNew)      { <span class="ml-1 text-[10px] bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded font-bold">BARU</span> }
+                                @if (isDataSiap) { <span class="ml-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">SIAP</span> }
                             </td>
                             <td class="px-4 py-3">
                                 <p class="font-semibold text-gray-800 text-sm">@p.Pribadi?.Nama</p>
@@ -196,8 +254,9 @@
                                     }
                                     else if (isDataSiap)
                                     {
+                                        @* {{!-- FIX ISSUE 4: tombol utama untuk status DataSiap lebih menonjol --}} *@
                                         <a href="/kasubkel-kdi/minta-feedback/@p.PermohonanPPIDID"
-                                           class="text-[11px] bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-lg font-bold">📨 Minta Feedback</a>
+                                           class="text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-bold">📨 Minta Feedback</a>
                                     }
                                     else if (isFeedback)
                                     {
@@ -221,8 +280,8 @@
     </div>
 }
 
-<!-- Quick Link -->
-<div class="flex gap-3">
+<!-- Quick Links -->
+<div class="flex gap-3 flex-wrap">
     <a href="/kasubkel-kdi/permintaan-data"
        class="inline-flex items-center gap-2 bg-[#002d7a] hover:bg-blue-900 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-colors">
         📊 Lihat Semua Permintaan Data →
@@ -232,6 +291,13 @@
         <a href="/kasubkel-kdi/permintaan-data?status=6"
            class="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-colors">
             📥 @baru.Count Disposisi Baru →
+        </a>
+    }
+    @if (dataSiap.Any())
+    {
+        <a href="/kasubkel-kdi/permintaan-data?status=10"
+           class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-colors">
+            📦 @dataSiap.Count Data Siap →
         </a>
     }
 </div>

@@ -254,17 +254,40 @@
                     </div>
                 }
                 else
+{
+
+        bool reopenWillRollback = p.StatusPPIDID == StatusId.DataSiap
+                               || p.StatusPPIDID == StatusId.FeedbackPemohon
+                               || p.StatusPPIDID == StatusId.Selesai;
+
+    <div class="space-y-2">
+        <div class="flex items-center justify-between">
+            <div class="text-emerald-600 text-xs font-semibold">
+                ✓ Selesai @st.SelesaiAt?.ToLocalTime().ToString("dd MMM HH:mm")
+            </div>
+            <a href="/petugas-loket/reopen-subtask/@p.PermohonanPPIDID/@st.JenisTask"
+               title="@(reopenWillRollback ? "⚠ Akan memundurkan status ke Sedang Diproses" : "Buka kembali sub-tugas ini")"
+               class="inline-flex items-center gap-1 text-[11px] bg-violet-50 hover:bg-violet-100 border border-violet-100 text-violet-600 px-2 py-1 rounded-lg font-medium transition-colors">
+                ↩ Reopen
+                @if (reopenWillRollback)
                 {
-                    <div class="flex items-center justify-between">
-                        <div class="text-emerald-600 text-xs font-semibold">
-                            ✓ Selesai @st.SelesaiAt?.ToLocalTime().ToString("dd MMM HH:mm")
-                        </div>
-                        <a href="/petugas-loket/reopen-subtask/@p.PermohonanPPIDID/@st.JenisTask"
-                           class="text-[11px] bg-violet-50 hover:bg-violet-100 border border-violet-100 text-violet-600 px-2 py-1 rounded-lg font-medium transition-colors">
-                            ↩ Reopen
-                        </a>
-                    </div>
+                    <span class="text-amber-500 text-[10px]">⚠</span>
                 }
+            </a>
+        </div>
+        @if (reopenWillRollback)
+        {
+            <div class="bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
+                <span class="text-amber-500 flex-shrink-0 text-xs mt-0.5">⚠</span>
+                <p class="text-[10px] text-amber-700 leading-relaxed">
+                    <strong>Perhatian:</strong> Mereopen sub-tugas yang sudah berkontribusi pada status
+                    permohonan dapat memundurkan status kembali ke <strong>Sedang Diproses</strong>.
+                    Konfirmasi diperlukan di halaman berikutnya.
+                </p>
+            </div>
+        }
+    </div>
+}
             </div>
         }
     </div>

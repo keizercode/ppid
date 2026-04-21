@@ -3,10 +3,70 @@
     ViewData["Title"] = $"Batalkan {JenisTask.GetLabel(Model.JenisTask)}";
     ViewData["Role"]  = "Kasubkel KDI";
     Layout = "_LayoutAdmin";
+
+    // ── Resolusi dampak yang akan ditampilkan ke pengguna ─────────────────
+    // Tiga kemungkinan dampak yang perlu dijelaskan:
+    // A) AkanRollbackStatus  → sub-tugas sudah selesai, status permohonan akan mundur
+    // B) AkanAdvanceStatus   → pembatalan justru memajukan status (task lain sudah selesai)
+    // C) Netral              → sub-tugas belum selesai, tidak ada perubahan status permohonan
+    string impactTitle;
+    string impactDesc;
+    string impactColor;
+    string checkboxLabel;
+
+    if (Model.AkanRollbackStatus)
+    {
+        impactTitle  = "Status Permohonan Akan Dimundurkan";
+        impactDesc   = $"Sub-tugas <strong>{JenisTask.GetLabel(Model.JenisTask)}</strong> ini sudah selesai dan berkontribusi pada status <strong>Data Siap</strong>. " +
+                       "Membatalkannya akan memundurkan status kembali ke <strong>Sedang Diproses</strong>. " +
+                       "Pemohon harus diberitahu tentang perubahan ini.";
+        impactColor  = "red";
+        checkboxLabel = $"Saya memahami bahwa status permohonan akan mundur ke <strong class=\"text-red-700\">Sedang Diproses</strong> dan pemohon sudah diberitahu.";
+    }
+    else if (Model.AkanAdvanceStatus)
+    {
+        impactTitle  = "Status Akan Otomatis Maju";
+        impactDesc   = "Setelah pembatalan ini, semua sub-tugas aktif lainnya sudah selesai. " +
+                       "Status permohonan akan otomatis maju ke <strong>Data Siap</strong>. " +
+                       "Sub-tugas yang dibatalkan tidak dihitung dalam penyelesaian.";
+        impactColor  = "emerald";
+        checkboxLabel = $"Saya memahami bahwa sub-tugas <strong>{JenisTask.GetLabel(Model.JenisTask)}</strong> akan dihapus dari alur proses dan tidak dapat diurungkan kecuali dengan Reopen.";
+    }
+    else
+    {
+        impactTitle  = "Sub-tugas Akan Dihapus dari Alur";
+        impactDesc   = "Sub-tugas yang dibatalkan tidak dihitung dalam penyelesaian permohonan. " +
+                       "Permohonan dapat tetap berlanjut dengan tugas-tugas yang tersisa. " +
+                       "Untuk membatalkan, gunakan fitur Reopen.";
+        impactColor  = "amber";
+        checkboxLabel = $"Saya memahami bahwa sub-tugas <strong>{JenisTask.GetLabel(Model.JenisTask)}</strong> akan dihapus dari alur proses dan tidak dapat diurungkan kecuali dengan Reopen.";
+    }
+
+    // ── Color map untuk dinamis Tailwind (tidak bisa pakai interpolasi langsung) ─
+    string bgImpact     = impactColor == "red"     ? "bg-red-50 border-red-300"     :
+                          impactColor == "emerald"  ? "bg-emerald-50 border-emerald-200" :
+                                                      "bg-amber-50 border-amber-200";
+    string textImpactH  = impactColor == "red"     ? "text-red-800"    :
+                          impactColor == "emerald"  ? "text-emerald-800" :
+                                                      "text-amber-800";
+    string textImpactB  = impactColor == "red"     ? "text-red-700"    :
+                          impactColor == "emerald"  ? "text-emerald-700" :
+                                                      "text-amber-700";
+    string borderCB     = impactColor == "red"     ? "border-red-300 has-[:checked]:border-red-600 has-[:checked]:bg-red-50" :
+                          impactColor == "emerald"  ? "border-emerald-200 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50" :
+                                                      "border-amber-200 has-[:checked]:border-amber-600 has-[:checked]:bg-amber-50";
+    string accentCB     = impactColor == "red"     ? "accent-red-600"     :
+                          impactColor == "emerald"  ? "accent-emerald-600" :
+                                                      "accent-amber-600";
+    string btnClass     = impactColor == "red"     ? "bg-red-600 hover:bg-red-700"     :
+                          impactColor == "emerald"  ? "bg-emerald-600 hover:bg-emerald-700" :
+                                                      "bg-amber-600 hover:bg-amber-700";
 }
 
 <div class="max-w-lg mx-auto">
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    @* {{!-- ── Header ────────────────────────────────────────────────────────── --}} *@
     <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
         <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-xl">🚫</div>
         <div>
@@ -14,50 +74,39 @@
             <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
         </div>
     </div>
+
     <div class="p-6">
 
-        @* Peringatan: pembatalan task Selesai akan mundurkan status *@
-        @if (Model.AkanRollbackStatus)
-        {
-            <div class="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-5">
-                <div class="flex items-start gap-3">
-                    <span class="text-red-500 text-xl flex-shrink-0">⚠️</span>
-                    <div>
-                        <p class="font-bold text-red-800 text-sm">Status Permohonan Akan Dimundurkan</p>
-                        <p class="text-red-700 text-xs mt-1.5 leading-relaxed">
-                            Sub-tugas <strong>@JenisTask.GetLabel(Model.JenisTask)</strong> ini sudah selesai
-                            dan berkontribusi pada status <strong>Data Siap</strong> permohonan.
-                            Membatalkannya akan memundurkan status kembali ke <strong>Sedang Diproses</strong>.
-                        </p>
+        @* {{!-- ── Ringkasan status saat ini ───────────────────────────────────── --}} *@
+        <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+            <span class="text-gray-400 text-sm">⚙️</span>
+            <div class="text-xs text-gray-600">
+                <span class="font-semibold text-gray-700">Status sub-tugas saat ini:</span>
+                <span class="ml-2 font-mono bg-gray-200 text-gray-700 px-2 py-0.5 rounded-md">@Model.StatusSaatIni</span>
+            </div>
+        </div>
+
+        @* {{!-- ── Blok dampak kontekstual ─────────────────────────────────────── --}}
+        {{!-- Selalu tampil — kontennya berbeda berdasarkan AkanRollback/Advance/Netral --}} *@
+        <div class="@bgImpact border-2 rounded-xl p-4 mb-5">
+            <div class="flex items-start gap-3">
+                <span class="text-xl flex-shrink-0 mt-0.5">
+                    @(impactColor == "red" ? "⚠️" : impactColor == "emerald" ? "✅" : "ℹ️")
+                </span>
+                <div>
+                    <p class="font-bold @textImpactH text-sm">@impactTitle</p>
+                    <p class="@textImpactB text-xs mt-1.5 leading-relaxed">@Html.Raw(impactDesc)</p>
+                    @if (impactColor == "red")
+                    {
                         <p class="text-red-600 text-xs mt-1.5 font-semibold">
-                            Pastikan pemohon sudah diberitahu tentang perubahan ini.
+                            ⚠ Tindakan ini tidak dapat diurungkan kecuali dengan menggunakan fitur Reopen.
                         </p>
-                    </div>
+                    }
                 </div>
             </div>
-        }
-        else if (Model.AkanAdvanceStatus)
-        {
-            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
-                <span class="text-emerald-500 flex-shrink-0 mt-0.5">✓</span>
-                <p class="text-xs text-emerald-700 leading-relaxed">
-                    Setelah pembatalan ini, semua sub-tugas aktif lainnya sudah selesai.
-                    Status permohonan akan otomatis maju ke <strong>Data Siap</strong>.
-                </p>
-            </div>
-        }
-        else
-        {
-            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
-                <span class="text-amber-500 flex-shrink-0 mt-0.5">⚠️</span>
-                <p class="text-xs text-amber-700 leading-relaxed">
-                    Sub-tugas yang dibatalkan tidak dihitung dalam penyelesaian permohonan.
-                    Permohonan tetap bisa berlanjut dengan tugas-tugas yang tersisa.
-                </p>
-            </div>
-        }
+        </div>
 
-        <form action="/@(ViewData["Prefix"] ?? "kasubkel-kdi")/batal-subtask" method="post">
+        <form action="/@(ViewData["Prefix"] ?? "kasubkel-kdi")/batal-subtask" method="post" id="batalForm">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="PermohonanPPIDID" />
             <input type="hidden" asp-for="NoPermohonan" />
@@ -65,21 +114,55 @@
             <input type="hidden" asp-for="AkanAdvanceStatus" />
             <input type="hidden" asp-for="AkanRollbackStatus" />
 
-            <div class="mb-5">
+            @* {{!-- ── Alasan pembatalan ───────────────────────────────────────────── --}} *@
+            <div class="mb-4">
                 <label class="lbl">Alasan Pembatalan <span class="req">*</span></label>
                 <textarea asp-for="AlasanBatal" rows="3" class="fld resize-none"
-                          placeholder="Jelaskan alasan mengapa sub-tugas ini perlu dibatalkan..."></textarea>
-                <span asp-validation-for="AlasanBatal" class="err"></span>
+                          id="alasanBatal"
+                          placeholder="Jelaskan alasan mengapa sub-tugas ini perlu dibatalkan. Minimal 15 karakter..."
+                          oninput="updateCounter(this)"></textarea>
+                <div class="flex items-center justify-between mt-1.5">
+                    <span asp-validation-for="AlasanBatal" class="err"></span>
+                    <span id="charCounter" class="text-[11px] text-gray-400 ml-auto">0 / min. 15 karakter</span>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-0.5">
+                    Alasan ini tercatat permanen di audit log dan tidak dapat diubah.
+                </p>
             </div>
 
+            @* {{!-- ── Konfirmasi wajib — SEMUA kasus, bukan hanya rollback ─────────
+                 PERUBAHAN: checkbox konfirmasi sekarang selalu tampil untuk mencegah
+                 klik tidak sengaja pada tombol destruktif.
+            --}} *@
+            <div class="mb-5">
+                <label id="cbLabel"
+                       class="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all @borderCB"
+                       for="konfirmasiCheckbox">
+                    <input type="checkbox"
+                           id="konfirmasiCheckbox"
+                           name="KonfirmasiBatal"
+                           class="mt-0.5 flex-shrink-0 @accentCB w-4 h-4"
+                           onchange="validateForm()" />
+                    <span class="text-sm text-gray-700 leading-relaxed">
+                        @Html.Raw(checkboxLabel)
+                    </span>
+                </label>
+                <p id="cbError" class="err hidden mt-1.5">Centang konfirmasi untuk melanjutkan.</p>
+            </div>
+
+            @* {{!-- ── Tombol aksi — TANPA browser confirm() ─────────────────────────
+                 PERUBAHAN: onclick confirm() dihapus. Validasi dilakukan via JS
+                 yang memeriksa checkbox dan panjang alasan sebelum submit.
+            --}} *@
             <div class="flex gap-3">
                 <a href="/@(ViewData["Prefix"] ?? "kasubkel-kdi")/subtasks/@Model.PermohonanPPIDID"
-                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
                     ← Kembali
                 </a>
                 <button type="submit"
-                        onclick="return confirm('Batalkan sub-tugas ini? Tindakan ini tidak dapat diurungkan kecuali dengan Reopen.')"
-                        class="flex-grow bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm">
+                        id="submitBtn"
+                        disabled
+                        class="flex-grow @btnClass disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all">
                     🚫 Batalkan Sub-tugas
                 </button>
             </div>
@@ -87,6 +170,7 @@
     </div>
 </div>
 </div>
+
 <style>
     .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
     .req{color:#f87171}
@@ -94,3 +178,54 @@
     .fld:focus{box-shadow:0 0 0 2.5px #ef4444;border-color:transparent;background:white}
     .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
 </style>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+const alasanEl  = document.getElementById('alasanBatal');
+const cbEl      = document.getElementById('konfirmasiCheckbox');
+const submitBtn = document.getElementById('submitBtn');
+const cbError   = document.getElementById('cbError');
+const counter   = document.getElementById('charCounter');
+
+function updateCounter(el) {
+    const len = el.value.trim().length;
+    const ok  = len >= 15;
+    counter.textContent = `${len} / min. 15 karakter`;
+    counter.className   = `text-[11px] ml-auto ${ok ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`;
+    validateForm();
+}
+
+function validateForm() {
+    const alasanOk = alasanEl.value.trim().length >= 15;
+    const cbOk     = cbEl.checked;
+    submitBtn.disabled = !(alasanOk && cbOk);
+
+    // Tunjukkan error checkbox hanya ketika pengguna sudah berinteraksi
+    if (!cbOk && document.activeElement !== cbEl && alasanOk) {
+        cbError.classList.remove('hidden');
+    } else {
+        cbError.classList.add('hidden');
+    }
+}
+
+// ── Guard: cegah submit jika validasi gagal ───────────────────────────────
+document.getElementById('batalForm').addEventListener('submit', function(e) {
+    if (!cbEl.checked) {
+        e.preventDefault();
+        cbError.classList.remove('hidden');
+        cbEl.focus();
+        return;
+    }
+    if (alasanEl.value.trim().length < 15) {
+        e.preventDefault();
+        alasanEl.focus();
+        return;
+    }
+    // Nonaktifkan tombol untuk mencegah double-submit
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Memproses...';
+});
+
+// Init state
+validateForm();
+</script>

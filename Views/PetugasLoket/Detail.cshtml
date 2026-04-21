@@ -1,9 +1,3 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/PetugasLoket/Detail.cshtml — FULL REPLACEMENT
-   UPDATE: tambah _WorkflowTimeline di kolom kanan
-   Controller Detail perlu:
-     ViewData["SubTasks"] = await db.SubTaskPPID.Where(t => t.PermohonanPPIDID == id).ToListAsync();
-   ════════════════════════════════════════════════════════════════════════════ *@
 @model PermohonanPPID
 @{
     ViewData["Title"] = $"Detail {Model.NoPermohonan}";
@@ -29,6 +23,8 @@
         <div>
             <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Nomor Permohonan (Sistem)</p>
             <h2 class="text-2xl font-extrabold font-mono text-gray-800 tracking-tight">@Model.NoPermohonan</h2>
+            @* {{!-- FIX: kedua blok Pengampu duplikat dihapus dari area header.
+                 Pengampu sekarang tampil satu kali di card "Data Permohonan" di bawah. --}} *@
             <div class="flex flex-wrap items-center gap-x-3 mt-1.5 text-xs text-gray-400">
                 <span>No. Surat: <span class="font-mono text-gray-600">@(Model.NoSuratPermohonan ?? "—")</span></span>
                 <span class="hidden sm:inline text-gray-200">·</span>
@@ -82,23 +78,23 @@
                                 </dd>
                             </div>
                         }
-                        @if (!string.IsNullOrEmpty(Model.Pengampu)) {
-                            <div><dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Pengampu</dt><dd class="text-gray-700 text-sm mt-0.5">@Model.Pengampu</dd></div>
+                        @* {{!-- FIX: Pengampu tampil satu kali di sini, dengan telepon --}} *@
+                        @if (!string.IsNullOrEmpty(Model.Pengampu))
+                        {
+                            <div>
+                                <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Pengampu / PIC</dt>
+                                <dd class="text-gray-700 text-sm mt-0.5">
+                                    @Model.Pengampu
+                                    @if (!string.IsNullOrEmpty(Model.TeleponPengampu))
+                                    {
+                                        <a href="tel:@Model.TeleponPengampu"
+                                           class="ml-2 text-blue-500 hover:text-blue-700 text-xs font-medium hover:underline">
+                                            📱 @Model.TeleponPengampu
+                                        </a>
+                                    }
+                                </dd>
+                            </div>
                         }
-                        @if (!string.IsNullOrEmpty(Model.Pengampu)) {
-        <div>
-            <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Pengampu / PIC</dt>
-            <dd class="text-gray-700 text-sm mt-0.5">
-                @Model.Pengampu
-                @if (!string.IsNullOrEmpty(Model.TeleponPengampu)) {
-                    <a href="tel:@Model.TeleponPengampu"
-                       class="ml-2 text-blue-500 hover:text-blue-700 text-xs font-medium hover:underline">
-                        📱 @Model.TeleponPengampu
-                    </a>
-                }
-            </dd>
-        </div>
-    }
                         <div><dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Judul</dt><dd class="text-gray-700 text-sm mt-0.5 leading-snug">@Model.JudulPenelitian</dd></div>
                         <div>
                             <dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-1">Keperluan</dt>
@@ -149,7 +145,7 @@
                 </div>
             }
 
-            <!-- Aksi -->
+            <!-- Aksi — tombol destruktif hanya di sini, bukan di tabel Index -->
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap gap-2.5">
                 @if (Model.StatusPPIDID == StatusId.TerdaftarSistem) {
                     <a href="/petugas-loket/input-identifikasi/@Model.PermohonanPPIDID"
@@ -169,19 +165,23 @@
                         ✍️ Upload Dokumen TTD
                     </a>
                 }
-                @if (StatusId.IsBatalkanAllowed(Model.StatusPPIDID))
-   {
-       <a href="/petugas-loket/batalkan/@Model.PermohonanPPIDID"
-          class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100
-                 border border-red-200 text-red-700 text-sm font-bold
-                 px-4 py-2.5 rounded-xl transition-colors">
-           🚫 Batalkan Permohonan
-       </a>
-   }
                 <a href="/petugas-loket/edit/@Model.PermohonanPPIDID"
                    class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
                     ✏️ Edit
                 </a>
+                @if (StatusId.IsBatalkanAllowed(Model.StatusPPIDID))
+                {
+                    @* {{!-- Tombol destruktif HANYA di halaman Detail, setelah pengguna melihat konteks penuh --}} *@
+                    <div class="w-full mt-2 pt-3 border-t border-gray-100">
+                        <p class="text-[11px] text-gray-400 mb-2">
+                            Zona Destruktif — Hanya tersedia sebelum surat izin terbit:
+                        </p>
+                        <a href="/petugas-loket/batalkan/@Model.PermohonanPPIDID"
+                           class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
+                            🚫 Batalkan Permohonan
+                        </a>
+                    </div>
+                }
             </div>
         </div>
 
