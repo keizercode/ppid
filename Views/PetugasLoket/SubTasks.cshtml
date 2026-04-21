@@ -85,7 +85,8 @@
         }
         @if (p.IsPermintaanData) {
             <div class="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
-                <span class="text-xs text-blue-500">📊</span>
+                @* belum dipakai  *@
+                @* <span class="text-xs text-blue-500">📊</span> *@
                 @{
                     var kdiSt = kdiTask.FirstOrDefault();
                     string kdiLabel = kdiSt is null ? "Menunggu" : SubTaskStatus.GetLabel(kdiSt.StatusTask);
@@ -96,12 +97,13 @@
                         _                        => "text-gray-500"
                     };
                 }
-                <p class="text-xs text-gray-500">
+                @* belum dipakai *@
+                @* <p class="text-xs text-gray-500">
                     Permintaan Data (KDI):
                     <span class="font-semibold @kdiColor">@kdiLabel</span>
                     — <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
                          class="text-blue-600 hover:underline">Lihat di KDI →</a>
-                </p>
+                </p> *@
             </div>
         }
     </div>
@@ -374,13 +376,6 @@
            class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
             📋 Lihat Detail & Audit Log
         </a>
-        @if (p.IsPermintaanData)
-        {
-            <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
-               class="inline-flex items-center gap-2 border border-blue-200 text-blue-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-50 transition-colors">
-                📊 Subtask Data (KDI) →
-            </a>
-        }
         @if (isDataSiap || isFeedback)
         {
             <a href="/petugas-loket/feedback/@p.PermohonanPPIDID"

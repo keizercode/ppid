@@ -27,7 +27,7 @@
     bool canForceClose = isDataSiap || isFeedback;
 
     var tugasDocs   = ViewData["TugasDocs"]  as List<DokumenPPID>   ?? new();
-    var obsWawTasks = ViewData["ObsWawTasks"] as List<SubTaskPPID> ?? new();
+    @* var obsWawTasks = ViewData["ObsWawTasks"] as List<SubTaskPPID> ?? new(); *@
 }
 
 <partial name="Partials/_FormStyles" />
@@ -71,40 +71,6 @@
         </div>
     </div>
 
-    <!-- Info: Obs/Waw dikelola Kepegawaian -->
-    @if (p.IsObservasi || p.IsWawancara)
-    {
-        <div class="bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4 mb-4 flex items-start gap-3">
-            <span class="text-violet-500 text-lg flex-shrink-0 mt-0.5">ℹ️</span>
-            <div class="flex-1">
-                <p class="text-violet-800 text-sm font-bold">Obs/Waw dikelola oleh Kepegawaian</p>
-                <p class="text-violet-600 text-xs mt-0.5 leading-relaxed">
-                    Permohonan ini memiliki keperluan
-                    @(p.IsObservasi && p.IsWawancara ? "Observasi + Wawancara" : p.IsObservasi ? "Observasi" : "Wawancara")
-                    yang dijadwalkan oleh KasubkelKepegawaian.
-                    Status permohonan akan maju ke <strong>Data Siap</strong> setelah semua sub-tugas selesai.
-                </p>
-                <div class="flex flex-wrap gap-2 mt-2">
-                    @foreach (var ot in obsWawTasks)
-                    {
-                        string badgeColor = ot.StatusTask switch {
-                            SubTaskStatus.Selesai    => "bg-emerald-100 text-emerald-700 border-emerald-200",
-                            SubTaskStatus.InProgress => "bg-amber-100 text-amber-700 border-amber-200",
-                            SubTaskStatus.Dibatalkan => "bg-red-100 text-red-700 border-red-200",
-                            _                        => "bg-gray-100 text-gray-500 border-gray-200"
-                        };
-                        <span class="text-[11px] @badgeColor border px-2.5 py-1 rounded-full font-semibold">
-                            @JenisTask.GetIcon(ot.JenisTask) @JenisTask.GetLabel(ot.JenisTask): @SubTaskStatus.GetLabel(ot.StatusTask)
-                        </span>
-                    }
-                    <a href="/kasubkel-kepegawaian/subtasks/@p.PermohonanPPIDID"
-                       class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 border border-violet-200 px-2.5 py-1 rounded-full font-semibold transition-colors">
-                        Kelola di Kepegawaian →
-                    </a>
-                </div>
-            </div>
-        </div>
-    }
 
     <!-- Sub-tugas Permintaan Data -->
     <div class="mb-4">
@@ -366,12 +332,5 @@
            class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
             📋 Lihat Detail & Audit Log
         </a>
-        @if (p.IsObservasi || p.IsWawancara)
-        {
-            <a href="/kasubkel-kepegawaian/subtasks/@p.PermohonanPPIDID"
-               class="inline-flex items-center gap-2 border border-violet-200 text-violet-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-violet-50 transition-colors">
-                🔍 Sub-tugas Obs/Waw (Kepegawaian) →
-            </a>
-        }
     </div>
 </div>
