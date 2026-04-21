@@ -1,0 +1,119 @@
+@*
+   Views/Shared/Partials/_ActionMenu.cshtml
+   ─────────────────────────────────────────────────────────────────────────
+   Komponen "Primary CTA + dropdown ⋯" yang menggantikan kolom Action padat.
+
+   DESIGN TOKEN LABEL (gunakan tepat di semua view):
+     Aksi primer per status:
+       TerdaftarSistem    → "Input Identifikasi"
+       IdentifikasiAwal   → "Upload TTD"
+       MenungguVerifikasi → "Verifikasi"
+       MenungguSuratIzin  → "Terbitkan Surat Izin"
+       Didisposisi        → "Terima Disposisi"
+       DiProses/Jadwal    → "Kelola Sub-tugas"
+       DataSiap           → "Minta Feedback"
+       FeedbackPemohon    → "Lihat Sub-tugas"
+       Selesai            → (tidak ada aksi primer)
+     Aksi sekunder (selalu tersedia):
+       "Detail"  → selalu tampil
+       "Edit"    → sampai surat izin terbit
+
+   PENGGUNAAN:
+     Partial ini tidak di-render langsung; ia mendokumentasikan token label
+     dan menyediakan JS helper dropdown yang digunakan inline di setiap view.
+
+   IMPLEMENTASI DROPDOWN:
+     Gunakan pattern di bawah — copy-paste ke kolom `<td>` tabel:
+
+     <td class="px-4 py-3">
+       <div class="action-cell">
+         <!-- Tombol Primer -->
+         <a href="..." class="btn-action-primary">Label Primer</a>
+         <!-- Dropdown -->
+         <div class="action-more-wrap">
+           <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
+           <div class="action-dropdown hidden">
+             <a href="..." class="action-dd-item">Detail</a>
+             <a href="..." class="action-dd-item">Edit</a>
+           </div>
+         </div>
+       </div>
+     </td>
+   ─────────────────────────────────────────────────────────────────────────
+*@
+<style>
+/* ── Action cell layout ─────────────────────────────────────────────── */
+.action-cell { display:flex; align-items:center; gap:4px; }
+
+/* ── Primary CTA ────────────────────────────────────────────────────── */
+.btn-action-primary {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; font-weight:700; white-space:nowrap;
+    padding:5px 10px; border-radius:8px;
+    background:#002d7a; color:white;
+    text-decoration:none; transition:background .12s;
+}
+.btn-action-primary:hover { background:#1e40af; }
+.btn-action-primary.cyan   { background:#0891b2; }
+.btn-action-primary.cyan:hover { background:#0e7490; }
+.btn-action-primary.emerald { background:#059669; }
+.btn-action-primary.emerald:hover { background:#047857; }
+.btn-action-primary.amber  { background:#d97706; }
+.btn-action-primary.amber:hover { background:#b45309; }
+.btn-action-primary.violet { background:#7c3aed; }
+.btn-action-primary.violet:hover { background:#6d28d9; }
+
+/* ── "⋯" more button ────────────────────────────────────────────────── */
+.action-more-wrap { position:relative; }
+.btn-action-more {
+    display:flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:6px;
+    background:#f3f4f6; border:1px solid #e5e7eb;
+    color:#6b7280; font-size:14px; font-weight:700;
+    cursor:pointer; transition:all .12s; flex-shrink:0;
+    line-height:1; padding:0;
+}
+.btn-action-more:hover { background:#e5e7eb; color:#374151; }
+
+/* ── Dropdown ────────────────────────────────────────────────────────── */
+.action-dropdown {
+    position:absolute; right:0; top:calc(100% + 4px); z-index:50;
+    background:white; border:1px solid #e5e7eb; border-radius:10px;
+    box-shadow:0 4px 16px rgba(0,0,0,.1); min-width:160px;
+    overflow:hidden;
+}
+.action-dropdown.hidden { display:none; }
+.action-dd-item {
+    display:block; padding:8px 14px; font-size:12px; font-weight:500;
+    color:#374151; text-decoration:none; transition:background .1s;
+    white-space:nowrap;
+}
+.action-dd-item:hover { background:#f9fafb; color:#111827; }
+.action-dd-item.danger { color:#dc2626; }
+.action-dd-item.danger:hover { background:#fef2f2; }
+.action-dd-divider { height:1px; background:#f3f4f6; margin:2px 0; }
+</style>
+
+<script>
+(function () {
+    'use strict';
+    window.toggleActionMenu = function (btn) {
+        var wrap  = btn.closest('.action-more-wrap');
+        var menu  = wrap.querySelector('.action-dropdown');
+        var open  = !menu.classList.contains('hidden');
+        // Tutup semua dropdown lain
+        document.querySelectorAll('.action-dropdown').forEach(function (d) {
+            d.classList.add('hidden');
+        });
+        if (!open) menu.classList.remove('hidden');
+    };
+    // Klik di luar → tutup semua
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.action-more-wrap')) {
+            document.querySelectorAll('.action-dropdown').forEach(function (d) {
+                d.classList.add('hidden');
+            });
+        }
+    });
+})();
+</script>

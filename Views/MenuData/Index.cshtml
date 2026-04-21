@@ -91,7 +91,7 @@
 <form method="get" action="@baseUrl/data" class="flex gap-2 mb-4">
     <input type="text" name="q" value="@q" placeholder="Cari nomor permohonan / nama pemohon..."
            class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
-    <button type="submit" class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
+    <button type="submit" class="btn-submit w-full bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
     @if (!string.IsNullOrEmpty(q))
     {
         <a href="@baseUrl/data" class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a>

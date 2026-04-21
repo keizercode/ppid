@@ -342,6 +342,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             .Include(x => x.Detail).ThenInclude(d => d.Keperluan)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+        ViewData["Prefix"] = "loket-umum";
         return View("~/Views/PetugasLoket/CetakIdentifikasi.cshtml", p);
     }
 

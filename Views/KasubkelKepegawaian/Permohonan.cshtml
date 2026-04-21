@@ -33,7 +33,7 @@
         <option value="10" selected="@(status==10)">Data Siap</option>
         <option value="11" selected="@(status==11)">Selesai</option>
     </select>
-    <button type="submit" class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
+    <button type="submit" class="btn-submit w-full bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
     @if (!string.IsNullOrEmpty(q) || status.HasValue)
     {
         <a href="/kasubkel-kepegawaian/permohonan" class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>

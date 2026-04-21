@@ -445,6 +445,7 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             .Include(x => x.Detail).ThenInclude(d => d.Keperluan)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+        ViewData["Prefix"] = "petugas-loket";
         return View(p);
     }
 

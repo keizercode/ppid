@@ -1,3 +1,14 @@
+@*
+   Views/PetugasLoket/CetakIdentifikasi.cshtml — PERBAIKAN
+   ─────────────────────────────────────────────────────────────────────────
+   BUG FIX: Tombol toolbar "Upload TTD" sebelumnya hardcoded ke
+   /petugas-loket/upload-ttd/... sehingga salah route ketika diakses
+   dari LoketUmum (/loket-umum/upload-ttd/...).
+
+   SOLUSI: Gunakan ViewData["Prefix"] yang sudah diset controller,
+   atau deteksi dari URL request path.
+   ─────────────────────────────────────────────────────────────────────────
+*@
 @model PermohonanPPID
 @{
     Layout = null;
@@ -19,9 +30,7 @@
         pr?.Alamat,
         !string.IsNullOrEmpty(pr?.RT) ? $"RT {pr!.RT}" : null,
         !string.IsNullOrEmpty(pr?.RW) ? $"RW {pr!.RW}" : null,
-        pr?.NamaKelurahan,
-        pr?.NamaKecamatan,
-        pr?.NamaKabupaten
+        pr?.NamaKelurahan, pr?.NamaKecamatan, pr?.NamaKabupaten
     }.Where(s => !string.IsNullOrEmpty(s)));
 
     var tanggalCetak     = DateTime.Now.ToString("dd MMMM yyyy");
@@ -30,6 +39,23 @@
         ? "................................"
         : System.Globalization.CultureInfo.InvariantCulture
             .TextInfo.ToTitleCase(namaPemohon.ToLower());
+
+    @* ── FIX: Deteksi prefix dari ViewData atau path request ── *@
+    @* Controller masing-masing (PetugasLoketController & LoketUmumController)
+       harus meng-set ViewData["Prefix"] sebelum me-render view ini.
+       Fallback: deteksi dari path request jika ViewData tidak tersedia. *@
+    string prefix = ViewData["Prefix"] as string ?? "";
+    if (string.IsNullOrEmpty(prefix))
+    {
+        var reqPath = Context.Request.Path.Value ?? "";
+        prefix = reqPath.StartsWith("/loket-umum", StringComparison.OrdinalIgnoreCase)
+            ? "loket-umum"
+            : "petugas-loket";
+    }
+
+    @* URL yang benar untuk tombol toolbar *@
+    string urlUploadTTD = $"/{prefix}/upload-ttd/{Model.PermohonanPPIDID}";
+    string urlKembali   = $"/{prefix}";
 }
 <!DOCTYPE html>
 <html lang="id">
@@ -40,7 +66,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
     <style>
-        /* ─── reset ─── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -99,14 +124,8 @@
         .tn { background: #059669; color: #fff; }
         .tb { background: rgba(255,255,255,.10); color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.18); }
 
-        /* ─── page wrapper (screen) ─── */
-        .page-wrap {
-            padding: 24px;
-            display: flex;
-            justify-content: center;
-        }
+        .page-wrap { padding: 24px; display: flex; justify-content: center; }
 
-        /* ─── A4 paper ─── */
         .paper {
             background: #fff;
             width: 210mm;
@@ -119,204 +138,79 @@
             overflow-wrap: break-word;
         }
 
-        /* ─── form header ─── */
-        h1.ftitle {
-            font-size: 12pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
-            letter-spacing: .03em;
-            margin-bottom: 3px;
-        }
-        .fsub {
-            font-size: 9pt;
-            text-align: center;
-            color: #333;
-            margin-bottom: 8px;
-        }
+        h1.ftitle { font-size: 12pt; font-weight: bold; text-transform: uppercase; text-align: center; letter-spacing: .03em; margin-bottom: 3px; }
+        .fsub { font-size: 9pt; text-align: center; color: #333; margin-bottom: 8px; }
         hr.thick { border: none; border-top: 2px solid #000; margin-bottom: 10px; }
 
-        /* ─── nomor permohonan box ─── */
-        /* Use table display so vertical dividers stretch to full height */
-        .nop-box {
-            display: table;
-            width: 100%;
-            border-collapse: collapse;
-            border: 2px solid #1B3B6F;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-bottom: 11px;
-            background: #eef3ff;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
+        .nop-box { display: table; width: 100%; border-collapse: collapse; border: 2px solid #1B3B6F; border-radius: 5px; overflow: hidden; margin-bottom: 11px; background: #eef3ff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .nop-box > div { display: table-cell; vertical-align: middle; }
-        .nop-lbl {
-            font-family: 'Plus Jakarta Sans', Arial, sans-serif;
-            font-size: 7.5pt;
-            font-weight: 700;
-            color: #1B3B6F;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            line-height: 1.5;
-            white-space: nowrap;
-            padding: 8px 10px;
-            width: 1%;
-        }
-        .nop-div {
-            width: 1px;
-            background: #a0b8d8;
-            padding: 0;
-        }
-        .nop-val {
-            text-align: center;
-            padding: 6px 12px;
-        }
-        .nop-val-text {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14pt;
-            font-weight: 900;
-            letter-spacing: .07em;
-            color: #1B3B6F;
-            word-break: break-all;
-        }
-        .nop-note {
-            width: 125px;
-            padding: 8px 10px;
-            font-family: 'Plus Jakarta Sans', Arial, sans-serif;
-            font-size: 7pt;
-            color: #374151;
-            line-height: 1.5;
-        }
+        .nop-lbl { font-family: 'Plus Jakarta Sans', Arial, sans-serif; font-size: 7.5pt; font-weight: 700; color: #1B3B6F; text-transform: uppercase; letter-spacing: .05em; line-height: 1.5; white-space: nowrap; padding: 8px 10px; width: 1%; }
+        .nop-div { width: 1px; background: #a0b8d8; padding: 0; }
+        .nop-val { text-align: center; padding: 6px 12px; }
+        .nop-val-text { font-family: 'Courier New', Courier, monospace; font-size: 14pt; font-weight: 900; letter-spacing: .07em; color: #1B3B6F; word-break: break-all; }
+        .nop-note { width: 125px; padding: 8px 10px; font-family: 'Plus Jakarta Sans', Arial, sans-serif; font-size: 7pt; color: #374151; line-height: 1.5; }
 
-        /* ─── isian fields (tabel layout fixed) ─── */
-        table.dtbl {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin-bottom: 2px;
-        }
+        table.dtbl { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2px; }
         table.dtbl col.c-lbl { width: 162px; }
-        table.dtbl col.c-sep { width: 14px;  }
-        table.dtbl col.c-val { width: auto;  }
-        table.dtbl td {
-            vertical-align: top;
-            padding: 2px 0;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-        .lbl   { font-weight: bold; }
-        .sep   { text-align: center; }
-        .ln {
-            display: block;
-            border-bottom: 1px solid #000;
-            min-height: 18px;
-            padding-bottom: 2px;
-        }
-        .ln-tall {
-            display: block;
-            border-bottom: 1px solid #000;
-            min-height: 38px;
-            padding-bottom: 2px;
-            white-space: pre-wrap;
-        }
+        table.dtbl col.c-sep { width: 14px; }
+        table.dtbl col.c-val { width: auto; }
+        table.dtbl td { vertical-align: top; padding: 2px 0; word-break: break-word; overflow-wrap: break-word; }
+        .lbl { font-weight: bold; }
+        .sep { text-align: center; }
+        .ln { display: block; border-bottom: 1px solid #000; min-height: 18px; padding-bottom: 2px; }
+        .ln-tall { display: block; border-bottom: 1px solid #000; min-height: 38px; padding-bottom: 2px; white-space: pre-wrap; }
 
-        /* ─── checkbox ─── */
         .cbrow { margin: 6px 0 2px; line-height: 1.7; }
-        .cb {
-            display: inline-block;
-            width: 11px; height: 11px;
-            border: 1.5px solid #000;
-            margin-right: 3px;
-            vertical-align: middle;
-            text-align: center;
-            font-size: 8.5pt;
-            line-height: 10px;
-        }
+        .cb { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #000; margin-right: 3px; vertical-align: middle; text-align: center; font-size: 8.5pt; line-height: 10px; }
         .cb.on::after { content: '✓'; font-weight: bold; }
         .cbl { margin-right: 16px; vertical-align: middle; }
 
-        /* ─── section title ─── */
         .stitle { font-weight: bold; margin: 8px 0 2px; }
 
-        /* ─── detail keperluan tabel ─── */
-        table.dtbl2 {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin-bottom: 2px;
-        }
+        table.dtbl2 { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2px; }
         table.dtbl2 col.c2-lbl { width: 195px; }
-        table.dtbl2 col.c2-sep { width: 14px;  }
-        table.dtbl2 col.c2-val { width: auto;  }
-        table.dtbl2 td {
-            vertical-align: top;
-            padding: 2px 0;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
+        table.dtbl2 col.c2-sep { width: 14px; }
+        table.dtbl2 col.c2-val { width: auto; }
+        table.dtbl2 td { vertical-align: top; padding: 2px 0; word-break: break-word; overflow-wrap: break-word; }
         .dlbl { font-style: italic; font-size: 9.5pt; }
         .hint { font-style: normal; font-size: 7.5pt; color: #555; display: block; }
-        .ln-det {
-            display: block;
-            border-bottom: 1px solid #000;
-            min-height: 36px;
-            padding-bottom: 2px;
-            white-space: pre-wrap;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
+        .ln-det { display: block; border-bottom: 1px solid #000; min-height: 36px; padding-bottom: 2px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
 
-        /* ─── tanda tangan ─── */
         .sign-row { display: flex; margin-top: 18px; }
         .sign-col { flex: 1; text-align: center; padding: 0 6px; font-size: 10pt; }
         .sign-space { height: 56px; }
-        .sign-name {
-            display: inline-block;
-            font-weight: bold;
-            border-top: 1px solid #000;
-            padding-top: 3px;
-            min-width: 145px;
-        }
+        .sign-name { display: inline-block; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; min-width: 145px; }
         .sign-sub { font-size: 8.5pt; margin-top: 2px; }
 
-        /* ─── nb ─── */
         .nb { font-size: 8pt; color: #333; margin-top: 11px; line-height: 1.5; }
 
-        /* ─── print ─── */
         @@media print {
             body { background: #fff; }
             .toolbar { display: none !important; }
             .page-wrap { padding: 0; }
-            .paper {
-                width: 100%;
-                min-height: unset;
-                padding: 10mm 16mm 10mm 20mm;
-                box-shadow: none;
-                border-radius: 0;
-            }
+            .paper { width: 100%; min-height: unset; padding: 10mm 16mm 10mm 20mm; box-shadow: none; border-radius: 0; }
             @@page { size: A4 portrait; margin: 0; }
         }
     </style>
 </head>
 <body>
 
-@* ── TOOLBAR ── *@
+@* ── TOOLBAR — URL dinamis berdasar prefix ─────────────────────────────── *@
 <div class="toolbar">
     <p class="tbrand">
         🖨️ Formulir Identifikasi Awal
         <code>@Model.NoPermohonan</code>
     </p>
     <button class="tbtn tp" onclick="window.print()">🖨️ Cetak</button>
-    <a class="tbtn tn" href="/petugas-loket/upload-ttd/@Model.PermohonanPPIDID">✍️ Upload TTD →</a>
-    <a class="tbtn tb" href="/petugas-loket">← Kembali</a>
+    @* FIX: gunakan urlUploadTTD yang sudah dihitung di atas (bukan hardcoded) *@
+    <a class="tbtn tn" href="@urlUploadTTD">✍️ Upload TTD →</a>
+    <a class="tbtn tb" href="@urlKembali">← Kembali</a>
 </div>
 
 @* ── PAPER ── *@
 <div class="page-wrap">
   <div class="paper">
 
-    @* judul *@
     <h1 class="ftitle">Formulir Identifikasi Awal Permohonan Data / Wawancara</h1>
     <p class="fsub">
         No. Surat:&nbsp;<strong>@(Model.NoSuratPermohonan ?? "—")</strong>
@@ -325,7 +219,6 @@
     </p>
     <hr class="thick" />
 
-    @* kotak nomor permohonan *@
     <div class="nop-box">
         <div class="nop-lbl">Nomor<br />Permohonan</div>
         <div class="nop-div"></div>
@@ -338,79 +231,31 @@
         </div>
     </div>
 
-    @* data pribadi *@
     <table class="dtbl">
-        <colgroup>
-            <col class="c-lbl" /><col class="c-sep" /><col class="c-val" />
-        </colgroup>
+        <colgroup><col class="c-lbl" /><col class="c-sep" /><col class="c-val" /></colgroup>
         <tbody>
-            <tr>
-                <td class="lbl">Nama</td>
-                <td class="sep">:</td>
-                <td><span class="ln">@(pr?.Nama ?? "")</span></td>
-            </tr>
-            <tr>
-                <td class="lbl">NIK</td>
-                <td class="sep">:</td>
-                <td><span class="ln" style="font-family:monospace;letter-spacing:.05em;">@(pr?.NIK ?? "")</span></td>
-            </tr>
-            <tr>
-                <td class="lbl">No. Telepon</td>
-                <td class="sep">:</td>
-                <td><span class="ln">@(pr?.Telepon ?? "")</span></td>
-            </tr>
-            <tr>
-                <td class="lbl">Alamat</td>
-                <td class="sep">:</td>
-                <td><span class="ln">@alamatLengkap</span></td>
-            </tr>
+            <tr><td class="lbl">Nama</td><td class="sep">:</td><td><span class="ln">@(pr?.Nama ?? "")</span></td></tr>
+            <tr><td class="lbl">NIK</td><td class="sep">:</td><td><span class="ln" style="font-family:monospace;letter-spacing:.05em;">@(pr?.NIK ?? "")</span></td></tr>
+            <tr><td class="lbl">No. Telepon</td><td class="sep">:</td><td><span class="ln">@(pr?.Telepon ?? "")</span></td></tr>
+            <tr><td class="lbl">Alamat</td><td class="sep">:</td><td><span class="ln">@alamatLengkap</span></td></tr>
 
             @if (Model.KategoriPemohon == "Mahasiswa")
             {
-                <tr>
-                    <td class="lbl">Lembaga Pendidikan</td>
-                    <td class="sep">:</td>
-                    <td><span class="ln">@(ppid?.Lembaga ?? "")</span></td>
-                </tr>
-                <tr>
-                    <td class="lbl">Fakultas</td>
-                    <td class="sep">:</td>
-                    <td><span class="ln">@(ppid?.Fakultas ?? "")</span></td>
-                </tr>
-                <tr>
-                    <td class="lbl">Program Studi</td>
-                    <td class="sep">:</td>
-                    <td><span class="ln">@(ppid?.Jurusan ?? "")</span></td>
-                </tr>
+                <tr><td class="lbl">Lembaga Pendidikan</td><td class="sep">:</td><td><span class="ln">@(ppid?.Lembaga ?? "")</span></td></tr>
+                <tr><td class="lbl">Fakultas</td><td class="sep">:</td><td><span class="ln">@(ppid?.Fakultas ?? "")</span></td></tr>
+                <tr><td class="lbl">Program Studi</td><td class="sep">:</td><td><span class="ln">@(ppid?.Jurusan ?? "")</span></td></tr>
             }
             else
             {
-                <tr>
-                    <td class="lbl">Lembaga / Organisasi</td>
-                    <td class="sep">:</td>
-                    <td><span class="ln">@(ppid?.Lembaga ?? "")</span></td>
-                </tr>
-                <tr>
-                    <td class="lbl">Pekerjaan / Jabatan</td>
-                    <td class="sep">:</td>
-                    <td><span class="ln">@(ppid?.Pekerjaan ?? "")</span></td>
-                </tr>
+                <tr><td class="lbl">Lembaga / Organisasi</td><td class="sep">:</td><td><span class="ln">@(ppid?.Lembaga ?? "")</span></td></tr>
+                <tr><td class="lbl">Pekerjaan / Jabatan</td><td class="sep">:</td><td><span class="ln">@(ppid?.Pekerjaan ?? "")</span></td></tr>
             }
 
-            <tr>
-                <td class="lbl">Judul Penelitian</td>
-                <td class="sep">:</td>
-                <td><span class="ln">@(Model.JudulPenelitian ?? "")</span></td>
-            </tr>
-            <tr>
-                <td class="lbl">Latar Belakang</td>
-                <td class="sep">:</td>
-                <td><span class="ln-tall">@(Model.LatarBelakang ?? "")</span></td>
-            </tr>
+            <tr><td class="lbl">Judul Penelitian</td><td class="sep">:</td><td><span class="ln">@(Model.JudulPenelitian ?? "")</span></td></tr>
+            <tr><td class="lbl">Latar Belakang</td><td class="sep">:</td><td><span class="ln-tall">@(Model.LatarBelakang ?? "")</span></td></tr>
         </tbody>
     </table>
 
-    @* tujuan penelitian *@
     <div class="cbrow">
         <span class="cb @(isTugasMK  ? "on" : "")"></span><span class="cbl">Tugas Mata Kuliah</span>
         <span class="cb @(isTugasAkh ? "on" : "")"></span><span class="cbl">Pembuatan Tugas Akhir</span>
@@ -422,58 +267,35 @@
         <span style="display:inline-block;border-bottom:1px solid #000;min-width:210px;padding-bottom:1px;vertical-align:bottom;">@(isLainnya ? tujuan : "")</span>
     </div>
 
-    @* keperluan *@
-    <div class="stitle">
-        Keperluan <span style="font-weight:normal;font-style:italic;">(pilihan bisa lebih dari satu)</span>
-    </div>
+    <div class="stitle">Keperluan <span style="font-weight:normal;font-style:italic;">(pilihan bisa lebih dari satu)</span></div>
     <div class="cbrow" style="margin-bottom:7px;">
         <span class="cb @(Model.IsObservasi      ? "on" : "")"></span><span class="cbl">Observasi</span>
         <span class="cb @(Model.IsPermintaanData ? "on" : "")"></span><span class="cbl">Permintaan Data</span>
         <span class="cb @(Model.IsWawancara      ? "on" : "")"></span><span class="cbl">Wawancara</span>
     </div>
 
-    @* detail keperluan *@
     <table class="dtbl2">
-        <colgroup>
-            <col class="c2-lbl" /><col class="c2-sep" /><col class="c2-val" />
-        </colgroup>
+        <colgroup><col class="c2-lbl" /><col class="c2-sep" /><col class="c2-val" /></colgroup>
         <tbody>
             <tr>
-                <td class="dlbl">
-                    Deskripsi observasi yang akan dilakukan
-                    <span class="hint">(tulis "–" jika tidak dibutuhkan)</span>
-                </td>
-                <td class="sep">:</td>
-                <td><span class="ln-det">@detailObs</span></td>
+                <td class="dlbl">Deskripsi observasi yang akan dilakukan<span class="hint">(tulis "–" jika tidak dibutuhkan)</span></td>
+                <td class="sep">:</td><td><span class="ln-det">@detailObs</span></td>
             </tr>
             <tr>
-                <td class="dlbl">
-                    Data yang diperlukan
-                    <span class="hint">(tulis "–" jika tidak dibutuhkan)</span>
-                </td>
-                <td class="sep">:</td>
-                <td><span class="ln-det">@detailData</span></td>
+                <td class="dlbl">Data yang diperlukan<span class="hint">(tulis "–" jika tidak dibutuhkan)</span></td>
+                <td class="sep">:</td><td><span class="ln-det">@detailData</span></td>
             </tr>
             <tr>
-                <td class="dlbl">
-                    Materi Wawancara
-                    <span class="hint">(tulis "–" jika tidak dibutuhkan)</span>
-                </td>
-                <td class="sep">:</td>
-                <td><span class="ln-det">@detailWaw</span></td>
+                <td class="dlbl">Materi Wawancara<span class="hint">(tulis "–" jika tidak dibutuhkan)</span></td>
+                <td class="sep">:</td><td><span class="ln-det">@detailWaw</span></td>
             </tr>
             <tr>
-                <td class="dlbl">
-                    Unit Kerja yang berkaitan dengan Penelitian
-                    <span class="hint">(Diisi Subkelompok Kepegawaian)</span>
-                </td>
-                <td class="sep">:</td>
-                <td><span class="ln-det">@(Model.NamaBidang ?? "")</span></td>
+                <td class="dlbl">Unit Kerja yang berkaitan dengan Penelitian<span class="hint">(Diisi Subkelompok Kepegawaian)</span></td>
+                <td class="sep">:</td><td><span class="ln-det">@(Model.NamaBidang ?? "")</span></td>
             </tr>
         </tbody>
     </table>
 
-    @* tanda tangan *@
     <div class="sign-row">
         <div class="sign-col">
             <div>Mengetahui,</div>
@@ -491,7 +313,6 @@
         </div>
     </div>
 
-    @* nb *@
     <p class="nb">
         <strong>NB:</strong> Formulir ini dibuat untuk mengetahui kebutuhan penelitian sebagai pendukung
         pembuatan surat pemberian izin penelitian. <strong>Simpan nomor permohonan yang tertera di atas —

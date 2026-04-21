@@ -1,8 +1,12 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/KasubkelKdi/SubTasks.cshtml
-   KDI hanya mengelola sub-tugas Permintaan Data.
-   Observasi + Wawancara dikelola oleh KasubkelKepegawaian.
-════════════════════════════════════════════════════════════════════════════ *@
+@*
+   Views/KasubkelKdi/SubTasks.cshtml — PERBAIKAN EMPTY STATE
+   ─────────────────────────────────────────────────────────────────────────
+   PERUBAHAN:
+   - Empty state "Sub-tugas belum tersedia" → penjelasan MENGAPA + CTA
+   - Loading state via _FormStyles partial
+   - Label konsisten: "Kelola Sub-tugas" (bukan "Kelola Tugas")
+   ─────────────────────────────────────────────────────────────────────────
+*@
 @model ParallelTasksVm
 @{
     ViewData["Title"] = $"Sub-tugas Data — {Model.Permohonan.NoPermohonan}";
@@ -25,6 +29,8 @@
     var tugasDocs   = ViewData["TugasDocs"]  as List<DokumenPPID>   ?? new();
     var obsWawTasks = ViewData["ObsWawTasks"] as List<SubTaskPPID> ?? new();
 }
+
+<partial name="Partials/_FormStyles" />
 
 @if (TempData["Success"] != null)
 {
@@ -71,16 +77,12 @@
         <div class="bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4 mb-4 flex items-start gap-3">
             <span class="text-violet-500 text-lg flex-shrink-0 mt-0.5">ℹ️</span>
             <div class="flex-1">
-                <p class="text-violet-800 text-sm font-bold">
-                    Obs/Waw dikelola oleh Kepegawaian
-                </p>
+                <p class="text-violet-800 text-sm font-bold">Obs/Waw dikelola oleh Kepegawaian</p>
                 <p class="text-violet-600 text-xs mt-0.5 leading-relaxed">
                     Permohonan ini memiliki keperluan
-                    @(p.IsObservasi && p.IsWawancara ? "Observasi + Wawancara" :
-                      p.IsObservasi ? "Observasi" : "Wawancara")
+                    @(p.IsObservasi && p.IsWawancara ? "Observasi + Wawancara" : p.IsObservasi ? "Observasi" : "Wawancara")
                     yang dijadwalkan oleh KasubkelKepegawaian.
-                    Status permohonan akan maju ke <strong>Data Siap</strong> setelah
-                    <em>semua</em> sub-tugas (Data + Obs/Waw) selesai.
+                    Status permohonan akan maju ke <strong>Data Siap</strong> setelah semua sub-tugas selesai.
                 </p>
                 <div class="flex flex-wrap gap-2 mt-2">
                     @foreach (var ot in obsWawTasks)
@@ -108,10 +110,27 @@
     <div class="mb-4">
         @if (stData is null)
         {
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-                <div class="text-3xl mb-2">📊</div>
-                <p class="text-gray-500 text-sm font-medium">Sub-tugas Permintaan Data belum tersedia.</p>
-                <p class="text-gray-400 text-xs mt-1">Terima disposisi terlebih dahulu untuk membuat sub-tugas.</p>
+            @* ── Empty state dengan MENGAPA kosong + CTA ── *@
+            <div class="bg-white rounded-2xl border border-dashed border-gray-300 p-8 text-center">
+                <div class="w-14 h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">📊</div>
+                <p class="text-sm font-semibold text-gray-700 mb-1">Sub-tugas Permintaan Data belum dibuat</p>
+                <p class="text-xs text-gray-400 mb-4 leading-relaxed max-w-xs mx-auto">
+                    Sub-tugas akan tersedia setelah Anda menerima disposisi dari dashboard KDI.
+                    Pastikan status permohonan sudah <strong>Didisposisi</strong>.
+                </p>
+                @if (current == StatusId.Didisposisi)
+                {
+                    <a href="/kasubkel-kdi/terima/@p.PermohonanPPIDID"
+                       class="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl">
+                        📥 Terima Disposisi Sekarang →
+                    </a>
+                }
+                else
+                {
+                    <a href="/kasubkel-kdi" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-5 py-2.5 rounded-xl">
+                        ← Kembali ke Dashboard
+                    </a>
+                }
             </div>
         }
         else
@@ -162,7 +181,6 @@
                     </div>
                 }
 
-                @* Tombol aksi *@
                 @if (stData.IsDibatalkan)
                 {
                     <div class="bg-red-50 border border-red-100 rounded-xl p-2.5 mb-2">
@@ -225,7 +243,7 @@
                         <div>
                             <p class="font-bold text-blue-800 text-sm">Langkah Selanjutnya: Minta Feedback Pemohon</p>
                             <p class="text-blue-600 text-xs mt-1 leading-relaxed">
-                                Semua data (dan Obs/Waw jika ada) sudah siap. Klik tombol di bawah untuk meminta feedback pemohon.
+                                Semua data sudah siap. Klik tombol di bawah untuk meminta feedback pemohon.
                             </p>
                         </div>
                     </div>
@@ -241,9 +259,9 @@
                     <div class="flex items-start gap-3">
                         <span class="text-2xl">⏳</span>
                         <div>
-                            <p class="font-bold text-amber-800 text-sm">Menunggu Kuesioner Pemohon</p>
+                            <p class="font-bold text-amber-800 text-sm">Menunggu Feedback dari Pemohon</p>
                             <p class="text-amber-700 text-xs mt-1 leading-relaxed">
-                                Status otomatis menjadi <strong>Selesai</strong> setelah pemohon mengisi kuesioner di portal publik
+                                Status otomatis menjadi <strong>Selesai</strong> setelah pemohon mengisi feedback di portal publik
                                 (nomor: <span class="font-mono">@p.NoPermohonan</span>).
                             </p>
                         </div>
@@ -254,9 +272,9 @@
             @if (canForceClose)
             {
                 <div class="mt-4 pt-4 border-t border-gray-100">
-                    <p class="text-xs text-gray-400 mb-2">Atau tandai selesai secara manual (jika pemohon tidak merespons):</p>
+                    <p class="text-xs text-gray-400 mb-2">Atau tandai selesai secara manual jika pemohon tidak merespons:</p>
                     <form asp-action="TandaiSelesai" asp-controller="KasubkelKdi" method="post"
-                          onsubmit="return confirm('Tandai permohonan ini selesai tanpa kuesioner pemohon?')">
+                          onsubmit="return confirm('Tandai permohonan ini selesai tanpa feedback pemohon?')">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID"/>
                         <button type="submit"
@@ -285,9 +303,7 @@
     @if (tugasDocs.Any())
     {
         <div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 mb-4">
-            <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">
-                Laporan Final Pemohon (@tugasDocs.Count)
-            </p>
+            <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Laporan Final Pemohon (@tugasDocs.Count)</p>
             <div class="space-y-2">
                 @foreach (var f in tugasDocs)
                 {
@@ -298,9 +314,7 @@
                             <p class="text-[10px] text-indigo-400">@f.CreatedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
                         </div>
                         <a href="@f.UploadDokumenPPID" target="_blank"
-                           class="text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded-lg font-medium">
-                            Unduh
-                        </a>
+                           class="text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded-lg font-medium">Unduh</a>
                     </div>
                 }
             </div>
@@ -322,7 +336,6 @@
                 }
             </dl>
         </div>
-
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Info Permohonan</p>
             <dl class="space-y-2">

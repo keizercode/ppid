@@ -1,22 +1,30 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/KasubkelKdi/PermintaanData.cshtml — FIXED
-   Perubahan: tombol aksi per status (Terima Disposisi vs Kelola Tugas vs Minta Feedback)
-════════════════════════════════════════════════════════════════════════════ *@
+@*
+   Views/KasubkelKdi/PermintaanData.cshtml — PERBAIKAN
+   ─────────────────────────────────────────────────────────────────────────
+   PERUBAHAN:
+   1. Kolom Action: satu tombol primer + dropdown ⋯
+   2. Label: "Kelola Sub-tugas" (bukan "Kelola Tugas"), "Terima Disposisi"
+   3. Empty state dengan CTA kontekstual
+   ─────────────────────────────────────────────────────────────────────────
+*@
 @model List<PermohonanPPID>
 @{
-    ViewData["Title"] = "Sub-menu Permintaan Data";
+    ViewData["Title"] = "Permintaan Data — Kasubkel KDI";
     ViewData["Role"]  = "Kasubkel KDI";
     Layout = "_LayoutAdmin";
     var q      = ViewData["Q"]      as string;
     var status = ViewData["Status"] as int?;
 }
 
+<partial name="Partials/_FormStyles" />
+<partial name="Partials/_ActionMenu" />
+
 <div class="flex items-center justify-between mb-4">
     <div>
         <p class="font-bold text-gray-700 text-sm">Permintaan Data</p>
         <p class="text-xs text-gray-400 mt-0.5">Semua permohonan dengan keperluan permintaan data</p>
     </div>
-    <a href="/kasubkel-kdi" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">← Dashboard</a>
+    <a href="/kasubkel-kdi" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">← Dashboard</a>
 </div>
 
 <!-- Search + Filter -->
@@ -43,11 +51,21 @@
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     @if (!Model.Any())
     {
-        <div class="text-center py-20">
-            <div class="text-4xl mb-3">📊</div>
-            <p class="text-gray-400 text-sm font-medium">
-                @(string.IsNullOrEmpty(q) ? "Belum ada permintaan data" : $"Tidak ada hasil untuk \"{q}\"")
-            </p>
+        @* ── Empty state kontekstual ── *@
+        <div class="text-center py-16 px-6">
+            <div class="w-16 h-16 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">📊</div>
+            @if (!string.IsNullOrEmpty(q) || status.HasValue)
+            {
+                <p class="text-sm font-semibold text-gray-600 mb-1">Tidak ada hasil ditemukan</p>
+                <p class="text-xs text-gray-400 mb-4">Coba ubah kata kunci atau pilih filter status yang berbeda.</p>
+                <a href="/kasubkel-kdi/permintaan-data" class="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:underline">↩ Lihat semua permintaan data</a>
+            }
+            else
+            {
+                <p class="text-sm font-semibold text-gray-600 mb-1">Belum ada permintaan data</p>
+                <p class="text-xs text-gray-400 mb-4">Permintaan data akan muncul setelah disposisi dari Kepegawaian diterima.</p>
+                <a href="/kasubkel-kdi" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-4 py-2 rounded-xl">← Kembali ke Dashboard</a>
+            }
         </div>
     }
     else
@@ -63,22 +81,44 @@
                         <th class="col-th">Batas Waktu</th>
                         <th class="col-th">Status</th>
                         <th class="col-th">Pengampu</th>
-                        <th class="col-th">Action</th>
+                        <th class="col-th">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @foreach (var item in Model)
                     {
-                        bool overdue        = item.IsOverdue;
-                        bool isNew          = item.StatusPPIDID == StatusId.Didisposisi;
-                        bool isInProgress   = item.StatusPPIDID == StatusId.DiProses
-                                           || item.StatusPPIDID == StatusId.ObservasiDijadwalkan
-                                           || item.StatusPPIDID == StatusId.ObservasiSelesai
-                                           || item.StatusPPIDID == StatusId.WawancaraDijadwalkan
-                                           || item.StatusPPIDID == StatusId.WawancaraSelesai;
-                        bool isDataSiap     = item.StatusPPIDID == StatusId.DataSiap;
-                        bool isFeedback     = item.StatusPPIDID == StatusId.FeedbackPemohon;
-                        bool isSelesai      = item.StatusPPIDID == StatusId.Selesai;
+                        bool overdue     = item.IsOverdue;
+                        bool isNew       = item.StatusPPIDID == StatusId.Didisposisi;
+                        bool isInProgress = item.StatusPPIDID == StatusId.DiProses
+                                         || item.StatusPPIDID == StatusId.ObservasiDijadwalkan
+                                         || item.StatusPPIDID == StatusId.ObservasiSelesai
+                                         || item.StatusPPIDID == StatusId.WawancaraDijadwalkan
+                                         || item.StatusPPIDID == StatusId.WawancaraSelesai;
+                        bool isDataSiap  = item.StatusPPIDID == StatusId.DataSiap;
+                        bool isFeedback  = item.StatusPPIDID == StatusId.FeedbackPemohon;
+                        bool isSelesai   = item.StatusPPIDID == StatusId.Selesai;
+
+                        @* Resolusi primer *@
+                        string? primerHref  = null;
+                        string? primerLabel = null;
+                        string  primerColor = "";
+
+                        if (isNew) {
+                            primerHref = $"/kasubkel-kdi/terima/{item.PermohonanPPIDID}";
+                            primerLabel = "Terima Disposisi";
+                            primerColor = "cyan";
+                        } else if (isInProgress) {
+                            primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
+                            primerLabel = "Kelola Sub-tugas";
+                        } else if (isDataSiap) {
+                            primerHref = $"/kasubkel-kdi/minta-feedback/{item.PermohonanPPIDID}";
+                            primerLabel = "Minta Feedback";
+                            primerColor = "emerald";
+                        } else if (isFeedback) {
+                            primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
+                            primerLabel = "Lihat Sub-tugas";
+                            primerColor = "amber";
+                        }
 
                         string badgeCls = item.StatusPPIDID switch
                         {
@@ -92,27 +132,18 @@
                             _                             => "bg-gray-100 text-gray-500"
                         };
 
-                        <tr class="hover:bg-blue-50/30 transition-colors group @(isNew ? "bg-cyan-50/40" : "")">
-
+                        <tr class="hover:bg-blue-50/30 transition-colors group @(isNew ? "bg-cyan-50/30" : "")">
                             <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold whitespace-nowrap">
                                 @item.NoPermohonan
                                 @if (isNew) { <span class="ml-1 text-[10px] bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded font-bold">BARU</span> }
                             </td>
-
-                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">
-                                @item.Pribadi?.Nama
-                            </td>
-
+                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
                             <td class="px-4 py-3">
                                 <span class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
                                     @(item.KategoriPemohon == "Mahasiswa" ? "🎓" : "🏢") @item.KategoriPemohon
                                 </span>
                             </td>
-
-                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                                @item.TanggalPermohonan?.ToString("dd MMM yyyy")
-                            </td>
-
+                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if (item.BatasWaktu.HasValue)
                                 {
@@ -121,63 +152,48 @@
                                         @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
                                         {
                                             <span class="block text-[10px] @(overdue ? "text-red-400" : "text-gray-400")">
-                                                @(overdue ? $"Terlambat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
+                                                @(overdue ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
                                             </span>
                                         }
                                     </span>
                                 }
                                 else { <span class="text-gray-300 text-xs">—</span> }
                             </td>
-
                             <td class="px-4 py-3">
                                 <span class="text-[11px] @badgeCls px-2.5 py-0.5 rounded-full font-medium">
                                     @item.Status?.NamaStatusPPID
                                 </span>
                             </td>
-
-                            <td class="px-4 py-3 text-xs text-gray-500">
-                                @(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)
-                            </td>
+                            <td class="px-4 py-3 text-xs text-gray-500">@(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)</td>
 
                             <td class="px-4 py-3">
-                                <div class="flex gap-1.5 flex-wrap opacity-80 group-hover:opacity-100 transition-opacity">
-                                    @if (isNew)
+                                <div class="action-cell">
+                                    @if (primerHref != null)
                                     {
-                                        <!-- Disposisi baru: harus diterima dulu sebelum bisa diproses -->
-                                        <a href="/kasubkel-kdi/terima/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-cyan-600 hover:bg-cyan-700 text-white px-2.5 py-1 rounded-lg font-bold">📥 Terima</a>
-                                    }
-                                    else if (isInProgress)
-                                    {
-                                        <!-- Sedang diproses: kelola sub-tugas paralel -->
-                                        <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-[#002d7a] hover:bg-blue-900 text-white px-2.5 py-1 rounded-lg font-bold">⚙️ Kelola Tugas</a>
-                                    }
-                                    else if (isDataSiap)
-                                    {
-                                        <!-- Data siap: minta feedback pemohon -->
-                                        <a href="/kasubkel-kdi/minta-feedback/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-lg font-bold">📨 Feedback</a>
-                                        <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a>
-                                    }
-                                    else if (isFeedback)
-                                    {
-                                        <!-- Menunggu kuesioner pemohon atau force close -->
-                                        <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg font-medium">⏳ Menunggu</a>
+                                        <a href="@primerHref" class="btn-action-primary @primerColor">@primerLabel</a>
                                     }
                                     else if (!isSelesai)
                                     {
-                                        <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a>
+                                        <a href="/kasubkel-kdi/detail/@item.PermohonanPPIDID"
+                                           class="btn-action-primary" style="background:#6b7280">Detail</a>
                                     }
 
-                                    <a href="/kasubkel-kdi/detail/@item.PermohonanPPIDID"
-                                       class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium opacity-60">Log</a>
+                                    <div class="action-more-wrap">
+                                        <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
+                                        <div class="action-dropdown hidden">
+                                            <a href="/kasubkel-kdi/detail/@item.PermohonanPPIDID" class="action-dd-item">📋 Detail & Log</a>
+                                            @if (!isNew && !isSelesai)
+                                            {
+                                                <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID" class="action-dd-item">⚙️ Sub-tugas</a>
+                                            }
+                                            @if (isDataSiap)
+                                            {
+                                                <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID" class="action-dd-item">⚙️ Sub-tugas</a>
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
-
                         </tr>
                     }
                 </tbody>
@@ -185,15 +201,3 @@
         </div>
     }
 </div>
-
-<style>
-    .col-th {
-        padding: 12px 16px;
-        text-align: left;
-        font-size: 10px;
-        font-weight: 700;
-        color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-    }
-</style>

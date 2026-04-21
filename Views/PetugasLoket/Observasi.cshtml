@@ -32,7 +32,7 @@
     @if (filterStatus != null) { <input type="hidden" name="filterStatus" value="@filterStatus" /> }
     <input type="text" name="q" value="@q" placeholder="Cari nomor / nama..."
            class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-300" />
-    <button type="submit" class="bg-[#002d7a] text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
+   <button type="submit" class="btn-submit w-full bg-[#002d7a] text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
     @if (!string.IsNullOrEmpty(q) || filterStatus != null)
     {
         <a href="/petugas-loket/observasi" class="border border-gray-200 text-gray-500 text-xs px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a>

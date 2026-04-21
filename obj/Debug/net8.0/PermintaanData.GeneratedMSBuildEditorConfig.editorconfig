@@ -222,6 +222,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXFBhcnRpYWxzXEVtcHR5VGFibGUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/Shared/Partials/_FormStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXFBhcnRpYWxzXF9Gb3JtU3R5bGVzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/Shared/Partials/_ParallelTaskStatus.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXFBhcnRpYWxzXF9QYXJhbGxlbFRhc2tTdGF0dXMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
