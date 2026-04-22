@@ -292,7 +292,7 @@
                                                         {
                                                             <p class="text-[11px] text-gray-500">PIC: <strong>@jadObs.NamaPIC</strong>
                                                                 @if (!string.IsNullOrEmpty(jadObs.TeleponPIC)) {
-                                                                    <a href="tel:@jadObs.TeleponPIC" class="ml-1 text-blue-500 hover:underline">📱 @jadObs.TeleponPIC</a>
+                                                                    <a href="tel:@jadObs.TeleponPIC" class="ml-1 text-blue-500 hover:underline">📞 @jadObs.TeleponPIC</a>
                                                                 }
                                                             </p>
                                                         }
@@ -376,7 +376,7 @@
                                                         {
                                                             <p class="text-[11px] text-gray-500">Narasumber: <strong>@jadWaw.NamaPIC</strong>
                                                                 @if (!string.IsNullOrEmpty(jadWaw.TeleponPIC)) {
-                                                                    <a href="tel:@jadWaw.TeleponPIC" class="ml-1 text-blue-500 hover:underline">📱 @jadWaw.TeleponPIC</a>
+                                                                    <a href="tel:@jadWaw.TeleponPIC" class="ml-1 text-blue-500 hover:underline">📞 @jadWaw.TeleponPIC</a>
                                                                 }
                                                             </p>
                                                         }
@@ -598,7 +598,7 @@
                             <dt class="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-0.5">Pengampu / PIC</dt>
                             <dd class="text-gray-700 text-sm">@p.Pengampu
                                 @if (!string.IsNullOrEmpty(p.TeleponPengampu)) {
-                                    <a href="tel:@p.TeleponPengampu" class="ml-2 text-blue-500 text-xs hover:underline">📱 @p.TeleponPengampu</a>
+                                    <a href="tel:@p.TeleponPengampu" class="ml-2 text-blue-500 text-xs hover:underline">📞 @p.TeleponPengampu</a>
                                 }
                             </dd>
                         </div>
@@ -677,7 +677,7 @@
                             {
                                 <a href="tel:@jadwal.TeleponPIC"
                                    class="mt-1 inline-flex items-center gap-1 text-[11px] @(isWaw ? "text-violet-500" : "text-orange-500") hover:underline">
-                                    📱 @jadwal.TeleponPIC
+                                    📞 @jadwal.TeleponPIC
                                 </a>
                             }
                         }
