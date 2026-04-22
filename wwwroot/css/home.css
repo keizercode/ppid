@@ -246,12 +246,13 @@ body {
 .hero {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(
-        135deg,
-        var(--ijo-dark) 0%,
-        var(--ijo-mid) 60%,
-        var(--ijo-dark) 100%
-    );
+    background:
+        linear-gradient(135deg, var(--ijo-dark) 0%, var(--ijo-mid) 60%, var(--ijo-dark) 100%),
+        url('https://res.cloudinary.com/dmcvht1vr/image/upload/v1775804215/kota_dyz54h.png');
+
+    background-repeat: no-repeat;
+    background-size: cover, cover;
+    background-position: center, bottom;
     padding: 80px 0 120px;
 }
 .hero-grid {
@@ -301,14 +302,15 @@ body {
     pointer-events: none;
 }
 .hero::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
     left: 0;
     right: 0;
-    height: 64px;
-    background: var(--bg);
     clip-path: ellipse(55% 100% at 50% 100%);
+    content: '';
+    position: absolute;
+    bottom: 0;
+    height: 120px;
+    width: 100%;
+    background: linear-gradient(to bottom, transparent, var(--bg));
 }
 
 .hero-deco {
@@ -681,7 +683,15 @@ body {
 
 /* ── STAT BAR ── */
 .stat-bar-section {
-    background: var(--bg);
+    background:
+        var(--bg),
+        url('https://res.cloudinary.com/dmcvht1vr/image/upload/v1775804215/kota_dyz54h.png');
+
+    background-repeat: no-repeat;
+    background-size: cover, cover;
+
+    /* 🔑 ini kuncinya */
+    background-position: center, calc(100% + 120px);
     padding-top: 0;
 }
 .stat-bar {
