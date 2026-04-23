@@ -63,10 +63,9 @@ builder.Services.AddHealthChecks();
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // LANGSUNG HTTPS ONLY (no HTTP)
-    options.ListenAnyIP(443, listenOptions =>
+    options.ListenAnyIP(5055, listenOptions =>
     {
-        listenOptions.UseHttps("/etc/ssl/certs/ppid.pfx", "passwordlu");
+        listenOptions.UseHttps("/var/www/ppid/cert.pfx", "PASSWORD_PFX");
     });
 });
 // ── 8. Build ──────────────────────────────────────────────────────────────────
