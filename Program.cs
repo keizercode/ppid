@@ -61,11 +61,13 @@ builder.Services.AddMemoryCache();
 // Membutuhkan: dotnet add package Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore
 builder.Services.AddHealthChecks();
 
+var password = Environment.GetEnvironmentVariable("CERT_PASSWORD");
+
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(5055, listenOptions =>
     {
-        listenOptions.UseHttps("/var/www/ppid/cert.pfx", "PASSWORD_PFX");
+        listenOptions.UseHttps("/var/www/ppid/cert.pfx", password);
     });
 });
 // ── 8. Build ──────────────────────────────────────────────────────────────────
