@@ -63,13 +63,13 @@ builder.Services.AddHealthChecks();
 
 var password = Environment.GetEnvironmentVariable("CERT_PASSWORD");
 
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5055, listenOptions =>
-    {
-        listenOptions.UseHttps("/var/www/ppid/cert.pfx", password);
-    });
-});
+// builder.WebHost.ConfigureKestrel(options =>
+// {
+//     options.ListenAnyIP(5055, listenOptions =>
+//     {
+//         listenOptions.UseHttps("/var/www/ppid/cert.pfx", password);
+//     });
+// });
 // ── 8. Build ──────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
