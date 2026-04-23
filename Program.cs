@@ -42,13 +42,13 @@ builder.Services.AddHttpClient();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath           = "/auth/login";
-        options.LogoutPath          = "/auth/logout";
-        options.AccessDeniedPath    = "/auth/akses-ditolak";
-        options.ExpireTimeSpan      = TimeSpan.FromHours(8);
-        options.SlidingExpiration   = true;
-        options.Cookie.HttpOnly     = true;
-        options.Cookie.SameSite     = SameSiteMode.Lax;
+        options.LoginPath = "/auth/login";
+        options.LogoutPath = "/auth/logout";
+        options.AccessDeniedPath = "/auth/akses-ditolak";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.None
             : CookieSecurePolicy.Always;
@@ -61,6 +61,14 @@ builder.Services.AddMemoryCache();
 // Membutuhkan: dotnet add package Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore
 builder.Services.AddHealthChecks();
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // LANGSUNG HTTPS ONLY (no HTTP)
+    options.ListenAnyIP(443, listenOptions =>
+    {
+        listenOptions.UseHttps("/etc/ssl/certs/ppid.pfx", "passwordlu");
+    });
+});
 // ── 8. Build ──────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
@@ -80,7 +88,7 @@ else
         errorApp.Run(async context =>
         {
             var exFeature = context.Features.Get<IExceptionHandlerPathFeature>();
-            var logger    = context.RequestServices
+            var logger = context.RequestServices
                 .GetRequiredService<ILogger<Program>>();
 
             if (exFeature?.Error is not null)
@@ -89,7 +97,7 @@ else
                     "Unhandled exception on path {Path}", exFeature.Path);
             }
 
-            context.Response.StatusCode  = 500;
+            context.Response.StatusCode = 500;
             context.Response.ContentType = "text/html; charset=utf-8";
             await context.Response.WriteAsync(BuildErrorHtml());
         });
@@ -108,6 +116,7 @@ app.UseStatusCodePages(async ctx =>
     }
 });
 
+app.UseHttpsRedirection();
 // ── 12. Static Files ──────────────────────────────────────────────────────────
 app.UseStaticFiles();
 
@@ -135,9 +144,9 @@ app.Run();
 static async Task RunStartupMigrationsAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
-    var services    = scope.ServiceProvider;
-    var logger      = services.GetRequiredService<ILogger<Program>>();
-    var env         = services.GetRequiredService<IWebHostEnvironment>();
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var env = services.GetRequiredService<IWebHostEnvironment>();
 
     try
     {
@@ -207,7 +216,7 @@ static async Task ValidateCriticalTablesAsync(AppDbContext db, ILogger logger)
 static string BuildErrorHtml()
 {
     var refCode = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-    var year    = DateTime.Now.Year;
+    var year = DateTime.Now.Year;
 
     // Tidak menggunakan $""" agar CSS { } tidak perlu di-escape
     return $$"""
