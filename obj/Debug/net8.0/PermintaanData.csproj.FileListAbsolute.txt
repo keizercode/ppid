@@ -104,3 +104,5 @@ D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\refint\PermintaanData.dll
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.pdb
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.genruntimeconfig.cache
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\ref\PermintaanData.dll
+D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\appsettings.Development.json
+D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\appsettings.Production.json
