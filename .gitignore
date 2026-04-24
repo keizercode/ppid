@@ -1,0 +1,16 @@
+# Production config
+appsettings.Production.json
+appsettings.Development.json
+
+# Certificates
+*.pfx
+*.pem
+*.key
+
+# Build files
+bin/
+obj/
+
+# User-specific
+*.user
+*.suo
