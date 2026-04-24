@@ -159,10 +159,11 @@
 
                                     @if (bisaSuratIzin)
                                     {
-                                        <a href="/kasubkel-kepegawaian/surat-izin/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg font-semibold">📄 Surat Izin</a>
+                                        @* Surat izin kini diproses Loket Kepegawaian — tampilkan info saja *@
+                                        <span class="text-[11px] bg-blue-50 border border-blue-200 text-blue-600 px-2.5 py-1 rounded-lg font-medium">
+                                            📄 Menunggu Loket
+                                        </span>
                                     }
-
                                     @if (item.StatusPPIDID >= StatusId.DataSiap)
                                     {
                                         <a href="/kasubkel-kepegawaian/feedback/@item.PermohonanPPIDID"

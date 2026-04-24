@@ -31,57 +31,57 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("")]
-public async Task<IActionResult> Index(string? q, int? status)
-{
-    var allStatus = await db.PermohonanPPID
-        .AsNoTracking()
-        .Select(p => p.StatusPPIDID)
-        .ToListAsync();
-
-    ViewData["DashVm"] = new DashboardVm
+    public async Task<IActionResult> Index(string? q, int? status)
     {
-        Total        = allStatus.Count,
-        Proses       = allStatus.Count(s => StatusId.IsProses(s)),
-        Selesai      = allStatus.Count(s => StatusId.IsSelesai(s)),
-        MonthlyStats = await db.GetMonthlyStats()
-    };
+        var allStatus = await db.PermohonanPPID
+            .AsNoTracking()
+            .Select(p => p.StatusPPIDID)
+            .ToListAsync();
 
-    // ── Hanya hitung antrian untuk badge navigasi, tidak load full list ──
-    var obsWawSummary = await db.PermohonanPPID
-        .AsNoTracking()
-        .Where(p =>
-            (p.IsObservasi || p.IsWawancara) &&
-            (p.StatusPPIDID == StatusId.DiProses             ||
-             p.StatusPPIDID == StatusId.Didisposisi          ||
-             p.StatusPPIDID == StatusId.ObservasiDijadwalkan ||
-             p.StatusPPIDID == StatusId.WawancaraDijadwalkan))
-        .Select(p => new { p.IsObservasi, p.IsWawancara })
-        .ToListAsync();
+        ViewData["DashVm"] = new DashboardVm
+        {
+            Total = allStatus.Count,
+            Proses = allStatus.Count(s => StatusId.IsProses(s)),
+            Selesai = allStatus.Count(s => StatusId.IsSelesai(s)),
+            MonthlyStats = await db.GetMonthlyStats()
+        };
 
-    ViewData["ObsAntrian"] = obsWawSummary.Count(p => p.IsObservasi);
-    ViewData["WawAntrian"] = obsWawSummary.Count(p => p.IsWawancara);
+        // ── Hanya hitung antrian untuk badge navigasi, tidak load full list ──
+        var obsWawSummary = await db.PermohonanPPID
+            .AsNoTracking()
+            .Where(p =>
+                (p.IsObservasi || p.IsWawancara) &&
+                (p.StatusPPIDID == StatusId.DiProses ||
+                 p.StatusPPIDID == StatusId.Didisposisi ||
+                 p.StatusPPIDID == StatusId.ObservasiDijadwalkan ||
+                 p.StatusPPIDID == StatusId.WawancaraDijadwalkan))
+            .Select(p => new { p.IsObservasi, p.IsWawancara })
+            .ToListAsync();
 
-    // ── Daftar permohonan utama ───────────────────────────────────────
-    var query = db.PermohonanPPID
-        .Include(p => p.Pribadi)
-        .Include(p => p.Status)
-        .Include(p => p.Jadwal)
-        .AsQueryable();
+        ViewData["ObsAntrian"] = obsWawSummary.Count(p => p.IsObservasi);
+        ViewData["WawAntrian"] = obsWawSummary.Count(p => p.IsWawancara);
 
-    if (!string.IsNullOrEmpty(q))
-        query = query.Where(p =>
-            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.Contains(q)));
+        // ── Daftar permohonan utama ───────────────────────────────────────
+        var query = db.PermohonanPPID
+            .Include(p => p.Pribadi)
+            .Include(p => p.Status)
+            .Include(p => p.Jadwal)
+            .AsQueryable();
 
-    if (status.HasValue)
-        query = query.Where(p => p.StatusPPIDID == status.Value);
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.NIK != null && p.Pribadi.NIK.Contains(q)));
 
-    ViewData["Q"]      = q;
-    ViewData["Status"] = status;
+        if (status.HasValue)
+            query = query.Where(p => p.StatusPPIDID == status.Value);
 
-    return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
-}
+        ViewData["Q"] = q;
+        ViewData["Status"] = status;
+
+        return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
+    }
 
     // ── Sub-menu: Permintaan Data ─────────────────────────────────────────
 
@@ -106,82 +106,82 @@ public async Task<IActionResult> Index(string? q, int? status)
     // ── Sub-menu: Wawancara ───────────────────────────────────────────────
 
     [HttpGet("wawancara")]
-public async Task<IActionResult> Wawancara(string? q, string? filterStatus)
-{
-    var query = db.PermohonanPPID
-        .Include(p => p.Pribadi)
-        .Include(p => p.Status)
-        .Include(p => p.Jadwal)
-        .Where(p => p.IsWawancara)
-        .AsQueryable();
+    public async Task<IActionResult> Wawancara(string? q, string? filterStatus)
+    {
+        var query = db.PermohonanPPID
+            .Include(p => p.Pribadi)
+            .Include(p => p.Status)
+            .Include(p => p.Jadwal)
+            .Where(p => p.IsWawancara)
+            .AsQueryable();
 
-    if (!string.IsNullOrEmpty(q))
-        query = query.Where(p =>
-            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
 
-    // Filter cepat berdasarkan status sub-tugas
-    var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
-    var ids   = list.Select(p => p.PermohonanPPIDID).ToList();
+        // Filter cepat berdasarkan status sub-tugas
+        var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
+        var ids = list.Select(p => p.PermohonanPPIDID).ToList();
 
-    var subTasks = await db.SubTaskPPID
-        .Where(t => ids.Contains(t.PermohonanPPIDID) && t.JenisTask == JenisTask.Wawancara)
-        .ToListAsync();
+        var subTasks = await db.SubTaskPPID
+            .Where(t => ids.Contains(t.PermohonanPPIDID) && t.JenisTask == JenisTask.Wawancara)
+            .ToListAsync();
 
-    var subTaskMap = subTasks.ToDictionary(t => t.PermohonanPPIDID, t => t);
+        var subTaskMap = subTasks.ToDictionary(t => t.PermohonanPPIDID, t => t);
 
-    // Filter by subtask status jika diminta
-    if (filterStatus == "pending")
-        list = list.Where(p => !subTaskMap.ContainsKey(p.PermohonanPPIDID) ||
-                               subTaskMap[p.PermohonanPPIDID].IsPending).ToList();
-    else if (filterStatus == "dijadwalkan")
-        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsInProgress).ToList();
-    else if (filterStatus == "selesai")
-        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsSelesai).ToList();
+        // Filter by subtask status jika diminta
+        if (filterStatus == "pending")
+            list = list.Where(p => !subTaskMap.ContainsKey(p.PermohonanPPIDID) ||
+                                   subTaskMap[p.PermohonanPPIDID].IsPending).ToList();
+        else if (filterStatus == "dijadwalkan")
+            list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsInProgress).ToList();
+        else if (filterStatus == "selesai")
+            list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsSelesai).ToList();
 
-    ViewData["Q"]           = q;
-    ViewData["FilterStatus"] = filterStatus;
-    ViewData["SubTaskMap"]  = subTaskMap;
-    return View(list);
-}
+        ViewData["Q"] = q;
+        ViewData["FilterStatus"] = filterStatus;
+        ViewData["SubTaskMap"] = subTaskMap;
+        return View(list);
+    }
 
-[HttpGet("observasi")]
-public async Task<IActionResult> Observasi(string? q, string? filterStatus)
-{
-    var query = db.PermohonanPPID
-        .Include(p => p.Pribadi)
-        .Include(p => p.Status)
-        .Include(p => p.Jadwal)
-        .Where(p => p.IsObservasi)
-        .AsQueryable();
+    [HttpGet("observasi")]
+    public async Task<IActionResult> Observasi(string? q, string? filterStatus)
+    {
+        var query = db.PermohonanPPID
+            .Include(p => p.Pribadi)
+            .Include(p => p.Status)
+            .Include(p => p.Jadwal)
+            .Where(p => p.IsObservasi)
+            .AsQueryable();
 
-    if (!string.IsNullOrEmpty(q))
-        query = query.Where(p =>
-            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+        if (!string.IsNullOrEmpty(q))
+            query = query.Where(p =>
+                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
 
-    var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
-    var ids   = list.Select(p => p.PermohonanPPIDID).ToList();
+        var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
+        var ids = list.Select(p => p.PermohonanPPIDID).ToList();
 
-    var subTasks = await db.SubTaskPPID
-        .Where(t => ids.Contains(t.PermohonanPPIDID) && t.JenisTask == JenisTask.Observasi)
-        .ToListAsync();
+        var subTasks = await db.SubTaskPPID
+            .Where(t => ids.Contains(t.PermohonanPPIDID) && t.JenisTask == JenisTask.Observasi)
+            .ToListAsync();
 
-    var subTaskMap = subTasks.ToDictionary(t => t.PermohonanPPIDID, t => t);
+        var subTaskMap = subTasks.ToDictionary(t => t.PermohonanPPIDID, t => t);
 
-    if (filterStatus == "pending")
-        list = list.Where(p => !subTaskMap.ContainsKey(p.PermohonanPPIDID) ||
-                               subTaskMap[p.PermohonanPPIDID].IsPending).ToList();
-    else if (filterStatus == "dijadwalkan")
-        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsInProgress).ToList();
-    else if (filterStatus == "selesai")
-        list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsSelesai).ToList();
+        if (filterStatus == "pending")
+            list = list.Where(p => !subTaskMap.ContainsKey(p.PermohonanPPIDID) ||
+                                   subTaskMap[p.PermohonanPPIDID].IsPending).ToList();
+        else if (filterStatus == "dijadwalkan")
+            list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsInProgress).ToList();
+        else if (filterStatus == "selesai")
+            list = list.Where(p => subTaskMap.TryGetValue(p.PermohonanPPIDID, out var st) && st.IsSelesai).ToList();
 
-    ViewData["Q"]            = q;
-    ViewData["FilterStatus"] = filterStatus;
-    ViewData["SubTaskMap"]   = subTaskMap;
-    return View(list);
-}
+        ViewData["Q"] = q;
+        ViewData["FilterStatus"] = filterStatus;
+        ViewData["SubTaskMap"] = subTaskMap;
+        return View(list);
+    }
 
     // ══════════════════════════════════════════════════════════════════════
     // IDENTIFIKASI
@@ -235,12 +235,12 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
         if (!ModelState.IsValid) return View("DaftarPemohon", vm);
 
-        Guid   lastId = Guid.Empty;
+        Guid lastId = Guid.Empty;
         string noPerm = string.Empty;
 
         var strategy = db.Database.CreateExecutionStrategy();
-        var tempDir  = Path.Combine(Path.GetTempPath(), $"ppid_upload_{Guid.NewGuid()}");
-        var movers   = new List<(string Temp, string Final)>();
+        var tempDir = Path.Combine(Path.GetTempPath(), $"ppid_upload_{Guid.NewGuid()}");
+        var movers = new List<(string Temp, string Final)>();
 
         try
         {
@@ -259,21 +259,29 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
                     {
                         pribadi = new Pribadi
                         {
-                            NIK           = vm.NIK,   Nama     = vm.Nama,
-                            Email         = vm.Email,  Telepon  = vm.Telepon,
-                            Alamat        = vm.Alamat, RT       = vm.RT,      RW = vm.RW,
-                            KelurahanID   = vm.KelurahanID,  KecamatanID  = vm.KecamatanID,
-                            KabupatenID   = vm.KabupatenID,  NamaKelurahan = vm.NamaKelurahan,
-                            NamaKecamatan = vm.NamaKecamatan, NamaKabupaten = vm.NamaKabupaten,
-                            CreatedAt     = now, UpdatedAt = now
+                            NIK = vm.NIK,
+                            Nama = vm.Nama,
+                            Email = vm.Email,
+                            Telepon = vm.Telepon,
+                            Alamat = vm.Alamat,
+                            RT = vm.RT,
+                            RW = vm.RW,
+                            KelurahanID = vm.KelurahanID,
+                            KecamatanID = vm.KecamatanID,
+                            KabupatenID = vm.KabupatenID,
+                            NamaKelurahan = vm.NamaKelurahan,
+                            NamaKecamatan = vm.NamaKecamatan,
+                            NamaKabupaten = vm.NamaKabupaten,
+                            CreatedAt = now,
+                            UpdatedAt = now
                         };
                         db.Pribadi.Add(pribadi);
                     }
                     else
                     {
-                        pribadi.Nama      = vm.Nama;
-                        pribadi.Email     = vm.Email;
-                        pribadi.Telepon   = vm.Telepon;
+                        pribadi.Nama = vm.Nama;
+                        pribadi.Email = vm.Email;
+                        pribadi.Telepon = vm.Telepon;
                         pribadi.UpdatedAt = now;
                     }
                     await db.SaveChangesAsync();
@@ -285,48 +293,53 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
                     {
                         db.PribadiPPID.Add(new PribadiPPID
                         {
-                            PribadiID    = pribadi.PribadiID,
-                            ProvinsiID   = vm.ProvinsiID,  NamaProvinsi = vm.NamaProvinsi,
-                            NIM          = vm.NIM,         Lembaga      = vm.Lembaga,
-                            Fakultas     = vm.Fakultas,    Jurusan      = vm.Jurusan,
-                            Pekerjaan    = vm.Pekerjaan,
-                            CreatedAt    = now, UpdatedAt = now
+                            PribadiID = pribadi.PribadiID,
+                            ProvinsiID = vm.ProvinsiID,
+                            NamaProvinsi = vm.NamaProvinsi,
+                            NIM = vm.NIM,
+                            Lembaga = vm.Lembaga,
+                            Fakultas = vm.Fakultas,
+                            Jurusan = vm.Jurusan,
+                            Pekerjaan = vm.Pekerjaan,
+                            CreatedAt = now,
+                            UpdatedAt = now
                         });
                     }
                     else
                     {
-                        pribadiPPID.NIM          = vm.NIM;
-                        pribadiPPID.Lembaga      = vm.Lembaga;
-                        pribadiPPID.Fakultas     = vm.Fakultas;
-                        pribadiPPID.Jurusan      = vm.Jurusan;
-                        pribadiPPID.Pekerjaan    = vm.Pekerjaan;
-                        pribadiPPID.ProvinsiID   = vm.ProvinsiID;
+                        pribadiPPID.NIM = vm.NIM;
+                        pribadiPPID.Lembaga = vm.Lembaga;
+                        pribadiPPID.Fakultas = vm.Fakultas;
+                        pribadiPPID.Jurusan = vm.Jurusan;
+                        pribadiPPID.Pekerjaan = vm.Pekerjaan;
+                        pribadiPPID.ProvinsiID = vm.ProvinsiID;
                         pribadiPPID.NamaProvinsi = vm.NamaProvinsi;
-                        pribadiPPID.UpdatedAt    = now;
+                        pribadiPPID.UpdatedAt = now;
                     }
 
                     var permohonan = new PermohonanPPID
                     {
-                        PribadiID         = pribadi.PribadiID,
-                        NoPermohonan      = generatedNoPerm,
-                        KategoriPemohon   = vm.Kategori,
-                        LoketJenis        = vm.LoketJenis,
+                        PribadiID = pribadi.PribadiID,
+                        NoPermohonan = generatedNoPerm,
+                        KategoriPemohon = vm.Kategori,
+                        LoketJenis = vm.LoketJenis,
                         NoSuratPermohonan = vm.NoSuratPermohonan,
                         TanggalPermohonan = vm.TanggalPermohonan,
-                        BatasWaktu        = AppDbContext.HitungBatasWaktu(vm.TanggalPermohonan),
-                        Pengampu          = vm.Pengampu,
-                        TeleponPengampu   = vm.TeleponPengampu,
-                        JudulPenelitian   = vm.JudulPenelitian,
-                        LatarBelakang     = vm.LatarBelakang,
-                        TujuanPermohonan  = vm.TujuanPermohonan,
-                        IsObservasi       = vm.IsObservasi,
-                        IsWawancara       = vm.IsWawancara,
-                        IsPermintaanData  = vm.IsPermintaanData,
-                        BidangID          = bidangGuid,
-                        NamaBidang        = vm.NamaBidang,
-                        StatusPPIDID      = StatusId.TerdaftarSistem,
-                        Sequance          = nextSeq,
-                        CratedAt          = now, UpdatedAt = now
+                        BatasWaktu = AppDbContext.HitungBatasWaktu(vm.TanggalPermohonan),
+                        Pengampu = vm.Pengampu,
+                        TeleponPengampu = vm.TeleponPengampu,
+                        JudulPenelitian = vm.JudulPenelitian,
+                        LatarBelakang = vm.LatarBelakang,
+                        TujuanPermohonan = vm.TujuanPermohonan,
+                        IsObservasi = vm.IsObservasi,
+                        IsWawancara = vm.IsWawancara,
+                        IsPermintaanData = vm.IsPermintaanData,
+                        BidangID = bidangGuid,
+                        NamaBidang = vm.NamaBidang,
+                        StatusPPIDID = StatusId.TerdaftarSistem,
+                        Sequance = nextSeq,
+                        CratedAt = now,
+                        UpdatedAt = now
                     };
                     db.PermohonanPPID.Add(permohonan);
                     await db.SaveChangesAsync();
@@ -335,34 +348,34 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
                         db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
                         {
                             PermohonanPPIDID = permohonan.PermohonanPPIDID,
-                            KeperluanID      = KeperluanId.Observasi,
-                            DetailKeperluan  = vm.DetailObservasi ?? "-",
-                            CreatedAt        = now
+                            KeperluanID = KeperluanId.Observasi,
+                            DetailKeperluan = vm.DetailObservasi ?? "-",
+                            CreatedAt = now
                         });
 
                     if (vm.IsPermintaanData)
                         db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
                         {
                             PermohonanPPIDID = permohonan.PermohonanPPIDID,
-                            KeperluanID      = KeperluanId.PermintaanData,
-                            DetailKeperluan  = vm.DetailPermintaanData ?? "-",
-                            CreatedAt        = now
+                            KeperluanID = KeperluanId.PermintaanData,
+                            DetailKeperluan = vm.DetailPermintaanData ?? "-",
+                            CreatedAt = now
                         });
 
                     if (vm.IsWawancara)
                         db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
                         {
                             PermohonanPPIDID = permohonan.PermohonanPPIDID,
-                            KeperluanID      = KeperluanId.Wawancara,
-                            DetailKeperluan  = vm.DetailWawancara ?? "-",
-                            CreatedAt        = now
+                            KeperluanID = KeperluanId.Wawancara,
+                            DetailKeperluan = vm.DetailWawancara ?? "-",
+                            CreatedAt = now
                         });
 
                     Directory.CreateDirectory(tempDir);
-                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileKTP,             JenisDokumenId.KTP,             "KTP",             now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileKTP, JenisDokumenId.KTP, "KTP", now, tempDir, movers);
                     await StageDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now, tempDir, movers);
-                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileProposal,        JenisDokumenId.Proposal,        "Proposal",         now, tempDir, movers);
-                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris,     JenisDokumenId.AktaNotaris,     "Akta Notaris",     now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileProposal, JenisDokumenId.Proposal, "Proposal", now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris, JenisDokumenId.AktaNotaris, "Akta Notaris", now, tempDir, movers);
 
                     db.AddAuditLog(permohonan.PermohonanPPIDID, null, StatusId.TerdaftarSistem,
                         $"Permohonan didaftarkan loket [{vm.LoketJenis}]. Keperluan: " +
@@ -425,7 +438,7 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
         var statusLama = p.StatusPPIDID;
         p.StatusPPIDID = StatusId.IdentifikasiAwal;
-        p.UpdatedAt    = DateTime.UtcNow;
+        p.UpdatedAt = DateTime.UtcNow;
 
         db.AddAuditLog(id, statusLama, StatusId.IdentifikasiAwal,
             "Identifikasi awal diinput oleh petugas loket.", CurrentUser);
@@ -471,9 +484,9 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         return View(new UploadTTDVm
         {
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan!,
-            NamaPemohon      = p.Pribadi?.Nama ?? "",
-            LoketJenis       = p.LoketJenis ?? LoketJenis.Kepegawaian
+            NoPermohonan = p.NoPermohonan!,
+            NamaPemohon = p.Pribadi?.Nama ?? "",
+            LoketJenis = p.LoketJenis ?? LoketJenis.Kepegawaian
         });
     }
 
@@ -492,7 +505,7 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
         }
 
-        var now   = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         var error = await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD,
             JenisDokumenId.IdentifikasiSigned, "Identifikasi TTD", now);
 
@@ -504,13 +517,140 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
         var statusLama = p.StatusPPIDID;
         p.StatusPPIDID = StatusId.MenungguVerifikasi;
-        p.UpdatedAt    = now;
+        p.UpdatedAt = now;
         db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguVerifikasi,
             "Dokumen identifikasi TTD diupload, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
 
         await db.SaveChangesAsync();
         TempData["Success"] = "Dokumen berhasil diupload. Permohonan diteruskan ke Kasubkel Kepegawaian untuk verifikasi.";
         return RedirectToAction("Index");
+    }
+
+    // ── Surat Izin (dikelola Loket Kepegawaian) ───────────────────────────
+    // Setelah Kasubkel memverifikasi, Loket yang menerbitkan surat izin.
+    // Logic routing identik dengan versi Kasubkel — aktornya saja yang berubah.
+
+    [HttpGet("surat-izin/{id:guid}")]
+    public async Task<IActionResult> SuratIzin(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .Include(x => x.Detail)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        if (p.StatusPPIDID != StatusId.MenungguSuratIzin)
+        {
+            TempData["Error"] = "Surat izin hanya dapat diterbitkan pada status Menunggu Surat Izin.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(new SuratIzinVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            Kategori = p.KategoriPemohon ?? string.Empty,
+            JudulPenelitian = p.JudulPenelitian ?? string.Empty,
+            IsObservasi = p.IsObservasi,
+            IsPermintaanData = p.IsPermintaanData,
+            IsWawancara = p.IsWawancara,
+            NamaBidangList = [string.Empty],
+            DisposisiUnits = ["PSMDI"],
+        });
+    }
+
+    [HttpPost("surat-izin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SuratIzinPost(SuratIzinVm vm)
+    {
+        if (vm.FileSuratIzin == null || vm.FileSuratIzin.Length == 0)
+            ModelState.AddModelError(nameof(vm.FileSuratIzin),
+                "File surat izin wajib diupload dalam format PDF.");
+
+        if (!ModelState.IsValid) return View("SuratIzin", vm);
+
+        var now = DateTime.UtcNow;
+
+        var error = await UploadDokumen(
+            vm.PermohonanPPIDID, vm.FileSuratIzin,
+            JenisDokumenId.SuratIzin, "Surat Izin", now);
+
+        if (error is not null)
+        {
+            ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
+            return View("SuratIzin", vm);
+        }
+
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is null) return NotFound();
+
+        var statusAwal = p.StatusPPIDID;
+        p.NoSuratPermohonan = vm.NoSuratIzin;
+        p.IsObservasi = vm.IsObservasi;
+        p.IsPermintaanData = vm.IsPermintaanData;
+        p.IsWawancara = vm.IsWawancara;
+        p.StatusPPIDID = StatusId.SuratIzinTerbit;
+        p.UpdatedAt = now;
+
+        db.AddAuditLog(vm.PermohonanPPIDID, statusAwal, StatusId.SuratIzinTerbit,
+            $"Surat izin diterbitkan oleh Loket Kepegawaian: {vm.NoSuratIzin}.",
+            CurrentUser);
+
+        // ── Buat sub-tugas Obs/Waw — dieksekusi oleh Loket Kepegawaian ───
+        if (vm.IsObservasi || vm.IsWawancara)
+        {
+            var existingObsWaw = await db.SubTaskPPID
+                .CountAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
+                              && (t.JenisTask == JenisTask.Observasi
+                               || t.JenisTask == JenisTask.Wawancara));
+
+            if (existingObsWaw == 0)
+                db.CreateSubTasks(
+                    vm.PermohonanPPIDID,
+                    perluData: false,
+                    perluObs: vm.IsObservasi,
+                    perluWaw: vm.IsWawancara,
+                    operatorName: CurrentUser);
+        }
+
+        // ── Routing status berdasarkan keperluan ──────────────────────────
+        int statusTujuan;
+        string routeKet;
+        string successMsg;
+
+        if (vm.IsPermintaanData)
+        {
+            p.StatusPPIDID = StatusId.Didisposisi;
+            p.NamaBidang = vm.NamaBidangPrimary;
+            statusTujuan = StatusId.Didisposisi;
+            routeKet = $"Surat izin terbit (Loket Kepegawaian). " +
+                       $"Permintaan Data → disposisi KDI (bidang: {p.NamaBidang ?? "PSMDI"})." +
+                       (vm.IsObservasi || vm.IsWawancara
+                           ? " Obs/Waw → dikelola Loket Kepegawaian (paralel)."
+                           : "");
+            successMsg = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
+                         $"Permintaan Data diteruskan KDI ({p.NamaBidang ?? "PSMDI"})." +
+                         (vm.IsObservasi || vm.IsWawancara
+                             ? " Obs/Waw dikelola Loket secara paralel."
+                             : "");
+        }
+        else
+        {
+            // Hanya Obs/Waw → langsung DiProses
+            p.StatusPPIDID = StatusId.DiProses;
+            statusTujuan = StatusId.DiProses;
+            routeKet = "Surat izin terbit (Loket Kepegawaian). Obs/Waw-only → dikelola Loket.";
+            successMsg = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
+                             "Obs/Waw dikelola langsung oleh Loket Kepegawaian.";
+        }
+
+        db.AddAuditLog(vm.PermohonanPPIDID, StatusId.SuratIzinTerbit, statusTujuan,
+            routeKet, CurrentUser);
+
+        await db.SaveChangesAsync();
+        TempData["Success"] = successMsg;
+        return RedirectToAction(nameof(Index));
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -548,8 +688,8 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             .ToListAsync();
 
         ViewData["TugasDocs"] = tugasDocs;
-        ViewData["KdiTask"]   = kdiTask;
-        ViewData["Prefix"]    = "petugas-loket";
+        ViewData["KdiTask"] = kdiTask;
+        ViewData["Prefix"] = "petugas-loket";
 
         return View(new ParallelTasksVm { Permohonan = p, SubTasks = tasks });
     }
@@ -567,19 +707,19 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", new JadwalSubTaskVm
         {
-            SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
-            PermohonanPPIDID  = id,
-            NoPermohonan      = p.NoPermohonan    ?? string.Empty,
-            NamaPemohon       = p.Pribadi?.Nama   ?? string.Empty,
-            JudulPenelitian   = p.JudulPenelitian ?? string.Empty,
-            JenisTask         = JenisTask.Observasi,
+            SubTaskID = sub?.SubTaskID ?? Guid.Empty,
+            PermohonanPPIDID = id,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian = p.JudulPenelitian ?? string.Empty,
+            JenisTask = JenisTask.Observasi,
             NamaBidangTerkait = p.NamaBidang,
-            Tanggal           = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
-            Waktu             = sub?.WaktuJadwal   ?? new TimeOnly(9, 0),
-            NamaPIC           = sub?.NamaPIC       ?? string.Empty,
-            TeleponPIC        = sub?.TeleponPIC,
-            LokasiJenis       = sub?.LokasiJenis   ?? "Offline",
-            LokasiDetail      = sub?.LokasiDetail,
+            Tanggal = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
+            Waktu = sub?.WaktuJadwal ?? new TimeOnly(9, 0),
+            NamaPIC = sub?.NamaPIC ?? string.Empty,
+            TeleponPIC = sub?.TeleponPIC,
+            LokasiJenis = sub?.LokasiJenis ?? "Offline",
+            LokasiDetail = sub?.LokasiDetail,
         });
     }
 
@@ -594,14 +734,14 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
-            JenisJadwal      = "Observasi",
-            Tanggal          = vm.Tanggal,
-            Waktu            = vm.Waktu,
-            NamaPIC          = vm.NamaPIC,
-            TeleponPIC       = vm.TeleponPIC,
-            LokasiJenis      = vm.LokasiJenis,
-            LokasiDetail     = vm.LokasiDetail,
-            CreatedAt        = now
+            JenisJadwal = "Observasi",
+            Tanggal = vm.Tanggal,
+            Waktu = vm.Waktu,
+            NamaPIC = vm.NamaPIC,
+            TeleponPIC = vm.TeleponPIC,
+            LokasiJenis = vm.LokasiJenis,
+            LokasiDetail = vm.LokasiDetail,
+            CreatedAt = now
         });
 
         var sub = vm.SubTaskID != Guid.Empty
@@ -610,15 +750,15 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
         if (sub is not null)
         {
-            sub.StatusTask    = SubTaskStatus.InProgress;
+            sub.StatusTask = SubTaskStatus.InProgress;
             sub.TanggalJadwal = vm.Tanggal;
-            sub.WaktuJadwal   = vm.Waktu;
-            sub.NamaPIC       = vm.NamaPIC;
-            sub.TeleponPIC    = vm.TeleponPIC;
-            sub.LokasiJenis   = vm.LokasiJenis;
-            sub.LokasiDetail  = vm.LokasiDetail;
-            sub.Operator      = CurrentUser;
-            sub.UpdatedAt     = now;
+            sub.WaktuJadwal = vm.Waktu;
+            sub.NamaPIC = vm.NamaPIC;
+            sub.TeleponPIC = vm.TeleponPIC;
+            sub.LokasiJenis = vm.LokasiJenis;
+            sub.LokasiDetail = vm.LokasiDetail;
+            sub.Operator = CurrentUser;
+            sub.UpdatedAt = now;
         }
 
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
@@ -657,16 +797,16 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
         {
-            SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
+            SubTaskID = sub?.SubTaskID ?? Guid.Empty,
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
-            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
-            JenisTask        = JenisTask.Observasi,
-            TanggalJadwal    = sub?.TanggalJadwal,
-            WaktuJadwal      = sub?.WaktuJadwal,
-            NamaPIC          = sub?.NamaPIC,
-            TeleponPIC       = sub?.TeleponPIC,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian = p.JudulPenelitian ?? string.Empty,
+            JenisTask = JenisTask.Observasi,
+            TanggalJadwal = sub?.TanggalJadwal,
+            WaktuJadwal = sub?.WaktuJadwal,
+            NamaPIC = sub?.NamaPIC,
+            TeleponPIC = sub?.TeleponPIC,
         });
     }
 
@@ -674,11 +814,11 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
     public async Task<IActionResult> SelesaiObservasiPost(SelesaiSubTaskVm vm)
     {
         var now = DateTime.UtcNow;
-        var p   = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p is null) return NotFound();
 
-        var lama     = p.StatusPPIDID;
-        string? fp   = null;
+        var lama = p.StatusPPIDID;
+        string? fp = null;
         string? nama = null;
 
         if (vm.FileHasil?.Length > 0)
@@ -688,16 +828,16 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             var fn = $"observasi_{Path.GetFileName(vm.FileHasil.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileHasil.CopyToAsync(s);
-            fp   = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+            fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
             nama = vm.FileHasil.FileName;
 
             db.DokumenPPID.Add(new DokumenPPID
             {
-                PermohonanPPIDID   = vm.PermohonanPPIDID,
-                NamaDokumenPPID    = "Hasil Observasi",
-                UploadDokumenPPID  = fp,
+                PermohonanPPIDID = vm.PermohonanPPIDID,
+                NamaDokumenPPID = "Hasil Observasi",
+                UploadDokumenPPID = fp,
                 JenisDokumenPPIDID = JenisDokumenId.DataHasil,
-                CreatedAt          = now
+                CreatedAt = now
             });
         }
 
@@ -708,12 +848,12 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         if (sub is not null)
         {
             sub.StatusTask = SubTaskStatus.Selesai;
-            sub.FilePath   = fp;
-            sub.NamaFile   = nama;
-            sub.Catatan    = vm.Catatan;
-            sub.Operator   = CurrentUser;
-            sub.SelesaiAt  = now;
-            sub.UpdatedAt  = now;
+            sub.FilePath = fp;
+            sub.NamaFile = nama;
+            sub.Catatan = vm.Catatan;
+            sub.Operator = CurrentUser;
+            sub.SelesaiAt = now;
+            sub.UpdatedAt = now;
         }
 
         p.UpdatedAt = now;
@@ -744,25 +884,25 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p is null) return NotFound();
 
-        var sub       = await db.GetSubTask(id, JenisTask.Wawancara);
+        var sub = await db.GetSubTask(id, JenisTask.Wawancara);
         var detailWaw = p.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara);
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", new JadwalSubTaskVm
         {
-            SubTaskID         = sub?.SubTaskID ?? Guid.Empty,
-            PermohonanPPIDID  = id,
-            NoPermohonan      = p.NoPermohonan    ?? string.Empty,
-            NamaPemohon       = p.Pribadi?.Nama   ?? string.Empty,
-            JudulPenelitian   = p.JudulPenelitian ?? string.Empty,
-            JenisTask         = JenisTask.Wawancara,
-            DetailKeperluan   = detailWaw?.DetailKeperluan,
+            SubTaskID = sub?.SubTaskID ?? Guid.Empty,
+            PermohonanPPIDID = id,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian = p.JudulPenelitian ?? string.Empty,
+            JenisTask = JenisTask.Wawancara,
+            DetailKeperluan = detailWaw?.DetailKeperluan,
             NamaBidangTerkait = p.NamaBidang ?? p.NamaProdusenData,
-            Tanggal           = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
-            Waktu             = sub?.WaktuJadwal   ?? new TimeOnly(9, 0),
-            NamaPIC           = sub?.NamaPIC       ?? string.Empty,
-            TeleponPIC        = sub?.TeleponPIC,
-            LokasiJenis       = sub?.LokasiJenis   ?? "Offline",
-            LokasiDetail      = sub?.LokasiDetail,
+            Tanggal = sub?.TanggalJadwal ?? DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
+            Waktu = sub?.WaktuJadwal ?? new TimeOnly(9, 0),
+            NamaPIC = sub?.NamaPIC ?? string.Empty,
+            TeleponPIC = sub?.TeleponPIC,
+            LokasiJenis = sub?.LokasiJenis ?? "Offline",
+            LokasiDetail = sub?.LokasiDetail,
         });
     }
 
@@ -775,20 +915,20 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p is null) return NotFound();
 
-        var now  = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         var lama = p.StatusPPIDID;
 
         db.JadwalPPID.Add(new JadwalPPID
         {
             PermohonanPPIDID = vm.PermohonanPPIDID,
-            JenisJadwal      = "Wawancara",
-            Tanggal          = vm.Tanggal,
-            Waktu            = vm.Waktu,
-            NamaPIC          = vm.NamaPIC,
-            TeleponPIC       = vm.TeleponPIC,
-            LokasiJenis      = vm.LokasiJenis,
-            LokasiDetail     = vm.LokasiDetail,
-            CreatedAt        = now
+            JenisJadwal = "Wawancara",
+            Tanggal = vm.Tanggal,
+            Waktu = vm.Waktu,
+            NamaPIC = vm.NamaPIC,
+            TeleponPIC = vm.TeleponPIC,
+            LokasiJenis = vm.LokasiJenis,
+            LokasiDetail = vm.LokasiDetail,
+            CreatedAt = now
         });
 
         var sub = vm.SubTaskID != Guid.Empty
@@ -797,15 +937,15 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
         if (sub is not null)
         {
-            sub.StatusTask    = SubTaskStatus.InProgress;
+            sub.StatusTask = SubTaskStatus.InProgress;
             sub.TanggalJadwal = vm.Tanggal;
-            sub.WaktuJadwal   = vm.Waktu;
-            sub.NamaPIC       = vm.NamaPIC;
-            sub.TeleponPIC    = vm.TeleponPIC;
-            sub.LokasiJenis   = vm.LokasiJenis;
-            sub.LokasiDetail  = vm.LokasiDetail;
-            sub.Operator      = CurrentUser;
-            sub.UpdatedAt     = now;
+            sub.WaktuJadwal = vm.Waktu;
+            sub.NamaPIC = vm.NamaPIC;
+            sub.TeleponPIC = vm.TeleponPIC;
+            sub.LokasiJenis = vm.LokasiJenis;
+            sub.LokasiDetail = vm.LokasiDetail;
+            sub.Operator = CurrentUser;
+            sub.UpdatedAt = now;
         }
 
         bool isWawOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
@@ -839,16 +979,16 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
         {
-            SubTaskID        = sub?.SubTaskID ?? Guid.Empty,
+            SubTaskID = sub?.SubTaskID ?? Guid.Empty,
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
-            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
-            JenisTask        = JenisTask.Wawancara,
-            TanggalJadwal    = sub?.TanggalJadwal,
-            WaktuJadwal      = sub?.WaktuJadwal,
-            NamaPIC          = sub?.NamaPIC,
-            TeleponPIC       = sub?.TeleponPIC,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian = p.JudulPenelitian ?? string.Empty,
+            JenisTask = JenisTask.Wawancara,
+            TanggalJadwal = sub?.TanggalJadwal,
+            WaktuJadwal = sub?.WaktuJadwal,
+            NamaPIC = sub?.NamaPIC,
+            TeleponPIC = sub?.TeleponPIC,
         });
     }
 
@@ -856,11 +996,11 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
     public async Task<IActionResult> SelesaiWawancaraPost(SelesaiSubTaskVm vm)
     {
         var now = DateTime.UtcNow;
-        var p   = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p is null) return NotFound();
 
-        var lama     = p.StatusPPIDID;
-        string? fp   = null;
+        var lama = p.StatusPPIDID;
+        string? fp = null;
         string? nama = null;
 
         if (vm.FileHasil?.Length > 0)
@@ -870,16 +1010,16 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             var fn = $"wawancara_{Path.GetFileName(vm.FileHasil.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileHasil.CopyToAsync(s);
-            fp   = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+            fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
             nama = vm.FileHasil.FileName;
 
             db.DokumenPPID.Add(new DokumenPPID
             {
-                PermohonanPPIDID   = vm.PermohonanPPIDID,
-                NamaDokumenPPID    = "Hasil Wawancara",
-                UploadDokumenPPID  = fp,
+                PermohonanPPIDID = vm.PermohonanPPIDID,
+                NamaDokumenPPID = "Hasil Wawancara",
+                UploadDokumenPPID = fp,
                 JenisDokumenPPIDID = JenisDokumenId.DataHasil,
-                CreatedAt          = now
+                CreatedAt = now
             });
         }
 
@@ -890,12 +1030,12 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         if (sub is not null)
         {
             sub.StatusTask = SubTaskStatus.Selesai;
-            sub.FilePath   = fp;
-            sub.NamaFile   = nama;
-            sub.Catatan    = vm.Catatan;
-            sub.Operator   = CurrentUser;
-            sub.SelesaiAt  = now;
-            sub.UpdatedAt  = now;
+            sub.FilePath = fp;
+            sub.NamaFile = nama;
+            sub.Catatan = vm.Catatan;
+            sub.Operator = CurrentUser;
+            sub.SelesaiAt = now;
+            sub.UpdatedAt = now;
         }
 
         p.UpdatedAt = now;
@@ -948,19 +1088,19 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         return View("~/Views/KasubkelKdi/RescheduleSubTask.cshtml", new RescheduleSubTaskVm
         {
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
-            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
-            JenisTask        = jenisTask,
-            TanggalLama      = sub.TanggalJadwal,
-            WaktuLama        = sub.WaktuJadwal,
-            NamaPICLama      = sub.NamaPIC,
-            RescheduleCount  = sub.RescheduleCount,
-            TanggalBaru      = DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
-            WaktuBaru        = sub.WaktuJadwal ?? new TimeOnly(9, 0),
-            NamaPICBaru      = sub.NamaPIC     ?? string.Empty,
-            TeleponPICBaru   = sub.TeleponPIC,
-            LokasiJenisLama  = sub.LokasiJenis,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian = p.JudulPenelitian ?? string.Empty,
+            JenisTask = jenisTask,
+            TanggalLama = sub.TanggalJadwal,
+            WaktuLama = sub.WaktuJadwal,
+            NamaPICLama = sub.NamaPIC,
+            RescheduleCount = sub.RescheduleCount,
+            TanggalBaru = DateOnly.FromDateTime(DateTime.Today.AddDays(3)),
+            WaktuBaru = sub.WaktuJadwal ?? new TimeOnly(9, 0),
+            NamaPICBaru = sub.NamaPIC ?? string.Empty,
+            TeleponPICBaru = sub.TeleponPIC,
+            LokasiJenisLama = sub.LokasiJenis,
             LokasiDetailLama = sub.LokasiDetail,
         });
     }
@@ -1026,7 +1166,7 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             return RedirectToAction(nameof(SubTasks), new { id });
         }
 
-        var allTasks    = await db.SubTaskPPID
+        var allTasks = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == id &&
                         (t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara))
             .ToListAsync();
@@ -1036,12 +1176,12 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/BatalSubTask.cshtml", new BatalSubTaskVm
         {
-            PermohonanPPIDID   = id,
-            NoPermohonan       = p.NoPermohonan  ?? string.Empty,
-            NamaPemohon        = p.Pribadi?.Nama ?? string.Empty,
-            JenisTask          = jenisTask,
-            StatusSaatIni      = SubTaskStatus.GetLabel(sub.StatusTask),
-            AkanAdvanceStatus  = allOtherDone && !sub.IsSelesai,
+            PermohonanPPIDID = id,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JenisTask = jenisTask,
+            StatusSaatIni = SubTaskStatus.GetLabel(sub.StatusTask),
+            AkanAdvanceStatus = allOtherDone && !sub.IsSelesai,
             AkanRollbackStatus = sub.IsSelesai && (
                 p.StatusPPIDID == StatusId.DataSiap ||
                 p.StatusPPIDID == StatusId.FeedbackPemohon ||
@@ -1075,7 +1215,7 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
         await db.SaveChangesAsync();
 
-        bool advanced   = false;
+        bool advanced = false;
         bool rolledBack = false;
 
         if (wasSelesai && statusWasTerminal)
@@ -1083,9 +1223,9 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
             if (p is not null)
             {
-                var lama       = p.StatusPPIDID;
+                var lama = p.StatusPPIDID;
                 p.StatusPPIDID = StatusId.DiProses;
-                p.UpdatedAt    = DateTime.UtcNow;
+                p.UpdatedAt = DateTime.UtcNow;
                 db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
                     $"Status di-rollback ke DiProses karena {JenisTask.GetLabel(vm.JenisTask)} " +
                     $"dibatalkan (Loket). Alasan: {vm.AlasanBatal}", CurrentUser);
@@ -1135,11 +1275,11 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/ReopenSubTask.cshtml", new ReopenSubTaskVm
         {
-            PermohonanPPIDID     = id,
-            NoPermohonan         = p.NoPermohonan  ?? string.Empty,
-            NamaPemohon          = p.Pribadi?.Nama ?? string.Empty,
-            JenisTask            = jenisTask,
-            StatusSaatIni        = p.StatusPPIDID ?? StatusId.TerdaftarSistem,
+            PermohonanPPIDID = id,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JenisTask = jenisTask,
+            StatusSaatIni = p.StatusPPIDID ?? StatusId.TerdaftarSistem,
             StatusAkanDiRollback = needsRollback,
         });
     }
@@ -1170,9 +1310,9 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
             var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
             if (p is not null)
             {
-                var lama       = p.StatusPPIDID;
+                var lama = p.StatusPPIDID;
                 p.StatusPPIDID = StatusId.DiProses;
-                p.UpdatedAt    = DateTime.UtcNow;
+                p.UpdatedAt = DateTime.UtcNow;
                 db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
                     $"Status di-rollback ke DiProses karena {JenisTask.GetLabel(vm.JenisTask)} " +
                     $"di-reopen (Loket). Alasan: {vm.AlasanReopen}", CurrentUser);
@@ -1211,12 +1351,12 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         return View("~/Views/KasubkelKdi/UpdatePIC.cshtml", new UpdatePICVm
         {
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan  ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama ?? string.Empty,
-            JenisTask        = jenisTask,
-            NamaPICSaatIni   = sub.NamaPIC,
-            NamaPICBaru      = sub.NamaPIC     ?? string.Empty,
-            TeleponPICBaru   = sub.TeleponPIC,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            JenisTask = jenisTask,
+            NamaPICSaatIni = sub.NamaPIC,
+            NamaPICBaru = sub.NamaPIC ?? string.Empty,
+            TeleponPICBaru = sub.TeleponPIC,
         });
     }
 
@@ -1276,8 +1416,8 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         return View("~/Views/KasubkelKepegawaian/HasilFeedback.cshtml", new HasilFeedbackVm
         {
             Permohonan = p,
-            Feedbacks  = feedbacks,
-            SubTasks   = subTasks,
+            Feedbacks = feedbacks,
+            SubTasks = subTasks,
         });
     }
 
@@ -1321,18 +1461,18 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         return View(new EditPermohonanVm
         {
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan ?? "",
-            NamaPemohon      = p.Pribadi?.Nama ?? "",
-            LoketJenis       = p.LoketJenis ?? LoketJenis.Kepegawaian,
-            JudulPenelitian  = p.JudulPenelitian ?? "",
-            LatarBelakang    = p.LatarBelakang ?? "",
+            NoPermohonan = p.NoPermohonan ?? "",
+            NamaPemohon = p.Pribadi?.Nama ?? "",
+            LoketJenis = p.LoketJenis ?? LoketJenis.Kepegawaian,
+            JudulPenelitian = p.JudulPenelitian ?? "",
+            LatarBelakang = p.LatarBelakang ?? "",
             TujuanPermohonan = p.TujuanPermohonan ?? "",
-            Pengampu         = p.Pengampu,
-            TeleponPengampu  = p.TeleponPengampu,
-            BatasWaktu       = p.BatasWaktu,
-            IsObservasi      = p.IsObservasi,
+            Pengampu = p.Pengampu,
+            TeleponPengampu = p.TeleponPengampu,
+            BatasWaktu = p.BatasWaktu,
+            IsObservasi = p.IsObservasi,
             IsPermintaanData = p.IsPermintaanData,
-            IsWawancara      = p.IsWawancara,
+            IsWawancara = p.IsWawancara,
         });
     }
 
@@ -1344,16 +1484,16 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
-        p.JudulPenelitian  = vm.JudulPenelitian;
-        p.LatarBelakang    = vm.LatarBelakang;
+        p.JudulPenelitian = vm.JudulPenelitian;
+        p.LatarBelakang = vm.LatarBelakang;
         p.TujuanPermohonan = vm.TujuanPermohonan;
-        p.Pengampu         = vm.Pengampu;
-        p.TeleponPengampu  = vm.TeleponPengampu;
-        p.BatasWaktu       = vm.BatasWaktu;
-        p.IsObservasi      = vm.IsObservasi;
+        p.Pengampu = vm.Pengampu;
+        p.TeleponPengampu = vm.TeleponPengampu;
+        p.BatasWaktu = vm.BatasWaktu;
+        p.IsObservasi = vm.IsObservasi;
         p.IsPermintaanData = vm.IsPermintaanData;
-        p.IsWawancara      = vm.IsWawancara;
-        p.UpdatedAt        = DateTime.UtcNow;
+        p.IsWawancara = vm.IsWawancara;
+        p.UpdatedAt = DateTime.UtcNow;
 
         db.AddAuditLog(vm.PermohonanPPIDID, p.StatusPPIDID,
             p.StatusPPIDID ?? StatusId.TerdaftarSistem,
@@ -1389,15 +1529,15 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
         return View(new BatalkanPermohonanVm
         {
-            PermohonanPPIDID   = id,
-            NoPermohonan       = p.NoPermohonan    ?? string.Empty,
-            NamaPemohon        = p.Pribadi?.Nama   ?? string.Empty,
-            Kategori           = p.KategoriPemohon ?? string.Empty,
-            JudulPenelitian    = p.JudulPenelitian ?? string.Empty,
-            StatusPPIDID       = p.StatusPPIDID    ?? StatusId.TerdaftarSistem,
-            StatusLabel        = p.Status?.NamaStatusPPID ?? "—",
-            AdaSubTasks        = subTasks.Count > 0,
-            JumlahSubTasks     = subTasks.Count,
+            PermohonanPPIDID = id,
+            NoPermohonan = p.NoPermohonan ?? string.Empty,
+            NamaPemohon = p.Pribadi?.Nama ?? string.Empty,
+            Kategori = p.KategoriPemohon ?? string.Empty,
+            JudulPenelitian = p.JudulPenelitian ?? string.Empty,
+            StatusPPIDID = p.StatusPPIDID ?? StatusId.TerdaftarSistem,
+            StatusLabel = p.Status?.NamaStatusPPID ?? "—",
+            AdaSubTasks = subTasks.Count > 0,
+            JumlahSubTasks = subTasks.Count,
         });
     }
 
@@ -1413,14 +1553,14 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
 
             if (pReload is not null)
             {
-                vm.StatusLabel     = pReload.Status?.NamaStatusPPID ?? "—";
+                vm.StatusLabel = pReload.Status?.NamaStatusPPID ?? "—";
                 vm.JudulPenelitian = pReload.JudulPenelitian ?? string.Empty;
-                vm.Kategori        = pReload.KategoriPemohon ?? string.Empty;
+                vm.Kategori = pReload.KategoriPemohon ?? string.Empty;
 
                 var subCount = await db.SubTaskPPID
                     .CountAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
                                   && t.StatusTask != SubTaskStatus.Dibatalkan);
-                vm.AdaSubTasks    = subCount > 0;
+                vm.AdaSubTasks = subCount > 0;
                 vm.JumlahSubTasks = subCount;
             }
             return View("Batalkan", vm);
@@ -1479,9 +1619,9 @@ public async Task<IActionResult> Observasi(string? q, string? filterStatus)
         ViewData["Q"] = q;
         return View("~/Views/MenuData/Index.cshtml", new MenuDataVm
         {
-            List       = list,
+            List = list,
             LoketJenis = LoketJenis.Kepegawaian,
-            Judul      = "Data Permohonan — Loket Kepegawaian"
+            Judul = "Data Permohonan — Loket Kepegawaian"
         });
     }
 

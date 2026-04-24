@@ -13,33 +13,29 @@
     var needsSurat = menunggu.Where(p => p.StatusPPIDID == StatusId.MenungguSuratIzin).ToList();
 }
 
-<!-- Alert: surat izin menunggu -->
+@* Alert: surat izin — informasikan ke Loket (bukan Kasubkel lagi) *@
 @if (needsSurat.Any())
 {
-    <div class="bg-blue-50 border border-blue-300 rounded-2xl p-4 mb-5 flex items-start gap-3">
-        <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+    <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
+        <div class="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
             <span class="text-white text-sm">📄</span>
         </div>
         <div>
-            <p class="font-bold text-blue-800 text-sm">@needsSurat.Count permohonan menunggu Surat Izin</p>
-            <p class="text-blue-600 text-xs mt-0.5">
-                Sudah diverifikasi — segera terbitkan surat izin.
-                Setelah diterbitkan, sub-tugas Obs/Waw otomatis dibuat untuk dikelola Loket Kepegawaian.
+            <p class="font-bold text-blue-800 text-sm">@needsSurat.Count permohonan siap — menunggu Surat Izin dari Loket Kepegawaian</p>
+            <p class="text-blue-600 text-xs mt-0.5 leading-relaxed">
+                Verifikasi selesai. Penerbitan surat izin dilakukan oleh
+                <strong>Loket Kepegawaian</strong>. Informasikan ke petugas loket untuk memproses.
             </p>
             <div class="flex flex-wrap gap-2 mt-2">
                 @foreach (var p in needsSurat.Take(3))
                 {
-                    <a href="/kasubkel-kepegawaian/surat-izin/@p.PermohonanPPIDID"
-                       class="inline-flex items-center gap-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                        📄 @p.NoPermohonan
-                    </a>
+                    <span class="inline-flex items-center gap-1.5 text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 px-3 py-1.5 rounded-lg">
+                        📋 @p.NoPermohonan
+                    </span>
                 }
                 @if (needsSurat.Count > 3)
                 {
-                    <a href="/kasubkel-kepegawaian/permohonan?status=4"
-                       class="text-xs font-semibold text-blue-600 hover:underline self-center">
-                        + @(needsSurat.Count - 3) lainnya →
-                    </a>
+                    <span class="text-xs font-semibold text-blue-600 self-center">+ @(needsSurat.Count - 3) lainnya</span>
                 }
             </div>
         </div>
