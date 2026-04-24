@@ -191,136 +191,19 @@ public class KasubkelKepegawaianController(
     }
 
     // ── Surat Izin ────────────────────────────────────────────────────────
+// ── Surat Izin — DIKELOLA OLEH LOKET KEPEGAWAIAN ─────────────────────
+// Penerbitan surat izin dipindahkan sepenuhnya ke PetugasLoketController.
+// Kasubkel hanya bertugas verifikasi identifikasi awal.
+// Route ini sengaja dikembalikan sebagai redirect agar tidak bisa diakses.
 
-    [HttpGet("surat-izin/{id:guid}")]
-    public async Task<IActionResult> SuratIzin(Guid id)
-    {
-        var p = await db.PermohonanPPID
-            .Include(x => x.Pribadi)
-            .Include(x => x.Detail)
-            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-
-        if (p is null) return NotFound();
-
-        if (p.StatusPPIDID != StatusId.MenungguSuratIzin)
-        {
-            TempData["Error"] = "Surat izin hanya dapat diterbitkan pada status Menunggu Surat Izin.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        return View(new SuratIzinVm
-        {
-            PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
-            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
-            Kategori         = p.KategoriPemohon ?? string.Empty,
-            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
-            IsObservasi      = p.IsObservasi,
-            IsPermintaanData = p.IsPermintaanData,
-            IsWawancara      = p.IsWawancara,
-            NamaBidangList   = [string.Empty],
-            DisposisiUnits   = ["PSMDI"],
-        });
-    }
-
-    [HttpPost("surat-izin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> SuratIzinPost(SuratIzinVm vm)
-    {
-        if (vm.FileSuratIzin == null || vm.FileSuratIzin.Length == 0)
-        {
-            ModelState.AddModelError(nameof(vm.FileSuratIzin),
-                "File surat izin wajib diupload dalam format PDF.");
-        }
-
-        if (!ModelState.IsValid) return View("SuratIzin", vm);
-
-        var now = DateTime.UtcNow;
-
-        var error = await UploadDokumen(
-            vm.PermohonanPPIDID, vm.FileSuratIzin,
-            JenisDokumenId.SuratIzin, "Surat Izin", now);
-
-        if (error is not null)
-        {
-            ModelState.AddModelError(nameof(vm.FileSuratIzin), error);
-            return View("SuratIzin", vm);
-        }
-
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p is null) return NotFound();
-
-        var statusAwal = p.StatusPPIDID;
-
-        p.NoSuratPermohonan = vm.NoSuratIzin;
-        p.IsObservasi        = vm.IsObservasi;
-        p.IsPermintaanData   = vm.IsPermintaanData;
-        p.IsWawancara        = vm.IsWawancara;
-        p.StatusPPIDID       = StatusId.SuratIzinTerbit;
-        p.UpdatedAt          = now;
-
-        db.AddAuditLog(vm.PermohonanPPIDID, statusAwal, StatusId.SuratIzinTerbit,
-            $"Surat izin diterbitkan: {vm.NoSuratIzin}.",
-            CurrentUser);
-
-        // ── Buat sub-tugas Obs/Waw untuk dikelola Loket Kepegawaian ──────
-        // PermintaanData dibuat KDI saat menerima disposisi.
-        // Obs/Waw dibuat di sini namun dieksekusi/dijadwalkan oleh Loket.
-        if (vm.IsObservasi || vm.IsWawancara)
-        {
-            var existingObsWaw = await db.SubTaskPPID
-                .CountAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
-                              && (t.JenisTask == JenisTask.Observasi
-                               || t.JenisTask == JenisTask.Wawancara));
-
-            if (existingObsWaw == 0)
-                db.CreateSubTasks(
-                    vm.PermohonanPPIDID,
-                    perluData: false,
-                    perluObs:  vm.IsObservasi,
-                    perluWaw:  vm.IsWawancara,
-                    operatorName: CurrentUser);
-        }
-
-        // ── Routing status berdasarkan keperluan ──────────────────────────
-        int    statusTujuan;
-        string routeKet;
-        string successMsg;
-
-        if (vm.IsPermintaanData)
-        {
-            // Ada komponen data → disposisi ke KDI
-            // Obs/Waw (jika ada) berjalan paralel, dikelola Loket
-            p.StatusPPIDID = StatusId.Didisposisi;
-            p.NamaBidang   = vm.NamaBidangPrimary;
-            statusTujuan   = StatusId.Didisposisi;
-            routeKet = $"Permintaan Data → disposisi KDI (bidang: {p.NamaBidang ?? "PSMDI"})." +
-                       (vm.IsObservasi || vm.IsWawancara
-                           ? " Obs/Waw → dikelola Loket Kepegawaian (paralel)."
-                           : "");
-            successMsg = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
-                         $"Permintaan Data diteruskan KDI ({p.NamaBidang ?? "PSMDI"})." +
-                         (vm.IsObservasi || vm.IsWawancara
-                             ? " Obs/Waw dikelola Loket Kepegawaian secara paralel."
-                             : "");
-        }
-        else
-        {
-            // Hanya Obs/Waw → langsung ke DiProses, dikelola Loket
-            p.StatusPPIDID = StatusId.DiProses;
-            statusTujuan   = StatusId.DiProses;
-            routeKet       = "Obs/Waw-only → dikelola Loket Kepegawaian. Tidak ada disposisi KDI.";
-            successMsg     = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
-                             "Obs/Waw dikelola langsung oleh Loket Kepegawaian.";
-        }
-
-        db.AddAuditLog(vm.PermohonanPPIDID, StatusId.SuratIzinTerbit, statusTujuan,
-            routeKet, CurrentUser);
-
-        await db.SaveChangesAsync();
-
-        TempData["Success"] = successMsg;
-        return RedirectToAction(nameof(Index));
-    }
+[HttpGet("surat-izin/{id:guid}")]
+public IActionResult SuratIzin(Guid id)
+{
+    TempData["Error"] =
+        "Penerbitan surat izin dilakukan oleh <strong>Loket Kepegawaian</strong>. " +
+        "Informasikan ke petugas loket untuk melanjutkan proses.";
+    return RedirectToAction(nameof(Index));
+}
 
     // ── Hasil Feedback (view-only) ────────────────────────────────────────
 
