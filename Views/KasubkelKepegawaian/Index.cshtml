@@ -47,9 +47,9 @@
     <span class="text-teal-500 flex-shrink-0 mt-0.5">ℹ️</span>
     <p class="text-xs text-teal-700 leading-relaxed">
         <strong>Alur baru:</strong> Sub-tugas Observasi &amp; Wawancara kini dijadwalkan dan dikelola oleh
-        <strong>Loket Kepegawaian</strong>. Kasubkel fokus pada verifikasi identifikasi dan penerbitan surat izin.
-        Pantau progres Obs/Waw di
-        <a href="/petugas-loket" class="underline font-semibold">dashboard Loket</a>.
+        <strong>Loket Kepegawaian</strong>. Penerbitan <strong>Surat Izin</strong> juga dilakukan oleh Loket Kepegawaian.
+        Kasubkel fokus pada <strong>verifikasi identifikasi</strong> saja.
+        Pantau progres di <a href="/petugas-loket" class="underline font-semibold">dashboard Loket</a>.
     </p>
 </div>
 
@@ -89,18 +89,18 @@
     </div>
 </div>
 
-<!-- Antrian Verifikasi + Surat Izin -->
+<!-- Antrian Verifikasi SAJA (Surat Izin sudah dipindah ke Loket) -->
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
     <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
         <div>
-            <p class="font-bold text-gray-700 text-sm">Antrian Tindak Lanjut Kasubkel</p>
-            <p class="text-xs text-gray-400 mt-0.5">Verifikasi form identifikasi &amp; penerbitan surat izin</p>
+            <p class="font-bold text-gray-700 text-sm">Antrian Verifikasi Identifikasi</p>
+            <p class="text-xs text-gray-400 mt-0.5">Hanya verifikasi form identifikasi — surat izin diproses Loket Kepegawaian</p>
         </div>
         <div class="flex items-center gap-2">
             @if (needsVerif.Any())
-            { <span class="bg-violet-100 text-violet-700 text-xs font-bold px-2.5 py-1 rounded-full">@needsVerif.Count verifikasi</span> }
+            { <span class="bg-violet-100 text-violet-700 text-xs font-bold px-2.5 py-1 rounded-full">@needsVerif.Count perlu verifikasi</span> }
             @if (needsSurat.Any())
-            { <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">@needsSurat.Count surat izin</span> }
+            { <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">@needsSurat.Count menunggu Loket</span> }
         </div>
     </div>
 
@@ -125,7 +125,7 @@
                     <tr>
                         <td colspan="9" class="px-6 py-12 text-center">
                             <div class="text-3xl mb-2">✅</div>
-                            <p class="text-sm font-semibold text-gray-500">Semua permohonan sudah ditindaklanjuti</p>
+                            <p class="text-sm font-semibold text-gray-500">Semua permohonan sudah diverifikasi</p>
                         </td>
                     </tr>
                 }
@@ -137,7 +137,7 @@
                         bool isVerif     = item.StatusPPIDID == StatusId.MenungguVerifikasi
                                         || item.StatusPPIDID == StatusId.IdentifikasiAwal;
 
-                        string rowHighlight = isSuratIzin ? "bg-blue-50/40" : "";
+                        string rowHighlight = isSuratIzin ? "bg-blue-50/30" : "";
 
                         <tr class="hover:bg-blue-50/30 transition-colors group @rowHighlight">
                             <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">@item.NoPermohonan</td>
@@ -176,15 +176,22 @@
                                 <div class="flex gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                                     <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID"
                                        class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-lg font-medium">Detail</a>
+
                                     @if (isVerif)
                                     {
                                         <a href="/kasubkel-kepegawaian/verifikasi/@item.PermohonanPPIDID"
                                            class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-semibold">✅ Verifikasi</a>
                                     }
+
                                     @if (isSuratIzin)
                                     {
-                                        <a href="/kasubkel-kepegawaian/surat-izin/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg font-bold">📄 Surat Izin</a>
+                                        @* ── PERUBAHAN UTAMA: Surat Izin tidak lagi dilakukan Kasubkel ──
+                                           Hanya tampil info bahwa Loket yang mengerjakan.
+                                           Tidak ada link ke /kasubkel-kepegawaian/surat-izin/... *@
+                                        <span class="text-[11px] bg-blue-50 border border-blue-200 text-blue-600 px-2.5 py-1 rounded-lg font-medium cursor-default"
+                                              title="Penerbitan surat izin dilakukan oleh Loket Kepegawaian">
+                                            📄 Menunggu Loket
+                                        </span>
                                     }
                                 </div>
                             </td>

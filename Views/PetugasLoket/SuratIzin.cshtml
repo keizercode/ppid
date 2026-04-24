@@ -1,0 +1,175 @@
+@model SuratIzinVm
+@{
+    ViewData["Title"] = "Upload Surat Izin";
+    ViewData["Role"]  = "Petugas Loket";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📄</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Upload Surat Izin</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        @* Ringkasan keperluan yang sudah diajukan (read-only, dari data DB) *@
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5">
+            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3">Keperluan yang Diajukan</p>
+            <div class="flex flex-wrap gap-2 mb-2">
+                @if (Model.IsObservasi)      { <span class="bg-orange-100 text-orange-800 text-xs px-2.5 py-1 rounded-full font-semibold">🔍 Observasi</span> }
+                @if (Model.IsPermintaanData) { <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-semibold">📊 Permintaan Data</span> }
+                @if (Model.IsWawancara)      { <span class="bg-violet-100 text-violet-800 text-xs px-2.5 py-1 rounded-full font-semibold">🎤 Wawancara</span> }
+            </div>
+            <p class="text-[10px] text-blue-500 leading-relaxed">
+                @if (Model.IsPermintaanData)
+                {
+                    <span>→ Setelah surat terbit: <strong>disposisi ke KDI</strong> untuk pemrosesan permintaan data.</span>
+                    @if (Model.IsObservasi || Model.IsWawancara)
+                    {
+                        <span> Obs/Waw dikelola Loket secara paralel.</span>
+                    }
+                }
+                else
+                {
+                    <span>→ Setelah surat terbit: <strong>Obs/Waw dikelola langsung oleh Loket Kepegawaian</strong>.</span>
+                }
+            </p>
+        </div>
+
+        <form asp-action="SuratIzinPost" asp-controller="PetugasLoket" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+            <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="Kategori" />
+
+            @* Keperluan dikirim sebagai hidden — sudah dikunci dari DB *@
+            <input type="hidden" asp-for="IsObservasi" />
+            <input type="hidden" asp-for="IsPermintaanData" />
+            <input type="hidden" asp-for="IsWawancara" />
+
+            @* Routing ke KDI default PSMDI *@
+            <input type="hidden" name="DisposisiUnits[0]" value="PSMDI" />
+            <input type="hidden" name="NamaBidangList[0]" id="f-bidang-name" value="" />
+
+            @* ── Nomor Surat ── *@
+            <div class="mb-4">
+                <label class="lbl">No. Surat Izin <span class="req">*</span></label>
+                <input asp-for="NoSuratIzin" class="fld font-mono"
+                       placeholder="Contoh: 070/DLH.1/-1.842.2/III/2026" />
+                <span asp-validation-for="NoSuratIzin" class="err"></span>
+            </div>
+
+            @* ── Tanggal Surat ── *@
+            <div class="mb-4">
+                <label class="lbl">Tanggal Surat <span class="req">*</span></label>
+                <input asp-for="TanggalSurat" type="date" class="fld" />
+                <span asp-validation-for="TanggalSurat" class="err"></span>
+            </div>
+
+            @* ── Upload File Surat Izin (WAJIB) ── *@
+            <div class="mb-5">
+                <label class="lbl">
+                    Upload Surat Izin (PDF) <span class="req">*</span>
+                </label>
+                <div id="dropzone-surat"
+                     class="border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-xl p-6 text-center transition-all cursor-pointer bg-gray-50 hover:bg-blue-50 group">
+                    <div class="text-2xl mb-1">📄</div>
+                    <p class="text-sm font-semibold text-gray-600 group-hover:text-blue-700">Klik atau drag file PDF ke sini</p>
+                    <p class="text-xs text-gray-400 mt-1">Hanya PDF — maks. 10 MB</p>
+                    <input asp-for="FileSuratIzin" type="file" id="fileSuratIzin"
+                           accept=".pdf" class="hidden" />
+                    <p id="suratFileName" class="text-xs text-blue-600 mt-2 font-semibold hidden"></p>
+                </div>
+                <span asp-validation-for="FileSuratIzin" class="err"></span>
+            </div>
+
+            @* ── Nama bidang / produsen data untuk wawancara-only ── *@
+            @if (Model.IsWawancaraOnly)
+            {
+                <div class="mb-5">
+                    <label class="lbl">
+                        Unit / Nama Produsen Data (Wawancara)
+                        <span class="text-gray-400 font-normal normal-case">(opsional)</span>
+                    </label>
+                    <input asp-for="NamaProdusenData" class="fld"
+                           placeholder="Misal: Bidang Pemantauan Lingkungan Hidup" />
+                </div>
+            }
+
+            @* ── Info routing ── *@
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex gap-2 items-start">
+                <span class="text-amber-500 flex-shrink-0 mt-0.5">ℹ️</span>
+                <div class="text-xs text-amber-700 leading-relaxed">
+                    @if (Model.IsPermintaanData)
+                    {
+                        <p>Setelah surat terbit, permohonan otomatis <strong>didisposisi ke KDI</strong> untuk pemrosesan permintaan data.</p>
+                        @if (Model.IsObservasi || Model.IsWawancara)
+                        {
+                            <p class="mt-1">Sub-tugas <strong>Observasi/Wawancara</strong> akan dibuat dan dikelola di menu sub-tugas Loket Kepegawaian secara paralel.</p>
+                        }
+                    }
+                    else
+                    {
+                        <p>Setelah surat terbit, sub-tugas <strong>Observasi/Wawancara</strong> akan dibuat dan dikelola di menu sub-tugas Loket Kepegawaian.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="/petugas-loket/detail/@Model.PermohonanPPIDID"
+                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                    Batal
+                </a>
+                <button type="submit"
+                        class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                    📄 Upload Surat Izin →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px }
+    .req { color:#f87171 }
+    .fld { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:9px 14px; font-size:13.5px; background:#fafafa; outline:none; transition:all .15s }
+    .fld:focus { box-shadow:0 0 0 2.5px #3b82f6; border-color:transparent; background:white }
+    .err { color:#ef4444; font-size:11px; margin-top:3px; display:block }
+</style>
+
+@section Scripts {
+<script>
+const dz   = document.getElementById('dropzone-surat');
+const fi   = document.getElementById('fileSuratIzin');
+const fnEl = document.getElementById('suratFileName');
+
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-blue-400','bg-blue-50'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('border-blue-400','bg-blue-50'));
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fi.files = dt.files;
+        showFile(file.name);
+    }
+});
+fi.addEventListener('change', function() { if (this.files[0]) showFile(this.files[0].name); });
+
+function showFile(name) {
+    fnEl.textContent = '✓ ' + name;
+    fnEl.classList.remove('hidden');
+    dz.classList.add('border-blue-400','bg-blue-50');
+}
+</script>
+}
