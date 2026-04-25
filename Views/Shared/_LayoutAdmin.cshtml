@@ -166,12 +166,15 @@
             }
 
             @* ── LOKET UMUM ── *@
+            @* FIX v2: "Permohonan Baru" → /loket-umum/daftar (langsung form LSM).
+               /loket-umum/identifikasi dihapus dari nav karena tidak ada controller action-nya.
+               LoketUmum hanya melayani LSM — tidak perlu langkah identifikasi kategori. *@
             @if (isLoketUmum)
             {
                 <p class="nav-group-label">Loket Umum</p>
                 @NavItem("/loket-umum", path, "Dashboard",
                     "<path stroke-linecap='round' stroke-linejoin='round' d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'/>")
-                @NavItem("/loket-umum/identifikasi", path, "Permohonan Baru",
+                @NavItem("/loket-umum/daftar", path, "Permohonan Baru (LSM)",
                     "<path stroke-linecap='round' stroke-linejoin='round' d='M12 4v16m8-8H4'/>")
                 @NavItem("/loket-umum/permintaan-data", path, "Permintaan Data",
                     "<path stroke-linecap='round' stroke-linejoin='round' d='M9 17v-2m3 2v-4m3 4v-6M4 19h16V5a2 2 0 00-2-2H6a2 2 0 00-2 2v14z'/>")

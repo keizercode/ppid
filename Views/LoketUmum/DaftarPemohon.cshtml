@@ -25,14 +25,10 @@
         <span class="text-xl">🏛️</span>
         <div>
             <p class="text-xs text-emerald-500 font-medium">Kategori Pemohon — Loket Umum</p>
-            <p class="text-emerald-800 font-bold">LSM / Organisasi Non-Pemerintah</p>
+            <p class="text-emerald-800 font-bold">LSM</p>
         </div>
         <div class="ml-auto flex items-center gap-2">
             <span class="text-xs font-mono bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg font-bold">Prefix: UMM</span>
-            <a href="/loket-umum"
-               class="text-xs text-emerald-600 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-400 px-2.5 py-1 rounded-lg transition-colors">
-               Batal
-            </a>
         </div>
     </div>
 
@@ -182,7 +178,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="lbl">Judul / Topik Permohonan <span class="req">*</span></label>
-                    <input asp-for="JudulPenelitian" class="fld" placeholder="Topik penelitian / kajian / program lembaga" />
+                    <input asp-for="JudulPenelitian" class="fld" placeholder="Topik permohonan" />
                     <span asp-validation-for="JudulPenelitian" class="err"></span>
                 </div>
                 <div class="md:col-span-2">

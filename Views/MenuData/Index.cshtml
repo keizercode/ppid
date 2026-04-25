@@ -5,6 +5,12 @@
     Layout = "_LayoutAdmin";
     var q = ViewData["Q"] as string;
     var baseUrl = Model.LoketJenis == "Umum" ? "/loket-umum" : "/petugas-loket";
+
+    // FIX v2: Loket Umum tidak lagi punya /identifikasi — langsung ke /daftar (locked LSM).
+    // Loket Kepegawaian tetap pakai /identifikasi untuk pemilihan kategori Mahasiswa.
+    var newPermohonanUrl = Model.LoketJenis == "Umum"
+        ? "/loket-umum/daftar"
+        : "/petugas-loket/identifikasi";
 }
 
 <!-- ══ REKAP CARDS ══ -->
@@ -76,9 +82,11 @@
            class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
             Unduh CSV
         </a>
-        <a href="@baseUrl/identifikasi"
+        @* FIX v2: Loket Umum → /loket-umum/daftar (langsung form LSM, tanpa identifikasi).
+                   Loket Kepegawaian → /petugas-loket/identifikasi (pilih kategori Mahasiswa). *@
+        <a href="@newPermohonanUrl"
            class="flex items-center gap-2 bg-[#002d7a] hover:bg-blue-900 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-            + Permohonan Baru
+            + Permohonan Baru@(Model.LoketJenis == "Umum" ? " (LSM)" : "")
         </a>
         <a href="@baseUrl"
            class="flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">

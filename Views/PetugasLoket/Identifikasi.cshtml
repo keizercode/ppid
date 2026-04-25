@@ -24,110 +24,116 @@
             @* ── Alert: non-mahasiswa diarahkan ke Loket Umum ── *@
             @if (showUmum)
             {
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex gap-3 items-start">
-                    <span class="text-amber-500 text-lg mt-0.5 flex-shrink-0">ℹ️</span>
-                    <div>
-                        <p class="font-bold text-amber-800 text-sm">Pemohon Eksternal — Gunakan Loket Umum</p>
-                        <p class="text-amber-700 text-xs mt-1 leading-relaxed">
-                            Pemohon LSM, Organisasi, Perusahaan, dan Masyarakat Umum kini dilayani
-                            melalui <strong>Loket Umum</strong>. Silakan arahkan pemohon ke loket yang sesuai.
-                        </p>
-                        <a href="/loket-umum/daftar"
-                               class="inline-flex items-center gap-1.5 mt-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
-                            🏢 Daftar di Loket Umum →
-                        </a>
+                if (Model.Kategori == "Umum")
+                {
+                    @* ── Umum → portal PPID eksternal ── *@
+                    <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 mb-5 flex gap-3 items-start">
+                        <span class="text-sky-500 text-lg mt-0.5 flex-shrink-0">🌐</span>
+                        <div>
+                            <p class="font-bold text-sky-800 text-sm">Pemohon Umum — Gunakan Portal PPID Jakarta</p>
+                            <p class="text-sky-700 text-xs mt-1 leading-relaxed">
+                                Permohonan informasi dari Masyarakat Umum dilayani melalui portal resmi PPID Jakarta.
+                                Silakan arahkan pemohon ke portal berikut.
+                            </p>
+                            <a href="https://ppid.jakarta.go.id/permohonan-informasi" target="_blank" rel="noopener noreferrer"
+                                   class="inline-flex items-center gap-1.5 mt-3 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                                🌐 ppid.jakarta.go.id →
+                            </a>
+                        </div>
                     </div>
-                </div>
+                }
+                else
+                {
+                    @* ── LSM → Loket Umum ── *@
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex gap-3 items-start">
+                        <span class="text-amber-500 text-lg mt-0.5 flex-shrink-0">ℹ️</span>
+                        <div>
+                            <p class="font-bold text-amber-800 text-sm">Pemohon Eksternal — Gunakan Loket Umum</p>
+                            <p class="text-amber-700 text-xs mt-1 leading-relaxed">
+                                Pemohon LSM, Organisasi, dan Perusahaan kini dilayani melalui
+                                <strong>Loket Umum</strong>. Silakan arahkan pemohon ke loket yang sesuai.
+                            </p>
+                            <a href="/loket-umum/daftar"
+                                   class="inline-flex items-center gap-1.5 mt-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                                🏢 Daftar di Loket Umum →
+                            </a>
+                        </div>
+                    </div>
+                }
             }
 
             @* ── Info scope Loket Kepegawaian ── *@
-            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5 flex gap-3 items-start">
-                <span class="text-blue-500 flex-shrink-0 mt-0.5">📋</span>
-                <div class="text-xs text-blue-700 leading-relaxed">
-                    <p class="font-bold text-blue-800 mb-1">Scope Loket Kepegawaian</p>
-                    <p>Loket ini <strong>hanya melayani Mahasiswa / Pelajar</strong> dengan prefix nomor permohonan
-                        <code class="bg-blue-100 px-1 rounded font-mono">MHS</code>.</p>
-                        <p class="mt-1">Untuk pemohon eksternal (LSM, Organisasi, Perusahaan), gunakan <strong>Loket
-                            Umum</strong> dengan prefix <code
-                            class="bg-emerald-100 text-emerald-700 px-1 rounded font-mono">UMM</code>.</p>
+
+            <form asp-action="IdentifikasiPost" asp-controller="PetugasLoket" method="post">
+                @Html.AntiForgeryToken()
+
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Pilih Kategori Pemohon</p>
+
+                <div class="space-y-2.5 mb-6">
+                    @* ── Mahasiswa: satu-satunya pilihan di Loket Kepegawaian ── *@
+                    <label class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100 hover:border-blue-300
+                        cursor-pointer transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                        <input type="radio" asp-for="Kategori" value="Mahasiswa"
+                               class="mt-0.5 accent-blue-600 flex-shrink-0" />
+                        <div class="flex items-start gap-3 flex-1">
+                            <span class="text-xl mt-0.5">🎓</span>
+                            <div>
+                                <p class="font-bold text-sm text-gray-800">Mahasiswa / Pelajar</p>
+                                <p class="text-xs text-gray-400 mt-0.5">KTP + Surat Permohonan + Proposal Penelitian</p>
+                            </div>
                         </div>
+
+                    </label>
+
+                    @* ── Pemohon Eksternal: info-only, diarahkan ke Loket Umum ── *@
+                    <label class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100
+                        cursor-pointer transition-all has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-50"
+                           title="Akan diarahkan ke Loket Umum">
+                        <input type="radio" asp-for="Kategori" value="LSM"
+                               class="mt-0.5 accent-emerald-600 flex-shrink-0" />
+                        <div class="flex items-start gap-3 flex-1">
+                            <span class="text-xl mt-0.5">🏢</span>
+                            <div>
+                                <p class="font-bold text-sm text-gray-800">LSM</p>
+                                <p class="text-xs text-amber-600 font-semibold mt-0.5">⚠ Akan diarahkan ke Loket Umum
+                                </p>
+                                <p class="text-xs text-gray-400">Pendaftaran dilakukan melalui Loket Umum
+                                </p>
+                            </div>
+                        </div>
+
+                    </label>
+
+                    @* ── Umum: diarahkan ke portal PPID eksternal ── *@
+                    <label class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100
+                        cursor-pointer transition-all has-[:checked]:border-gray-400 has-[:checked]:bg-gray-50">
+                        <input type="radio" asp-for="Kategori" value="Umum"
+                               class="mt-0.5 accent-gray-500 flex-shrink-0" />
+                        <div class="flex items-start gap-3 flex-1">
+                            <span class="text-xl mt-0.5">👤</span>
+                            <div>
+                                <p class="font-bold text-sm text-gray-800">Umum</p>
+                                <p class="text-xs text-amber-600 font-semibold mt-0.5">⚠ Diarahkan ke portal PPID
+                                    Jakarta</p>
+                                    <p class="text-xs text-gray-400">ppid.jakarta.go.id/permohonan-informasi</p>
+                                </div>
+                            </div>
+                        </label>
                     </div>
 
-                    <form asp-action="IdentifikasiPost" asp-controller="PetugasLoket" method="post">
-                        @Html.AntiForgeryToken()
+                    <span asp-validation-for="Kategori" class="text-red-500 text-xs block -mt-3 mb-4"></span>
 
-                        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Pilih Kategori Pemohon</p>
-
-                        <div class="space-y-2.5 mb-6">
-                            @* ── Mahasiswa: satu-satunya pilihan di Loket Kepegawaian ── *@
-                            <label
-                                class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100 hover:border-blue-300
-                                cursor-pointer transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
-                                <input type="radio" asp-for="Kategori" value="Mahasiswa"
-                                       class="mt-0.5 accent-blue-600 flex-shrink-0" />
-                                <div class="flex items-start gap-3 flex-1">
-                                    <span class="text-xl mt-0.5">🎓</span>
-                                    <div>
-                                        <p class="font-bold text-sm text-gray-800">Mahasiswa / Pelajar</p>
-                                        <p class="text-xs text-gray-400 mt-0.5">KTP + Surat Permohonan + Proposal Penelitian</p>
-                                    </div>
-                                </div>
-                                <span
-                                class="ml-auto text-[10px] font-mono bg-blue-100 text-blue-700 px-2 py-0.5 rounded-lg font-bold self-center">MHS</span>
-                            </label>
-
-                            @* ── Pemohon Eksternal: info-only, diarahkan ke Loket Umum ── *@
-                            <label
-                                class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100
-                                cursor-pointer transition-all has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-50"
-                                title="Akan diarahkan ke Loket Umum">
-                                <input type="radio" asp-for="Kategori" value="LSM"
-                                       class="mt-0.5 accent-emerald-600 flex-shrink-0" />
-                                <div class="flex items-start gap-3 flex-1">
-                                    <span class="text-xl mt-0.5">🏢</span>
-                                    <div>
-                                        <p class="font-bold text-sm text-gray-800">LSM / Organisasi / Perusahaan</p>
-                                        <p class="text-xs text-amber-600 font-semibold mt-0.5">⚠ Akan diarahkan ke Loket Umum
-                                        </p>
-                                        <p class="text-xs text-gray-400">Pendaftaran dilakukan melalui Loket Umum (prefix UMM)
-                                        </p>
-                                    </div>
-                                </div>
-                                <span
-                                class="ml-auto text-[10px] font-mono bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-lg font-bold self-center">UMM</span>
-                            </label>
-
-                            @* ── Umum: diarahkan ke portal PPID eksternal ── *@
-                            <label
-                                class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100
-                                cursor-pointer transition-all has-[:checked]:border-gray-400 has-[:checked]:bg-gray-50">
-                                <input type="radio" asp-for="Kategori" value="Umum"
-                                       class="mt-0.5 accent-gray-500 flex-shrink-0" />
-                                <div class="flex items-start gap-3 flex-1">
-                                    <span class="text-xl mt-0.5">👤</span>
-                                    <div>
-                                        <p class="font-bold text-sm text-gray-800">Masyarakat Umum / Perseorangan</p>
-                                        <p class="text-xs text-amber-600 font-semibold mt-0.5">⚠ Diarahkan ke portal PPID
-                                            Jakarta</p>
-                                            <p class="text-xs text-gray-400">ppid.jakarta.go.id/permohonan-informasi</p>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <span asp-validation-for="Kategori" class="text-red-500 text-xs block -mt-3 mb-4"></span>
-
-                            <div class="flex gap-3">
-                                <a href="/petugas-loket"
-                                       class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
-                                    Batal
-                                </a>
-                                <button type="submit"
-                                        class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
-                                    Lanjutkan →
-                                </button>
-                            </div>
-                        </form>
+                    <div class="flex gap-3">
+                        <a href="/petugas-loket"
+                               class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                            Batal
+                        </a>
+                        <button type="submit"
+                                class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
+                            Lanjutkan →
+                        </button>
                     </div>
-                </div>
+                </form>
             </div>
+        </div>
+    </div>
