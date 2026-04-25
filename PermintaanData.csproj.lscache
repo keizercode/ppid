@@ -502,7 +502,6 @@ Views/KasubkelKepegawaian/
  Index.cshtml
  Permohonan.cshtml
  SubTasks.cshtml
- SuratIzin.cshtml
  Verifikasi.cshtml
 Views/LoketUmum/
  DaftarPemohon.cshtml
@@ -526,6 +525,7 @@ Views/
   Observasi.cshtml
   PermintaanData.cshtml
   SubTasks.cshtml
+  SuratIzin.cshtml
   UploadTTD.cshtml
   Wawancara.cshtml
  Shared/Partials/
@@ -571,7 +571,6 @@ Views/KasubkelKepegawaian/
  Index.cshtml
  Permohonan.cshtml
  SubTasks.cshtml
- SuratIzin.cshtml
  Verifikasi.cshtml
 Views/LoketUmum/
  DaftarPemohon.cshtml
@@ -595,6 +594,7 @@ Views/
   Observasi.cshtml
   PermintaanData.cshtml
   SubTasks.cshtml
+  SuratIzin.cshtml
   UploadTTD.cshtml
   Wawancara.cshtml
  Shared/Partials/

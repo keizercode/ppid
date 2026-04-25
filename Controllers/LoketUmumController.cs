@@ -8,8 +8,12 @@ using PermintaanData.Models.ViewModels;
 namespace PermintaanData.Controllers;
 
 /// <summary>
-/// Loket Umum — melayani pemohon non-mahasiswa (LSM, Organisasi, Perusahaan).
+/// Loket Umum — melayani pemohon eksternal non-mahasiswa kategori LSM.
 /// Scope: permohonan dengan LoketJenis = "Umum" (prefix UMM).
+///
+/// PERUBAHAN v2: Alur pendaftaran disederhanakan — tidak ada lagi langkah
+/// Identifikasi terpisah. "+ Permohonan Baru" langsung menuju formulir
+/// pendaftaran dengan Kategori dikunci ke "LSM".
 /// </summary>
 [Route("loket-umum")]
 [Authorize(Roles = $"{AppRoles.LoketUmum},{AppRoles.Admin}")]
@@ -31,9 +35,9 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
 
         ViewData["DashVm"] = new DashboardVm
         {
-            Total        = allStatus.Count,
-            Proses       = allStatus.Count(s => StatusId.IsProses(s)),
-            Selesai      = allStatus.Count(s => StatusId.IsSelesai(s)),
+            Total = allStatus.Count,
+            Proses = allStatus.Count(s => StatusId.IsProses(s)),
+            Selesai = allStatus.Count(s => StatusId.IsSelesai(s)),
             MonthlyStats = await GetMonthlyStatsUmum()
         };
 
@@ -47,12 +51,12 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             query = query.Where(p =>
                 (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
                 (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.Contains(q)));
+                (p.Pribadi != null && p.Pribadi.NIK != null && p.Pribadi.NIK.Contains(q)));
 
         if (status.HasValue)
             query = query.Where(p => p.StatusPPIDID == status.Value);
 
-        ViewData["Q"]      = q;
+        ViewData["Q"] = q;
         ViewData["Status"] = status;
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
@@ -119,30 +123,26 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
     }
 
-    // ── IDENTIFIKASI ──────────────────────────────────────────────────────
-
-    [HttpGet("identifikasi")]
-    public IActionResult Identifikasi() => View(new IdentifikasiPemohonVm());
-
-    [HttpPost("identifikasi"), ValidateAntiForgeryToken]
-    public IActionResult IdentifikasiPost(IdentifikasiPemohonVm model)
-    {
-        if (!ModelState.IsValid) return View("Identifikasi", model);
-        return RedirectToAction("DaftarPemohon",
-            new { kategori = model.Kategori, loketJenis = LoketJenis.Umum });
-    }
-
     // ── DAFTAR PEMOHON ────────────────────────────────────────────────────
+    //
+    // v2: Tidak ada lagi langkah Identifikasi terpisah.
+    //     GET /loket-umum/daftar langsung menampilkan formulir pendaftaran LSM.
+    //     Kategori dikunci "LSM", LoketJenis dikunci "Umum".
 
     [HttpGet("daftar")]
-    public IActionResult DaftarPemohon(string kategori = "LSM")
-        => View(new DaftarPemohonVm { Kategori = kategori, LoketJenis = LoketJenis.Umum });
+    public IActionResult DaftarPemohon()
+        => View(new DaftarPemohonVm
+        {
+            Kategori = "LSM",
+            LoketJenis = LoketJenis.Umum
+        });
 
     [HttpPost("daftar"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DaftarPemohonPost(DaftarPemohonVm vm)
     {
-        // Loket Umum selalu menggunakan prefix UMM
+        // Paksa selalu Loket Umum + LSM — tidak bisa di-override dari form
         vm.LoketJenis = LoketJenis.Umum;
+        if (string.IsNullOrEmpty(vm.Kategori)) vm.Kategori = "LSM";
 
         Guid? bidangGuid = null;
         if (!string.IsNullOrEmpty(vm.BidangID) && Guid.TryParse(vm.BidangID, out var parsed))
@@ -150,12 +150,12 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
 
         if (!ModelState.IsValid) return View("DaftarPemohon", vm);
 
-        Guid   lastId = Guid.Empty;
+        Guid lastId = Guid.Empty;
         string noPerm = string.Empty;
 
         var strategy = db.Database.CreateExecutionStrategy();
-        var tempDir  = Path.Combine(Path.GetTempPath(), $"ppid_umum_{Guid.NewGuid()}");
-        var movers   = new List<(string Temp, string Final)>();
+        var tempDir = Path.Combine(Path.GetTempPath(), $"ppid_umum_{Guid.NewGuid()}");
+        var movers = new List<(string Temp, string Final)>();
 
         try
         {
@@ -175,21 +175,29 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
                     {
                         pribadi = new Pribadi
                         {
-                            NIK           = vm.NIK,   Nama     = vm.Nama,
-                            Email         = vm.Email,  Telepon  = vm.Telepon,
-                            Alamat        = vm.Alamat, RT       = vm.RT,      RW = vm.RW,
-                            KelurahanID   = vm.KelurahanID,   KecamatanID   = vm.KecamatanID,
-                            KabupatenID   = vm.KabupatenID,   NamaKelurahan  = vm.NamaKelurahan,
-                            NamaKecamatan = vm.NamaKecamatan, NamaKabupaten  = vm.NamaKabupaten,
-                            CreatedAt     = now, UpdatedAt = now
+                            NIK = vm.NIK,
+                            Nama = vm.Nama,
+                            Email = vm.Email,
+                            Telepon = vm.Telepon,
+                            Alamat = vm.Alamat,
+                            RT = vm.RT,
+                            RW = vm.RW,
+                            KelurahanID = vm.KelurahanID,
+                            KecamatanID = vm.KecamatanID,
+                            KabupatenID = vm.KabupatenID,
+                            NamaKelurahan = vm.NamaKelurahan,
+                            NamaKecamatan = vm.NamaKecamatan,
+                            NamaKabupaten = vm.NamaKabupaten,
+                            CreatedAt = now,
+                            UpdatedAt = now
                         };
                         db.Pribadi.Add(pribadi);
                     }
                     else
                     {
-                        pribadi.Nama      = vm.Nama;
-                        pribadi.Email     = vm.Email;
-                        pribadi.Telepon   = vm.Telepon;
+                        pribadi.Nama = vm.Nama;
+                        pribadi.Email = vm.Email;
+                        pribadi.Telepon = vm.Telepon;
                         pribadi.UpdatedAt = now;
                     }
                     await db.SaveChangesAsync();
@@ -201,42 +209,48 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
                     {
                         db.PribadiPPID.Add(new PribadiPPID
                         {
-                            PribadiID    = pribadi.PribadiID,
-                            Lembaga      = vm.Lembaga,   Pekerjaan    = vm.Pekerjaan,
-                            ProvinsiID   = vm.ProvinsiID, NamaProvinsi = vm.NamaProvinsi,
-                            CreatedAt    = now, UpdatedAt = now
+                            PribadiID = pribadi.PribadiID,
+                            Lembaga = vm.Lembaga,
+                            Pekerjaan = vm.Pekerjaan,
+                            ProvinsiID = vm.ProvinsiID,
+                            NamaProvinsi = vm.NamaProvinsi,
+                            CreatedAt = now,
+                            UpdatedAt = now
                         });
                     }
                     else
                     {
-                        ppid.Lembaga      = vm.Lembaga;
-                        ppid.Pekerjaan    = vm.Pekerjaan;
-                        ppid.ProvinsiID   = vm.ProvinsiID;
+                        ppid.Lembaga = vm.Lembaga;
+                        ppid.Pekerjaan = vm.Pekerjaan;
+                        ppid.ProvinsiID = vm.ProvinsiID;
                         ppid.NamaProvinsi = vm.NamaProvinsi;
-                        ppid.UpdatedAt    = now;
+                        ppid.UpdatedAt = now;
                     }
 
                     // 3. PermohonanPPID
                     var permohonan = new PermohonanPPID
                     {
-                        PribadiID         = pribadi.PribadiID,
-                        NoPermohonan      = generatedNoPerm,
-                        KategoriPemohon   = vm.Kategori,
-                        LoketJenis        = LoketJenis.Umum,
+                        PribadiID = pribadi.PribadiID,
+                        NoPermohonan = generatedNoPerm,
+                        KategoriPemohon = vm.Kategori,
+                        LoketJenis = LoketJenis.Umum,
                         NoSuratPermohonan = vm.NoSuratPermohonan,
                         TanggalPermohonan = vm.TanggalPermohonan,
-                        BatasWaktu        = AppDbContext.HitungBatasWaktu(vm.TanggalPermohonan),
-                        Pengampu          = vm.Pengampu,
-                        TeleponPengampu   = vm.TeleponPengampu,
-                        JudulPenelitian   = vm.JudulPenelitian,
-                        LatarBelakang     = vm.LatarBelakang,
-                        TujuanPermohonan  = vm.TujuanPermohonan,
-                        IsObservasi       = vm.IsObservasi,
-                        IsWawancara       = vm.IsWawancara,
-                        IsPermintaanData  = vm.IsPermintaanData,
-                        BidangID          = bidangGuid, NamaBidang = vm.NamaBidang,
-                        StatusPPIDID      = StatusId.TerdaftarSistem,
-                        Sequance          = nextSeq, CratedAt = now, UpdatedAt = now
+                        BatasWaktu = AppDbContext.HitungBatasWaktu(vm.TanggalPermohonan),
+                        Pengampu = vm.Pengampu,
+                        TeleponPengampu = vm.TeleponPengampu,
+                        JudulPenelitian = vm.JudulPenelitian,
+                        LatarBelakang = vm.LatarBelakang,
+                        TujuanPermohonan = vm.TujuanPermohonan,
+                        IsObservasi = vm.IsObservasi,
+                        IsWawancara = vm.IsWawancara,
+                        IsPermintaanData = vm.IsPermintaanData,
+                        BidangID = bidangGuid,
+                        NamaBidang = vm.NamaBidang,
+                        StatusPPIDID = StatusId.TerdaftarSistem,
+                        Sequance = nextSeq,
+                        CratedAt = now,
+                        UpdatedAt = now
                     };
                     db.PermohonanPPID.Add(permohonan);
                     await db.SaveChangesAsync();
@@ -247,31 +261,34 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
                         {
                             PermohonanPPIDID = permohonan.PermohonanPPIDID,
                             KeperluanID = KeperluanId.Observasi,
-                            DetailKeperluan = vm.DetailObservasi ?? "-", CreatedAt = now
+                            DetailKeperluan = vm.DetailObservasi ?? "-",
+                            CreatedAt = now
                         });
                     if (vm.IsPermintaanData)
                         db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
                         {
                             PermohonanPPIDID = permohonan.PermohonanPPIDID,
                             KeperluanID = KeperluanId.PermintaanData,
-                            DetailKeperluan = vm.DetailPermintaanData ?? "-", CreatedAt = now
+                            DetailKeperluan = vm.DetailPermintaanData ?? "-",
+                            CreatedAt = now
                         });
                     if (vm.IsWawancara)
                         db.PermohonanPPIDDetail.Add(new PermohonanPPIDDetail
                         {
                             PermohonanPPIDID = permohonan.PermohonanPPIDID,
                             KeperluanID = KeperluanId.Wawancara,
-                            DetailKeperluan = vm.DetailWawancara ?? "-", CreatedAt = now
+                            DetailKeperluan = vm.DetailWawancara ?? "-",
+                            CreatedAt = now
                         });
 
                     // 5. Dokumen ke temp
                     Directory.CreateDirectory(tempDir);
-                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileKTP,             JenisDokumenId.KTP,             "KTP",              now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileKTP, JenisDokumenId.KTP, "KTP", now, tempDir, movers);
                     await StageDokumen(permohonan.PermohonanPPIDID, vm.FileSuratPermohonan, JenisDokumenId.SuratPermohonan, "Surat Permohonan", now, tempDir, movers);
-                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris,     JenisDokumenId.AktaNotaris,     "Akta Notaris",     now, tempDir, movers);
+                    await StageDokumen(permohonan.PermohonanPPIDID, vm.FileAktaNotaris, JenisDokumenId.AktaNotaris, "Akta Notaris", now, tempDir, movers);
 
                     db.AddAuditLog(permohonan.PermohonanPPIDID, null, StatusId.TerdaftarSistem,
-                        $"Permohonan didaftarkan Loket Umum (UMM). Keperluan: " +
+                        $"Permohonan didaftarkan Loket Umum (UMM) — Kategori: {vm.Kategori}. Keperluan: " +
                         $"{(vm.IsObservasi ? "Observasi " : "")}" +
                         $"{(vm.IsPermintaanData ? "Data " : "")}" +
                         $"{(vm.IsWawancara ? "Wawancara" : "")}",
@@ -322,7 +339,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
 
         var lama = p.StatusPPIDID;
         p.StatusPPIDID = StatusId.IdentifikasiAwal;
-        p.UpdatedAt    = DateTime.UtcNow;
+        p.UpdatedAt = DateTime.UtcNow;
 
         db.AddAuditLog(id, lama, StatusId.IdentifikasiAwal,
             "Identifikasi awal diinput Loket Umum.", CurrentUser);
@@ -357,7 +374,6 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
 
-        // ── Guard: cegah loop — hanya IdentifikasiAwal yang boleh upload TTD ──
         if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
         {
             TempData["Error"] = p.StatusPPIDID < StatusId.IdentifikasiAwal
@@ -371,9 +387,9 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         return View("~/Views/PetugasLoket/UploadTTD.cshtml", new UploadTTDVm
         {
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan!,
-            NamaPemohon      = p.Pribadi?.Nama ?? "",
-            LoketJenis       = LoketJenis.Umum
+            NoPermohonan = p.NoPermohonan!,
+            NamaPemohon = p.Pribadi?.Nama ?? "",
+            LoketJenis = LoketJenis.Umum
         });
     }
 
@@ -385,7 +401,6 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
-        // ── Guard idempoten: cegah looping status ──────────────────────────
         if (p.StatusPPIDID != StatusId.IdentifikasiAwal)
         {
             TempData["Error"] = "Upload TTD tidak diizinkan — permohonan sudah berada di tahap " +
@@ -393,7 +408,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
         }
 
-        var now   = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         var error = await UploadDokumen(vm.PermohonanPPIDID, vm.FileDokumenTTD,
             JenisDokumenId.IdentifikasiSigned, "Identifikasi TTD", now);
 
@@ -405,7 +420,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
 
         var lama = p.StatusPPIDID;
         p.StatusPPIDID = StatusId.MenungguVerifikasi;
-        p.UpdatedAt    = now;
+        p.UpdatedAt = now;
         db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.MenungguVerifikasi,
             "Dokumen TTD diupload Loket Umum, menunggu verifikasi Kasubkel Kepegawaian.", CurrentUser);
 
@@ -454,17 +469,17 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         return View("~/Views/PetugasLoket/Edit.cshtml", new EditPermohonanVm
         {
             PermohonanPPIDID = id,
-            NoPermohonan     = p.NoPermohonan ?? "",
-            NamaPemohon      = p.Pribadi?.Nama ?? "",
-            LoketJenis       = LoketJenis.Umum,
-            JudulPenelitian  = p.JudulPenelitian ?? "",
-            LatarBelakang    = p.LatarBelakang ?? "",
+            NoPermohonan = p.NoPermohonan ?? "",
+            NamaPemohon = p.Pribadi?.Nama ?? "",
+            LoketJenis = LoketJenis.Umum,
+            JudulPenelitian = p.JudulPenelitian ?? "",
+            LatarBelakang = p.LatarBelakang ?? "",
             TujuanPermohonan = p.TujuanPermohonan ?? "",
-            Pengampu         = p.Pengampu,
-            BatasWaktu       = p.BatasWaktu,
-            IsObservasi      = p.IsObservasi,
+            Pengampu = p.Pengampu,
+            BatasWaktu = p.BatasWaktu,
+            IsObservasi = p.IsObservasi,
             IsPermintaanData = p.IsPermintaanData,
-            IsWawancara      = p.IsWawancara,
+            IsWawancara = p.IsWawancara,
         });
     }
 
@@ -476,16 +491,16 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
 
-        p.JudulPenelitian  = vm.JudulPenelitian;
-        p.LatarBelakang    = vm.LatarBelakang;
+        p.JudulPenelitian = vm.JudulPenelitian;
+        p.LatarBelakang = vm.LatarBelakang;
         p.TujuanPermohonan = vm.TujuanPermohonan;
-        p.Pengampu         = vm.Pengampu;
-        p.TeleponPengampu  = vm.TeleponPengampu;
-        p.BatasWaktu       = vm.BatasWaktu;
-        p.IsObservasi      = vm.IsObservasi;
+        p.Pengampu = vm.Pengampu;
+        p.TeleponPengampu = vm.TeleponPengampu;
+        p.BatasWaktu = vm.BatasWaktu;
+        p.IsObservasi = vm.IsObservasi;
         p.IsPermintaanData = vm.IsPermintaanData;
-        p.IsWawancara      = vm.IsWawancara;
-        p.UpdatedAt        = DateTime.UtcNow;
+        p.IsWawancara = vm.IsWawancara;
+        p.UpdatedAt = DateTime.UtcNow;
 
         db.AddAuditLog(vm.PermohonanPPIDID, p.StatusPPIDID,
             p.StatusPPIDID ?? StatusId.TerdaftarSistem,
@@ -520,9 +535,9 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         ViewData["Q"] = q;
         return View("~/Views/MenuData/Index.cshtml", new MenuDataVm
         {
-            List       = list,
+            List = list,
             LoketJenis = LoketJenis.Umum,
-            Judul      = "Data Permohonan — Loket Umum"
+            Judul = "Data Permohonan — Loket Umum (LSM)"
         });
     }
 
@@ -561,7 +576,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
 
     private async Task<List<MonthlyStatRow>> GetMonthlyStatsUmum()
     {
-        var from     = DateTime.UtcNow.AddMonths(-11);
+        var from = DateTime.UtcNow.AddMonths(-11);
         var fromDate = new DateTime(from.Year, from.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var raw = await db.PermohonanPPID.AsNoTracking()
@@ -574,9 +589,9 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
             .Select(g => new MonthlyStatRow
             {
-                Label   = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yy"),
-                Total   = g.Count(),
-                Proses  = g.Count(p => StatusId.IsProses(p.StatusPPIDID)),
+                Label = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yy"),
+                Total = g.Count(),
+                Proses = g.Count(p => StatusId.IsProses(p.StatusPPIDID)),
                 Selesai = g.Count(p => StatusId.IsSelesai(p.StatusPPIDID))
             }).ToList();
     }

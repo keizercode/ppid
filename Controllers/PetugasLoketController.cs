@@ -195,17 +195,16 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     {
         if (!ModelState.IsValid) return View("Identifikasi", model);
 
-        if (model.Kategori == "Umum")
+        // Loket Kepegawaian HANYA menangani Mahasiswa.
+        // LSM, Organisasi, Perusahaan, dan Umum → Loket Umum (/loket-umum/daftar).
+        if (model.Kategori != "Mahasiswa")
         {
             TempData["InfoUmum"] = "true";
             return View("Identifikasi", model);
         }
 
-        var loketJenis = model.Kategori == "Mahasiswa"
-            ? LoketJenis.Kepegawaian
-            : LoketJenis.Umum;
-
-        return RedirectToAction("DaftarPemohon", new { kategori = model.Kategori, loketJenis });
+        return RedirectToAction("DaftarPemohon",
+            new { kategori = model.Kategori, loketJenis = LoketJenis.Kepegawaian });
     }
 
     // ══════════════════════════════════════════════════════════════════════
