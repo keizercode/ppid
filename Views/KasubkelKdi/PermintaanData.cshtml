@@ -111,8 +111,8 @@
                             primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
                             primerLabel = "Kelola Sub-tugas";
                         } else if (isDataSiap) {
-                            primerHref = $"/kasubkel-kdi/minta-feedback/{item.PermohonanPPIDID}";
-                            primerLabel = "Minta Feedback";
+                            primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
+                            primerLabel = "Review Data Siap";
                             primerColor = "emerald";
                         } else if (isFeedback) {
                             primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
@@ -182,14 +182,17 @@
                                         <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
                                         <div class="action-dropdown hidden">
                                             <a href="/kasubkel-kdi/detail/@item.PermohonanPPIDID" class="action-dd-item">📋 Detail & Log</a>
-                                            @if (!isNew && !isSelesai)
+                                            @if (!isNew && !isSelesai && !isDataSiap)
                                             {
                                                 <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID" class="action-dd-item">⚙️ Sub-tugas</a>
                                             }
                                             @if (isDataSiap)
                                             {
-                                                <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID" class="action-dd-item">⚙️ Sub-tugas</a>
+                                                <a href="/kasubkel-kdi/minta-feedback/@item.PermohonanPPIDID"
+                                                class="action-dd-item">📨 Kirim Feedback</a>
                                             }
+
+
                                         </div>
                                     </div>
                                 </div>
