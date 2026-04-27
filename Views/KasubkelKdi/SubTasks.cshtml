@@ -202,7 +202,7 @@
             <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Tindak Lanjut</p>
 
             @if (isDataSiap)
-{
+    {
     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
         <div class="flex items-start gap-3">
             <span class="text-2xl">📨</span>
@@ -210,8 +210,7 @@
                 <p class="font-bold text-blue-800 text-sm">Langkah Selanjutnya</p>
                 <p class="text-blue-600 text-xs mt-1 leading-relaxed">
                     Semua data sudah siap. <strong>Loket Kepegawaian</strong> yang akan
-                    meminta feedback dari pemohon via portal publik. KDI tidak mengelola
-                    tahap feedback secara langsung.
+                    meminta feedback dari pemohon via portal publik.
                 </p>
             </div>
         </div>
@@ -244,7 +243,7 @@
             {
                 <div class="mt-4 pt-4 border-t border-gray-100">
                     <p class="text-xs text-gray-400 mb-2">
-                        Override darurat — hanya jika Loket tidak dapat dihubungi:
+                         Hanya jika Loket tidak dapat dihubungi:
                     </p>
                     <form asp-action="TandaiSelesai" asp-controller="KasubkelKdi" method="post"
                         onsubmit="return confirm('Override: tandai selesai tanpa feedback? Tindakan ini akan dicatat.')">
@@ -252,7 +251,7 @@
                         <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID"/>
                         <button type="submit"
                                 class="inline-flex items-center gap-2 border border-red-200 text-red-600 text-xs font-semibold px-4 py-2 rounded-xl hover:bg-red-50 transition-colors">
-                            ⚠ Override: Tandai Selesai (darurat)
+                            ⚠ Tandai Selesai (darurat)
                         </button>
                     </form>
                 </div>
