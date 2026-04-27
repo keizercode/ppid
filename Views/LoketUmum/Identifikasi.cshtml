@@ -1,7 +1,7 @@
 @model IdentifikasiPemohonVm
 @{
     ViewData["Title"] = "Identifikasi Pemohon — Loket Umum";
-    ViewData["Role"]  = "Loket Umum";
+    ViewData["Role"] = "Loket Umum";
     Layout = "_LayoutAdmin";
 }
 
@@ -36,14 +36,17 @@
 
                 <div class="space-y-2.5 mb-6">
                     @foreach (var (val, icon, lbl, desc, border) in new[]{
-                        ("LSM",           "🏛️", "LSM / NGO",         "KTP + Akta Notaris + Surat Permohonan",            "has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50"),
-                        ("Organisasi",    "🤝", "Organisasi",         "KTP + Surat Keterangan Organisasi + Surat Permohonan","has-[:checked]:border-blue-500    has-[:checked]:bg-blue-50"),
-                        ("Perusahaan",    "🏢", "Perusahaan / Badan Usaha","KTP + SIUP/NIB + Surat Permohonan",            "has-[:checked]:border-amber-500   has-[:checked]:bg-amber-50"),
-                        ("Perseorangan",  "👤", "Masyarakat Umum / Perseorangan","KTP + Surat Permohonan",                "has-[:checked]:border-gray-400    has-[:checked]:bg-gray-50"),
+                        ("LSM", "🏛️", "LSM / NGO", "KTP + Akta Notaris + Surat Permohonan",                "has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50"),
+                        ("Organisasi", "🤝", "Organisasi", "KTP + Surat Keterangan Organisasi + Surat Permohonan","has-[:checked]:border-blue-500    has-[:checked]:bg-blue-50"),
+                        ("Perusahaan", "🏢", "Perusahaan / Badan Usaha","KTP + SIUP/NIB + Surat Permohonan",              "has-[:checked]:border-amber-500   has-[:checked]:bg-amber-50"),
+                        ("Perseorangan", "👤", "Masyarakat Umum / Perseorangan","KTP + Surat Permohonan",
+                   "has-[:checked]:border-gray-400    has-[:checked]:bg-gray-50"),
                     })
                     {
-                        <label class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100 hover:border-gray-200 cursor-pointer transition-all @border">
-                            <input type="radio" asp-for="Kategori" value="@val" class="mt-0.5 accent-blue-600 flex-shrink-0" />
+                        <label
+                            class="flex items-start gap-3.5 p-4 rounded-xl border-2 border-gray-100 hover:border-gray-200 cursor-pointer transition-all @border">
+                            <input type="radio" asp-for="Kategori" value="@val"
+                                   class="mt-0.5 accent-blue-600 flex-shrink-0" />
                             <div class="flex items-start gap-3 flex-1">
                                 <span class="text-xl mt-0.5">@icon</span>
                                 <div>
@@ -59,7 +62,7 @@
 
                 <div class="flex gap-3">
                     <a href="/loket-umum"
-                       class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                           class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
                         Batal
                     </a>
                     <button type="submit"

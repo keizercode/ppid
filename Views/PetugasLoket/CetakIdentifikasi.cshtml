@@ -251,7 +251,7 @@
                 <tr><td class="lbl">Pekerjaan / Jabatan</td><td class="sep">:</td><td><span class="ln">@(ppid?.Pekerjaan ?? "")</span></td></tr>
             }
 
-            <tr><td class="lbl">Judul Penelitian</td><td class="sep">:</td><td><span class="ln">@(Model.JudulPenelitian ?? "")</span></td></tr>
+            <tr><td class="lbl">Judul Topik</td><td class="sep">:</td><td><span class="ln">@(Model.JudulPenelitian ?? "")</span></td></tr>
             <tr><td class="lbl">Latar Belakang</td><td class="sep">:</td><td><span class="ln-tall">@(Model.LatarBelakang ?? "")</span></td></tr>
         </tbody>
     </table>
@@ -290,7 +290,7 @@
                 <td class="sep">:</td><td><span class="ln-det">@detailWaw</span></td>
             </tr>
             <tr>
-                <td class="dlbl">Unit Kerja yang berkaitan dengan Penelitian<span class="hint">(Diisi Subkelompok Kepegawaian)</span></td>
+                <td class="dlbl">Unit Kerja yang berkaitan<span class="hint">(Diisi Subkelompok Kepegawaian)</span></td>
                 <td class="sep">:</td><td><span class="ln-det">@(Model.NamaBidang ?? "")</span></td>
             </tr>
         </tbody>
@@ -314,8 +314,8 @@
     </div>
 
     <p class="nb">
-        <strong>NB:</strong> Formulir ini dibuat untuk mengetahui kebutuhan penelitian sebagai pendukung
-        pembuatan surat pemberian izin penelitian. <strong>Simpan nomor permohonan yang tertera di atas —
+        <strong>NB:</strong> Formulir ini dibuat untuk mengetahui kebutuhan pemohon sebagai pendukung
+        pembuatan surat pemberian izin. <strong>Simpan nomor permohonan yang tertera di atas —
         nomor tersebut diperlukan untuk melacak status secara <em>online</em> di portal PPID.</strong>
     </p>
 
