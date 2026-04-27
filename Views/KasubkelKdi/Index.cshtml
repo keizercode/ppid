@@ -71,9 +71,9 @@
                 <div class="flex flex-wrap gap-2 mt-2.5">
                     @foreach (var p in dataSiap.Take(3))
                     {
-                        <a href="/kasubkel-kdi/minta-feedback/@p.PermohonanPPIDID"
-                           class="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                            📨 @p.NoPermohonan
+                        <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
+                        class="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                        📦 @p.NoPermohonan
                         </a>
                     }
                     @if (dataSiap.Count > 3)
@@ -255,8 +255,10 @@
                                     else if (isDataSiap)
                                     {
                                         @* {{!-- FIX ISSUE 4: tombol utama untuk status DataSiap lebih menonjol --}} *@
-                                        <a href="/kasubkel-kdi/minta-feedback/@p.PermohonanPPIDID"
-                                           class="text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-bold">📨 Minta Feedback</a>
+                                        <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID"
+                                        class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-medium">
+                                        📦 Lihat Data Siap
+                                        </a>
                                     }
                                     else if (isFeedback)
                                     {

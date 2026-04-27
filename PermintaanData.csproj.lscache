@@ -522,6 +522,7 @@ Views/
   Identifikasi.cshtml
   Index.cshtml
   InputIdentifikasi.cshtml
+  MintaFeedback.cshtml
   Observasi.cshtml
   PermintaanData.cshtml
   SubTasks.cshtml
@@ -591,6 +592,7 @@ Views/
   Identifikasi.cshtml
   Index.cshtml
   InputIdentifikasi.cshtml
+  MintaFeedback.cshtml
   Observasi.cshtml
   PermintaanData.cshtml
   SubTasks.cshtml

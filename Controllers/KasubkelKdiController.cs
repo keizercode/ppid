@@ -633,86 +633,45 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
     }
 
-    // ── Minta Feedback ────────────────────────────────────────────────────
+    // ── Minta Feedback — dipindah ke Loket Kepegawaian ───────────────────────
+// KDI tidak lagi mengelola feedback pemohon. Loket adalah aktor yang
+// berinteraksi langsung dengan pemohon.
 
-    [HttpGet("minta-feedback/{id:guid}")]
-    public async Task<IActionResult> MintaFeedback(Guid id)
+[HttpGet("minta-feedback/{id:guid}")]
+public IActionResult MintaFeedback(Guid id)
+{
+    TempData["Error"] =
+        "Permintaan feedback dikelola oleh <strong>Loket Kepegawaian</strong>, " +
+        "bukan KDI. Hubungi petugas loket untuk mengubah status ke Feedback Pemohon.";
+    return RedirectToAction(nameof(SubTasks), new { id });
+}
+
+// TandaiSelesai tetap di KDI sebagai override darurat jika Loket tidak tersedia
+[HttpPost("tandai-selesai"), ValidateAntiForgeryToken]
+public async Task<IActionResult> TandaiSelesai([FromForm] Guid permohonanId)
+{
+    var p = await db.PermohonanPPID.FindAsync(permohonanId);
+    if (p is null) return NotFound();
+
+    if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
     {
-        var p = await db.PermohonanPPID
-            .Include(x => x.Pribadi)
-            .Include(x => x.Dokumen)
-            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-
-        if (p is null) return NotFound();
-
-        if (p.StatusPPIDID != StatusId.DataSiap)
-        {
-            TempData["Error"] = "Status harus Data Siap sebelum meminta feedback pemohon.";
-            return RedirectToAction(nameof(SubTasks), new { id });
-        }
-
-        ViewData["NoPermohonan"] = p.NoPermohonan;
-        ViewData["NamaPemohon"]  = p.Pribadi?.Nama;
-        ViewData["HasData"]      = p.Dokumen.Any(d => d.JenisDokumenPPIDID == JenisDokumenId.DataHasil);
-
-        return View(p);
-    }
-
-    [HttpPost("minta-feedback"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> MintaFeedbackPost([FromForm] Guid permohonanId)
-    {
-        var p = await db.PermohonanPPID.FindAsync(permohonanId);
-        if (p is null) return NotFound();
-
-        if (p.StatusPPIDID != StatusId.DataSiap)
-        {
-            TempData["Error"] = "Status sudah berubah. Refresh halaman.";
-            return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
-        }
-
-        var lama       = p.StatusPPIDID;
-        var now        = DateTime.UtcNow;
-        p.StatusPPIDID = StatusId.FeedbackPemohon;
-        p.UpdatedAt    = now;
-
-        db.AddAuditLog(permohonanId, lama, StatusId.FeedbackPemohon,
-            "Data siap. Pemohon diminta mengisi kuesioner kepuasan via portal publik.",
-            CurrentUser);
-
-        await db.SaveChangesAsync();
-
-        TempData["Success"] =
-            "Status diperbarui ke <strong>Feedback Pemohon</strong>. " +
-            "Pemohon dapat mengisi kuesioner di portal publik.";
-
+        TempData["Error"] = "Tidak dapat ditandai selesai pada status ini.";
         return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
     }
 
-    [HttpPost("tandai-selesai"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> TandaiSelesai([FromForm] Guid permohonanId)
-    {
-        var p = await db.PermohonanPPID.FindAsync(permohonanId);
-        if (p is null) return NotFound();
+    var lama         = p.StatusPPIDID;
+    var now          = DateTime.UtcNow;
+    p.StatusPPIDID   = StatusId.Selesai;
+    p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
+    p.UpdatedAt      = now;
 
-        if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
-        {
-            TempData["Error"] = "Tidak dapat ditandai selesai pada status ini.";
-            return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
-        }
+    db.AddAuditLog(permohonanId, lama, StatusId.Selesai,
+        "Permohonan ditandai selesai (override) oleh KDI karena Loket tidak merespons.",
+        CurrentUser);
 
-        var lama         = p.StatusPPIDID;
-        var now          = DateTime.UtcNow;
-        p.StatusPPIDID   = StatusId.Selesai;
-        p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
-        p.UpdatedAt      = now;
+    await db.SaveChangesAsync();
 
-        db.AddAuditLog(permohonanId, lama, StatusId.Selesai,
-            "Permohonan ditandai selesai secara manual oleh KDI (tanpa kuesioner pemohon).",
-            CurrentUser);
-
-        await db.SaveChangesAsync();
-
-        TempData["Success"] = "Permohonan berhasil ditandai <strong>Selesai</strong>.";
-        return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
-    }
+    TempData["Success"] = "Permohonan berhasil ditandai <strong>Selesai</strong>.";
+    return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+}
 }

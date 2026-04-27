@@ -334,6 +334,74 @@
         </div>
     }
 
+@{
+    bool isDataSiapLoket  = current == StatusId.DataSiap;
+    bool isFeedbackLoket  = current == StatusId.FeedbackPemohon;
+    bool canForceCloseLoket = isDataSiapLoket || isFeedbackLoket;
+}
+
+@if (!isSelesai)
+{
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Tindak Lanjut Feedback</p>
+
+        @if (isDataSiapLoket)
+        {
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">📨</span>
+                    <div>
+                        <p class="font-bold text-emerald-800 text-sm">Data Siap — Minta Feedback Pemohon</p>
+                        <p class="text-emerald-600 text-xs mt-1 leading-relaxed">
+                            Semua tugas selesai. Klik tombol di bawah untuk mengubah status ke
+                            <strong>Feedback Pemohon</strong> sehingga pemohon dapat mengisi
+                            formulir feedback di portal publik.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <a href="/petugas-loket/minta-feedback/@p.PermohonanPPIDID"
+               class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors">
+                📨 Minta Feedback Pemohon →
+            </a>
+        }
+        else if (isFeedbackLoket)
+        {
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">⏳</span>
+                    <div>
+                        <p class="font-bold text-amber-800 text-sm">Menunggu Feedback Pemohon</p>
+                        <p class="text-amber-700 text-xs mt-1 leading-relaxed">
+                            Pemohon dapat mengisi feedback di portal publik menggunakan nomor
+                            <span class="font-mono font-bold">@p.NoPermohonan</span>.
+                            Status otomatis <strong>Selesai</strong> setelah semua feedback terisi.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (canForceCloseLoket)
+        {
+            <div class="mt-4 pt-4 border-t border-gray-100">
+                <p class="text-xs text-gray-400 mb-2">
+                    Jika pemohon tidak merespons dalam waktu wajar, tandai selesai secara manual:
+                </p>
+                <form asp-action="TandaiSelesaiFeedback" asp-controller="PetugasLoket" method="post"
+                      onsubmit="return confirm('Tandai permohonan ini selesai tanpa feedback pemohon?')">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID"/>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 border border-gray-300 text-gray-600 text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                        ✓ Tandai Selesai (Manual)
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+}
+
     <!-- Info Permohonan -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Info Permohonan</p>

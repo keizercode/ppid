@@ -1,0 +1,154 @@
+@model PermohonanPPID
+@{
+    ViewData["Title"] = "Minta Feedback Pemohon";
+    ViewData["Role"] = "Petugas Loket";
+
+    Layout = "_LayoutAdmin";
+
+    var pr       = Model.Pribadi;
+    bool hasData = ViewData["HasData"] as bool? ?? false;
+
+    // URL halaman lacak publik (Home/Index) — pemohon tinggal masukkan nomor di sana
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+}
+
+<div class="max-w-xl mx-auto">
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl">📨</div>
+        <div>
+            <h3 class="font-bold text-gray-800">Minta Feedback Pemohon</h3>
+            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @pr?.Nama</p>
+        </div>
+    </div>
+
+    <div class="p-6">
+
+        <!-- Checklist -->
+        <div class="mb-5">
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Checklist Sebelum Lanjut</p>
+            <div class="space-y-2">
+                @{
+                    var items = new[]{
+                        (true,  "Semua sub-tugas paralel sudah selesai"),
+                        (hasData, "File data hasil sudah diupload dan tersedia untuk diunduh"),
+                        (Model.StatusPPIDID == StatusId.DataSiap, "Status permohonan: Data Siap"),
+                    };
+                }
+                @foreach (var (ok, label) in items)
+                {
+                    <div class="flex items-center gap-2.5 @(ok ? "text-emerald-700" : "text-red-600")">
+                        <span class="w-5 h-5 @(ok ? "bg-emerald-100" : "bg-red-100") rounded-full flex items-center justify-center text-xs flex-shrink-0">
+                            @(ok ? "✓" : "✗")
+                        </span>
+                        <span class="text-sm @(ok ? "font-medium" : "font-bold")">@label</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Yang terjadi -->
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+            <p class="font-bold text-amber-800 text-sm mb-2">Yang akan terjadi:</p>
+            <ul class="space-y-1.5 text-xs text-amber-700">
+                <li>• Status berubah dari <strong>Data Siap</strong> ke <strong>Feedback Pemohon</strong></li>
+                <li>• Pemohon dapat melihat status dan mengunduh data di portal publik</li>
+                <li>• Pemohon diminta mengisi kuesioner kepuasan layanan</li>
+                <li>• Pemohon juga dapat mengunggah laporan/tugas final mereka</li>
+                <li>• Setelah kuesioner diisi, status otomatis menjadi <strong>Selesai</strong></li>
+                <li>• Jika pemohon tidak merespons, KDI dapat tandai selesai secara manual</li>
+            </ul>
+        </div>
+
+        @* ── Panduan untuk pemohon ────────────────────────────────────────────
+           Tampilkan INSTRUKSI + NOMOR PERMOHONAN yang mudah dicopy,
+           bukan URL mentah dengan %2F yang membingungkan.
+           Pemohon cukup buka halaman utama dan masukkan nomor.
+        *@
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5">
+            <p class="text-xs font-bold text-gray-600 uppercase tracking-widest mb-2">
+                Instruksi untuk Pemohon
+            </p>
+            <ol class="space-y-2 text-xs text-gray-600 mb-3">
+                <li class="flex items-start gap-2">
+                    <span class="w-4 h-4 bg-gray-300 text-white rounded-full flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 font-bold">1</span>
+                    <span>Buka portal PPID DLH:
+                        <a href="@baseUrl" target="_blank"
+                           class="text-blue-600 font-mono font-semibold hover:underline">
+                            @baseUrl
+                        </a>
+                    </span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="w-4 h-4 bg-gray-300 text-white rounded-full flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 font-bold">2</span>
+                    <span>Masukkan nomor permohonan di kolom "Lacak Status Permohonan"</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="w-4 h-4 bg-gray-300 text-white rounded-full flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 font-bold">3</span>
+                    <span>Klik tombol "Isi Kuesioner Kepuasan" dan unggah laporan jika sudah selesai</span>
+                </li>
+            </ol>
+
+            @* Nomor permohonan — inilah yang paling penting dikirim ke pemohon *@
+            <div class="bg-white border-2 border-dashed border-blue-300 rounded-xl p-3 flex items-center gap-3">
+                <div class="flex-1">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Nomor Permohonan</p>
+                    <p id="noPerm" class="font-mono font-extrabold text-blue-700 text-lg tracking-widest">@Model.NoPermohonan</p>
+                </div>
+                <button type="button" id="copyNoBtn"
+                        onclick="copyNomor('@Model.NoPermohonan')"
+                        class="flex-shrink-0 text-xs font-bold bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition-colors">
+                    Salin
+                </button>
+            </div>
+        </div>
+
+        @if (!hasData)
+        {
+            <div class="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
+                <span class="text-red-500 flex-shrink-0">⚠️</span>
+                <p class="text-xs text-red-700 leading-relaxed">
+                    File data hasil belum ada. Pastikan sub-tugas Permintaan Data sudah selesai dan file sudah diupload sebelum meminta feedback.
+                </p>
+            </div>
+        }
+
+        <form asp-action="MintaFeedbackPost" asp-controller="PetugasLoket" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="permohonanId" value="@Model.PermohonanPPIDID" />
+            <div class="flex gap-3">
+                <a href="/kasubkel-kdi/subtasks/@Model.PermohonanPPIDID" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
+                <button type="submit" class="flex-grow bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
+                    📨 Minta Feedback Pemohon →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+@section Scripts {
+<script>
+function copyNomor(nomor) {
+    navigator.clipboard.writeText(nomor).then(() => {
+        const btn = document.getElementById('copyNoBtn');
+        btn.textContent = '✓ Tersalin!';
+        btn.classList.replace('bg-blue-100', 'bg-emerald-100');
+        btn.classList.replace('text-blue-700', 'text-emerald-700');
+        setTimeout(() => {
+            btn.textContent = 'Salin';
+            btn.classList.replace('bg-emerald-100', 'bg-blue-100');
+            btn.classList.replace('text-emerald-700', 'text-blue-700');
+        }, 2500);
+    }).catch(() => {
+        // Fallback: select the text
+        const el = document.getElementById('noPerm');
+        const range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+    });
+}
+</script>
+}

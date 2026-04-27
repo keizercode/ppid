@@ -48,9 +48,12 @@
          || p.StatusPPIDID == StatusId.WawancaraSelesai)
         && (p.IsPermintaanData || p.IsObservasi || p.IsWawancara);
 
-    // Kondisi feedback bisa diisi (DataSiap atau FeedbackPemohon)
-    bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
-                     || p.StatusPPIDID == StatusId.FeedbackPemohon;
+
+
+    // bisaFeedback hanya aktif setelah Loket secara eksplisit meminta feedback.
+    // Status DataSiap sengaja TIDAK membuka tombol isi agar alur tidak bypass
+    // langkah "Minta Feedback" oleh Loket Kepegawaian.
+    bool bisaFeedback = p.StatusPPIDID == StatusId.FeedbackPemohon;
 
     // Feedback yang sudah terisi
     var feedbackMap = ViewData["FeedbackMap"] as Dictionary<string, bool> ?? new();
@@ -408,85 +411,15 @@
                                     <p class="text-blue-500 text-xs mt-1 font-medium">⏳ Sedang dalam proses</p>
                                 }
 
-                                @* ══ STEP 7 AKTIF: Data Siap + Panel Feedback ══ *@
+
+                                @* ══ STEP 7 AKTIF: Data Siap — hanya download, belum feedback ══ *@
                                 @if (step.AktifSekarang && step.StatusId == StatusId.DataSiap)
                                 {
                                     <p class="text-blue-600 text-xs mt-1 font-semibold">✅ Data sudah dapat diunduh</p>
-
-                                    @* Panel feedback per-task (untuk mengisi feedback dan otomatis maju ke Selesai) *@
-                                    @if (totalFeedbackDibutuhkan > 0)
-                                    {
-                                        <div class="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                                            <p class="text-[11px] font-bold text-amber-800 mb-2">
-                                                📝 Lengkapi feedback layanan (@totalFeedbackTerisi/@totalFeedbackDibutuhkan selesai)
-                                            </p>
-                                            <div class="space-y-1.5">
-                                                @* Permintaan Data *@
-                                                @if (p.IsPermintaanData && (stData?.IsSelesai ?? false))
-                                                {
-                                                    bool fbDone = FeedbackDiisi(JenisTask.PermintaanData);
-                                                    <div class="flex items-center justify-between bg-white rounded-lg px-2.5 py-1.5 border @(fbDone ? "border-emerald-200" : "border-blue-200")">
-                                                        <span class="text-[11px] font-semibold @(fbDone ? "text-emerald-700" : "text-blue-700")">
-                                                            @(fbDone ? "✓" : "○") 📊 Permintaan Data
-                                                        </span>
-                                                        @if (!fbDone)
-                                                        {
-                                                            <a href="@Url.Action("FeedbackTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.PermintaanData })"
-                                                               class="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded font-bold">Isi →</a>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-[10px] text-emerald-600 font-semibold">Terisi ✓</span>
-                                                        }
-                                                    </div>
-                                                }
-                                                @* Observasi *@
-                                                @if (p.IsObservasi && (stObs?.IsSelesai ?? false))
-                                                {
-                                                    bool fbDone = FeedbackDiisi(JenisTask.Observasi);
-                                                    <div class="flex items-center justify-between bg-white rounded-lg px-2.5 py-1.5 border @(fbDone ? "border-emerald-200" : "border-orange-200")">
-                                                        <span class="text-[11px] font-semibold @(fbDone ? "text-emerald-700" : "text-orange-700")">
-                                                            @(fbDone ? "✓" : "○") 🔍 Observasi
-                                                        </span>
-                                                        @if (!fbDone)
-                                                        {
-                                                            <a href="@Url.Action("FeedbackTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Observasi })"
-                                                               class="text-[10px] bg-orange-600 hover:bg-orange-700 text-white px-2 py-0.5 rounded font-bold">Isi →</a>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-[10px] text-emerald-600 font-semibold">Terisi ✓</span>
-                                                        }
-                                                    </div>
-                                                }
-                                                @* Wawancara *@
-                                                @if (p.IsWawancara && (stWaw?.IsSelesai ?? false))
-                                                {
-                                                    bool fbDone = FeedbackDiisi(JenisTask.Wawancara);
-                                                    <div class="flex items-center justify-between bg-white rounded-lg px-2.5 py-1.5 border @(fbDone ? "border-emerald-200" : "border-violet-200")">
-                                                        <span class="text-[11px] font-semibold @(fbDone ? "text-emerald-700" : "text-violet-700")">
-                                                            @(fbDone ? "✓" : "○") 🎤 Wawancara
-                                                        </span>
-                                                        @if (!fbDone)
-                                                        {
-                                                            <a href="@Url.Action("FeedbackTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Wawancara })"
-                                                               class="text-[10px] bg-violet-600 hover:bg-violet-700 text-white px-2 py-0.5 rounded font-bold">Isi →</a>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-[10px] text-emerald-600 font-semibold">Terisi ✓</span>
-                                                        }
-                                                    </div>
-                                                }
-                                            </div>
-                                            @if (sisaFeedback > 0)
-                                            {
-                                                <p class="text-[11px] text-amber-600 mt-2 font-medium">
-                                                    ℹ️ Isi semua feedback untuk menyelesaikan permohonan secara otomatis.
-                                                </p>
-                                            }
-                                        </div>
-                                    }
+                                    <p class="text-gray-400 text-[11px] mt-1 leading-relaxed">
+                                        ⏳ Petugas Loket sedang mempersiapkan permintaan feedback.
+                                        Anda akan diberitahu saat formulir feedback siap diisi.
+                                    </p>
                                 }
 
                                 @* ══ STEP 8 AKTIF: Pengisian Feedback (FeedbackPemohon) ══ *@

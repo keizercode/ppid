@@ -1428,6 +1428,92 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         });
     }
 
+    // ── Minta Feedback (dikelola Loket Kepegawaian) ───────────────────────────
+// Memindahkan status DataSiap → FeedbackPemohon agar pemohon dapat mengisi
+// feedback di portal publik. Loket adalah aktor yang berinteraksi langsung
+// dengan pemohon sehingga mereka yang "membuka" akses feedback.
+
+[HttpGet("minta-feedback/{id:guid}")]
+public async Task<IActionResult> MintaFeedback(Guid id)
+{
+    var p = await db.PermohonanPPID
+        .Include(x => x.Pribadi)
+        .Include(x => x.Dokumen)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+    if (p is null) return NotFound();
+
+    if (p.StatusPPIDID != StatusId.DataSiap)
+    {
+        TempData["Error"] = "Status harus Data Siap sebelum meminta feedback pemohon.";
+        return RedirectToAction(nameof(SubTasks), new { id });
+    }
+
+    ViewData["NoPermohonan"] = p.NoPermohonan;
+    ViewData["NamaPemohon"]  = p.Pribadi?.Nama;
+    ViewData["HasData"]      = p.Dokumen.Any(d => d.JenisDokumenPPIDID == JenisDokumenId.DataHasil);
+
+    return View(p);
+}
+
+[HttpPost("minta-feedback"), ValidateAntiForgeryToken]
+public async Task<IActionResult> MintaFeedbackPost([FromForm] Guid permohonanId)
+{
+    var p = await db.PermohonanPPID.FindAsync(permohonanId);
+    if (p is null) return NotFound();
+
+    if (p.StatusPPIDID != StatusId.DataSiap)
+    {
+        TempData["Error"] = "Status sudah berubah. Refresh halaman.";
+        return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+    }
+
+    var lama    = p.StatusPPIDID;
+    var now     = DateTime.UtcNow;
+    p.StatusPPIDID = StatusId.FeedbackPemohon;
+    p.UpdatedAt    = now;
+
+    db.AddAuditLog(permohonanId, lama, StatusId.FeedbackPemohon,
+        "Data siap. Loket Kepegawaian meminta pemohon mengisi feedback via portal publik.",
+        CurrentUser);
+
+    await db.SaveChangesAsync();
+
+    TempData["Success"] =
+        "Status diperbarui ke <strong>Feedback Pemohon</strong>. " +
+        "Pemohon dapat mengisi feedback di portal publik menggunakan nomor permohonan mereka.";
+
+    return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+}
+
+[HttpPost("tandai-selesai-feedback"), ValidateAntiForgeryToken]
+public async Task<IActionResult> TandaiSelesaiFeedback([FromForm] Guid permohonanId)
+{
+    var p = await db.PermohonanPPID.FindAsync(permohonanId);
+    if (p is null) return NotFound();
+
+    if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
+    {
+        TempData["Error"] = "Tidak dapat ditandai selesai pada status ini.";
+        return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+    }
+
+    var lama         = p.StatusPPIDID;
+    var now          = DateTime.UtcNow;
+    p.StatusPPIDID   = StatusId.Selesai;
+    p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
+    p.UpdatedAt      = now;
+
+    db.AddAuditLog(permohonanId, lama, StatusId.Selesai,
+        "Permohonan ditandai selesai secara manual oleh Loket Kepegawaian (pemohon tidak merespons).",
+        CurrentUser);
+
+    await db.SaveChangesAsync();
+
+    TempData["Success"] = "Permohonan berhasil ditandai <strong>Selesai</strong>.";
+    return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+}
+
     // ══════════════════════════════════════════════════════════════════════
     // DETAIL + EDIT + BATALKAN
     // ══════════════════════════════════════════════════════════════════════
