@@ -346,25 +346,39 @@
         <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Tindak Lanjut Feedback</p>
 
         @if (isDataSiapLoket)
-        {
-            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
-                <div class="flex items-start gap-3">
-                    <span class="text-2xl">📨</span>
-                    <div>
-                        <p class="font-bold text-emerald-800 text-sm">Data Siap — Minta Feedback Pemohon</p>
-                        <p class="text-emerald-600 text-xs mt-1 leading-relaxed">
-                            Semua tugas selesai. Klik tombol di bawah untuk mengubah status ke
-                            <strong>Feedback Pemohon</strong> sehingga pemohon dapat mengisi
-                            formulir feedback di portal publik.
-                        </p>
-                    </div>
-                </div>
+{
+    @* Notifikasi: feedback SUDAH aktif otomatis di portal pemohon *@
+    <div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4 mb-3">
+        <div class="flex items-start gap-3">
+            <span class="text-xl flex-shrink-0 mt-0.5">✅</span>
+            <div>
+                <p class="font-bold text-emerald-800 text-sm">Tombol feedback sudah aktif di portal pemohon</p>
+                <p class="text-emerald-700 text-xs mt-1 leading-relaxed">
+                    Semua tugas selesai. Pemohon sudah dapat mengisi feedback langsung
+                    di portal publik menggunakan nomor <span class="font-mono font-bold">@p.NoPermohonan</span>.
+                    Tidak perlu tindakan tambahan — feedback otomatis aktif sejak status Data Siap.
+                </p>
             </div>
+        </div>
+    </div>
+    @* "Minta Feedback" menjadi opsional — hanya untuk tracking status *@
+    <details class="mb-3">
+        <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-700 select-none">
+            ⚙️ Opsional: ubah status ke "Feedback Pemohon" untuk tracking
+        </summary>
+        <div class="mt-2 bg-gray-50 border border-gray-200 rounded-xl p-3">
+            <p class="text-xs text-gray-500 mb-2 leading-relaxed">
+                Klik tombol ini jika ingin status permohonan berubah ke
+                <strong>Feedback Pemohon</strong> untuk keperluan pelaporan atau tracking internal.
+                Pemohon tidak terpengaruh — feedback mereka sudah bisa diisi sejak Data Siap.
+            </p>
             <a href="/petugas-loket/minta-feedback/@p.PermohonanPPIDID"
-               class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors">
-                📨 Minta Feedback Pemohon →
+               class="inline-flex items-center gap-2 border border-gray-300 text-gray-600 text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors">
+                📋 Ubah Status → Feedback Pemohon
             </a>
-        }
+        </div>
+    </details>
+}
         else if (isFeedbackLoket)
         {
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">

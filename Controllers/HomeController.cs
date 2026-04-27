@@ -412,12 +412,21 @@ public class HomeController(
             return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
         }
 
-        // Harus sudah DataSiap atau FeedbackPemohon agar bisa mengisi
-        if (p.StatusPPIDID < StatusId.DataSiap)
-        {
-            TempData["Error"] = "Feedback belum dapat diisi. Pastikan semua proses pengolahan data selesai terlebih dahulu.";
-            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
-        }
+
+// Feedback aktif sejak DataSiap (otomatis setelah semua tugas selesai).
+// Selesai / Dibatalkan → tidak bisa diubah lagi.
+bool statusBisaFeedback = p.StatusPPIDID == StatusId.DataSiap
+                       || p.StatusPPIDID == StatusId.FeedbackPemohon;
+
+if (!statusBisaFeedback)
+{
+    string pesanError = p.StatusPPIDID < StatusId.DataSiap
+        ? "Feedback belum dapat diisi. Pastikan semua proses pengolahan data selesai terlebih dahulu."
+        : "Permohonan sudah selesai atau dibatalkan. Feedback tidak dapat diubah lagi.";
+
+    TempData["Error"] = pesanError;
+    return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+}
 
         var existing = await db.FeedbackTaskPPID
             .FirstOrDefaultAsync(f => f.PermohonanPPIDID == id && f.JenisTask == jenisTask);
@@ -504,8 +513,9 @@ public class HomeController(
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
 
         if (p != null
-            && (p.StatusPPIDID == StatusId.FeedbackPemohon || p.StatusPPIDID == StatusId.DataSiap)
-            && p.StatusPPIDID != StatusId.Selesai)
+    && (p.StatusPPIDID == StatusId.DataSiap || p.StatusPPIDID == StatusId.FeedbackPemohon)
+    && p.StatusPPIDID != StatusId.Selesai
+    && p.StatusPPIDID != StatusId.Dibatalkan)
         {
             // Task yang aktif (tidak dibatalkan) dan sudah selesai
             var completedTaskJenis = await db.SubTaskPPID
