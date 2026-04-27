@@ -519,6 +519,7 @@ Views/
   DaftarPemohon.cshtml
   Detail.cshtml
   Edit.cshtml
+  HasilFeedback.cshtml
   Identifikasi.cshtml
   Index.cshtml
   InputIdentifikasi.cshtml
@@ -589,6 +590,7 @@ Views/
   DaftarPemohon.cshtml
   Detail.cshtml
   Edit.cshtml
+  HasilFeedback.cshtml
   Identifikasi.cshtml
   Index.cshtml
   InputIdentifikasi.cshtml

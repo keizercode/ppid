@@ -24,6 +24,12 @@
     var tugasDocs = ViewData["TugasDocs"] as List<DokumenPPID> ?? new();
     var kdiTask   = ViewData["KdiTask"]   as List<SubTaskPPID> ?? new();
 
+        var feedbacks     = ViewData["FeedbackMap"] as Dictionary<string, bool> ?? new();
+    int fbTerisi      = feedbacks.Count;
+    int taskSelesai   = Model.SubTasks.Count(t => t.IsSelesai);
+    bool anyFeedback  = fbTerisi > 0;
+    bool allFbDone    = taskSelesai > 0 && fbTerisi >= taskSelesai;
+
     static bool IsRecentlyUpdated(SubTaskPPID? st) =>
         st?.UpdatedAt >= DateTime.UtcNow.AddHours(-72);
 }
@@ -294,6 +300,92 @@
         }
     </div>
 
+    @* Panel status feedback — hanya tampil jika ada task yang selesai *@
+@if (Model.SubTasks.Any(t => t.IsSelesai))
+{
+    @* Hitung mana task selesai yang sudah dan belum ada feedback-nya.
+       FeedbackMap sudah di-pass dari controller via ViewData["FeedbackMap"]. *@
+    var feedbackMap2 = ViewData["FeedbackMap"] as Dictionary<string, bool> ?? new();
+    var selesaiTasks = Model.SubTasks.Where(t => t.IsSelesai).ToList();
+    int fbCount      = selesaiTasks.Count(t => feedbackMap2.ContainsKey(t.JenisTask) && feedbackMap2[t.JenisTask]);
+    int totalSelesai = selesaiTasks.Count;
+    bool allDone     = fbCount >= totalSelesai;
+    int pctFb        = totalSelesai > 0 ? (int)Math.Round(fbCount * 100.0 / totalSelesai) : 0;
+
+    <div class="bg-white rounded-2xl border @(allDone ? "border-emerald-200" : fbCount > 0 ? "border-amber-200" : "border-gray-100") shadow-sm p-5 mb-4">
+
+        @* Header panel dengan link ke halaman detail feedback *@
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+                <span class="text-base">📋</span>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Feedback Pemohon</p>
+                @if (allDone)
+                {
+                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">✓ Lengkap</span>
+                }
+                else if (fbCount > 0)
+                {
+                    <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">@fbCount/@totalSelesai terisi</span>
+                }
+            </div>
+            <a href="/petugas-loket/feedback/@p.PermohonanPPIDID"
+               class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                Lihat Detail →
+            </a>
+        </div>
+
+        @* Progress bar *@
+        <div class="mb-3">
+            <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500 @(allDone ? "bg-emerald-500" : "bg-amber-400")"
+                     style="width:@pctFb%"></div>
+            </div>
+        </div>
+
+        @* Status per task *@
+        <div class="space-y-1.5">
+            @foreach (var st in selesaiTasks)
+            {
+                bool fbAda    = feedbackMap2.ContainsKey(st.JenisTask) && feedbackMap2[st.JenisTask];
+                string icon2  = JenisTask.GetIcon(st.JenisTask);
+                string lbl2   = JenisTask.GetLabel(st.JenisTask);
+
+                <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-1.5 border @(fbAda ? "border-emerald-100" : "border-gray-100")">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm">@icon2</span>
+                        <span class="text-xs font-semibold @(fbAda ? "text-emerald-700" : "text-gray-600")">
+                            @lbl2
+                        </span>
+                    </div>
+                    @if (fbAda)
+                    {
+                        <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">✓ Diterima</span>
+                    }
+                    else
+                    {
+                        <span class="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-semibold">⏳ Menunggu</span>
+                    }
+                </div>
+            }
+        </div>
+
+        @* Pesan kontekstual *@
+        @if (allDone)
+        {
+            <p class="text-xs text-emerald-600 font-semibold mt-3">
+                🎉 Semua feedback diterima. Permohonan siap diselesaikan.
+            </p>
+        }
+        else
+        {
+            <p class="text-xs text-gray-400 mt-3 leading-relaxed">
+                Feedback aktif otomatis di portal pemohon sejak status Data Siap.
+                Ingatkan pemohon menggunakan nomor <span class="font-mono font-bold text-gray-600">@p.NoPermohonan</span>.
+            </p>
+        }
+    </div>
+}
+
     <!-- Laporan Final Pemohon -->
     @if (tugasDocs.Any())
     {
@@ -458,12 +550,17 @@
            class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
             📋 Lihat Detail & Audit Log
         </a>
-        @if (isDataSiap || isFeedback)
-        {
-            <a href="/petugas-loket/feedback/@p.PermohonanPPIDID"
-               class="inline-flex items-center gap-2 border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-amber-50 transition-colors">
-                📋 Lihat Feedback Pemohon
-            </a>
-        }
+        @if (isDataSiap || isFeedback || isSelesai)
+{
+
+        var fbMapNav  = ViewData["FeedbackMap"] as Dictionary<string, bool> ?? new();
+        int fbCountNav = fbMapNav.Values.Count(v => v);
+        string fbBadge = fbCountNav > 0 ? $"({fbCountNav})" : "";
+
+    <a href="/petugas-loket/feedback/@p.PermohonanPPIDID"
+       class="inline-flex items-center gap-2 @(fbCountNav > 0 ? "bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100" : "border border-gray-200 text-gray-600 hover:bg-gray-50") text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+        📋 Hasil Feedback Pemohon @fbBadge
+    </a>
+}
     </div>
 </div>

@@ -666,40 +666,55 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     // ══════════════════════════════════════════════════════════════════════
 
     [HttpGet("subtasks/{id:guid}")]
-    public async Task<IActionResult> SubTasks(Guid id)
-    {
-        var p = await db.PermohonanPPID
-            .Include(x => x.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
-            .Include(x => x.Status)
-            .Include(x => x.Detail).ThenInclude(d => d.Keperluan)
-            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+public async Task<IActionResult> SubTasks(Guid id)
+{
+    var p = await db.PermohonanPPID
+        .Include(x => x.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
+        .Include(x => x.Status)
+        .Include(x => x.Detail).ThenInclude(d => d.Keperluan)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
 
-        if (p is null) return NotFound();
+    if (p is null) return NotFound();
 
-        // Loket mengelola Obs/Waw; tampilkan status PermintaanData dari KDI sebagai info
-        var tasks = await db.SubTaskPPID
-            .Where(t => t.PermohonanPPIDID == id &&
-                        (t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara))
-            .OrderBy(t => t.JenisTask)
-            .ToListAsync();
+    // Loket mengelola Obs/Waw; tampilkan status PermintaanData dari KDI sebagai info
+    var tasks = await db.SubTaskPPID
+        .Where(t => t.PermohonanPPIDID == id &&
+                    (t.JenisTask == JenisTask.Observasi || t.JenisTask == JenisTask.Wawancara))
+        .OrderBy(t => t.JenisTask)
+        .ToListAsync();
 
-        var tugasDocs = await db.DokumenPPID
-            .Where(d => d.PermohonanPPIDID == id &&
-                        d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
-            .OrderByDescending(d => d.CreatedAt)
-            .ToListAsync();
+    // Laporan final pemohon (unggahan via portal publik)
+    var tugasDocs = await db.DokumenPPID
+        .Where(d => d.PermohonanPPIDID == id &&
+                    d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+        .OrderByDescending(d => d.CreatedAt)
+        .ToListAsync();
 
-        // Info sub-tugas KDI (PermintaanData) — read-only untuk Loket
-        var kdiTask = await db.SubTaskPPID
-            .Where(t => t.PermohonanPPIDID == id && t.JenisTask == JenisTask.PermintaanData)
-            .ToListAsync();
+    // Info sub-tugas KDI (PermintaanData) — read-only untuk Loket
+    var kdiTask = await db.SubTaskPPID
+        .Where(t => t.PermohonanPPIDID == id && t.JenisTask == JenisTask.PermintaanData)
+        .ToListAsync();
 
-        ViewData["TugasDocs"] = tugasDocs;
-        ViewData["KdiTask"] = kdiTask;
-        ViewData["Prefix"] = "petugas-loket";
+    // ── TAMBAHAN: Load feedback yang sudah diterima dari pemohon ──────────
+    // Digunakan oleh panel "Status Feedback Pemohon" di SubTasks.cshtml
+    // agar Loket dapat melihat progress feedback tanpa harus masuk ke
+    // halaman HasilFeedback terpisah.
+    var feedbacks = await db.FeedbackTaskPPID
+        .AsNoTracking()
+        .Where(f => f.PermohonanPPIDID == id)
+        .ToListAsync();
 
-        return View(new ParallelTasksVm { Permohonan = p, SubTasks = tasks });
-    }
+    ViewData["FeedbackMap"] = feedbacks
+        .GroupBy(f => f.JenisTask)
+        .ToDictionary(g => g.Key, g => true);
+    // ──────────────────────────────────────────────────────────────────────
+
+    ViewData["TugasDocs"]  = tugasDocs;
+    ViewData["KdiTask"]    = kdiTask;
+    ViewData["Prefix"]     = "petugas-loket";
+
+    return View(new ParallelTasksVm { Permohonan = p, SubTasks = tasks });
+}
 
     // ── Jadwal Observasi ──────────────────────────────────────────────────
 
@@ -1394,39 +1409,45 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
     // ── Hasil Feedback (view-only untuk Loket) ────────────────────────────
 
     [HttpGet("feedback/{id:guid}")]
-    public async Task<IActionResult> HasilFeedback(Guid id)
+public async Task<IActionResult> HasilFeedback(Guid id)
+{
+    var p = await db.PermohonanPPID
+        .Include(x => x.Pribadi)
+        .Include(x => x.Status)
+        .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+    if (p is null) return NotFound();
+
+    // Load semua feedback task yang sudah diterima dari pemohon
+    var feedbacks = await db.FeedbackTaskPPID
+        .AsNoTracking()
+        .Where(f => f.PermohonanPPIDID == id)
+        .ToListAsync();
+
+    // Load semua sub-task (Obs, Waw, PermintaanData) untuk menentukan
+    // task mana yang wajib punya feedback
+    var subTasks = await db.SubTaskPPID
+        .Where(t => t.PermohonanPPIDID == id)
+        .OrderBy(t => t.JenisTask)
+        .ToListAsync();
+
+    // Load laporan / tugas final yang diunggah pemohon via portal publik
+    var tugasDocs = await db.DokumenPPID
+        .Where(d => d.PermohonanPPIDID == id &&
+                    d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+        .OrderByDescending(d => d.CreatedAt)
+        .ToListAsync();
+
+    ViewData["TugasDocs"] = tugasDocs;
+
+    // Gunakan view lokal PetugasLoket/HasilFeedback.cshtml
+    return View(new HasilFeedbackVm
     {
-        var p = await db.PermohonanPPID
-            .Include(x => x.Pribadi)
-            .Include(x => x.Status)
-            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
-
-        if (p is null) return NotFound();
-
-        var feedbacks = await db.FeedbackTaskPPID
-            .Where(f => f.PermohonanPPIDID == id)
-            .ToListAsync();
-
-        var subTasks = await db.SubTaskPPID
-            .Where(t => t.PermohonanPPIDID == id)
-            .OrderBy(t => t.JenisTask)
-            .ToListAsync();
-
-        var tugasDocs = await db.DokumenPPID
-            .Where(d => d.PermohonanPPIDID == id &&
-                        d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
-            .OrderByDescending(d => d.CreatedAt)
-            .ToListAsync();
-
-        ViewData["TugasDocs"] = tugasDocs;
-
-        return View("~/Views/KasubkelKepegawaian/HasilFeedback.cshtml", new HasilFeedbackVm
-        {
-            Permohonan = p,
-            Feedbacks = feedbacks,
-            SubTasks = subTasks,
-        });
-    }
+        Permohonan = p,
+        Feedbacks  = feedbacks,
+        SubTasks   = subTasks,
+    });
+}
 
     // ── Minta Feedback (dikelola Loket Kepegawaian) ───────────────────────────
 // Memindahkan status DataSiap → FeedbackPemohon agar pemohon dapat mengisi
