@@ -177,44 +177,54 @@
                                 {
                                     <div class="mt-3 space-y-2">
 
-                                        @* ── Permintaan Data ── *@
-                                        @if (p.IsPermintaanData)
-                                        {
-                                            bool done   = stData?.IsSelesai ?? false;
-                                            bool canc   = stData?.IsDibatalkan ?? false;
-                                            bool fbDone = done && FeedbackDiisi(JenisTask.PermintaanData);
 
-                                            <div class="bg-white border @(done ? "border-emerald-200" : canc ? "border-red-100" : "border-blue-100") rounded-lg px-3 py-2">
-                                                <div class="flex items-center justify-between gap-2">
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0
-                                                            @(done ? "bg-emerald-100 text-emerald-600" : canc ? "bg-red-100 text-red-500" : "bg-blue-100 text-blue-600")">
-                                                            @(done ? "✓" : canc ? "✗" : "◑")
-                                                        </span>
-                                                        <span class="text-xs font-semibold @(done ? "text-emerald-700" : canc ? "text-red-500" : "text-blue-700")">
-                                                            📊 Permintaan Data
-                                                        </span>
-                                                    </div>
-                                                    <div class="flex items-center gap-1 flex-wrap justify-end">
-                                                        @if (done && !fbDone && bisaFeedback)
-                                                        {
-                                                            <a href="@Url.Action("FeedbackTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.PermintaanData })"
-                                                               class="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded font-bold">
-                                                                📝 Isi Feedback
-                                                            </a>
-                                                        }
-                                                        else if (done && fbDone)
-                                                        { <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">✓ Feedback Terisi</span> }
-                                                        else if (done)
-                                                        { <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Selesai</span> }
-                                                        else if (canc)
-                                                        { <span class="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded font-bold">Dibatalkan</span> }
-                                                        else
-                                                        { <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">Diproses</span> }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
+                                        @* ── Permintaan Data ── *@
+@if (p.IsPermintaanData)
+{
+    bool done      = stData?.IsSelesai    ?? false;
+    bool canc      = stData?.IsDibatalkan ?? false;
+    bool isPending = stData != null && stData.IsPending;   // pre-created, menunggu KDI
+    bool fbDone    = done && FeedbackDiisi(JenisTask.PermintaanData);
+
+    <div class="bg-white border @(done ? "border-emerald-200" : canc ? "border-red-100" : isPending ? "border-gray-100" : "border-blue-100") rounded-lg px-3 py-2">
+        <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0
+                    @(done ? "bg-emerald-100 text-emerald-600" : canc ? "bg-red-100 text-red-500" : isPending ? "bg-gray-100 text-gray-400" : "bg-blue-100 text-blue-600")">
+                    @(done ? "✓" : canc ? "✗" : isPending ? "○" : "◑")
+                </span>
+                <span class="text-xs font-semibold @(done ? "text-emerald-700" : canc ? "text-red-500" : isPending ? "text-gray-400" : "text-blue-700")">
+                    📊 Permintaan Data
+                </span>
+            </div>
+            <div class="flex items-center gap-1 flex-wrap justify-end">
+                @if (done && !fbDone && bisaFeedback)
+                {
+                    <a href="@Url.Action("FeedbackTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.PermintaanData })"
+                       class="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded font-bold">
+                        📝 Isi Feedback
+                    </a>
+                }
+                else if (done && fbDone)
+                { <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">✓ Feedback Terisi</span> }
+                else if (done)
+                { <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Selesai</span> }
+                else if (canc)
+                { <span class="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded font-bold">Dibatalkan</span> }
+                else if (isPending)
+                { <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold">⏳ Menunggu KDI</span> }
+                else
+                { <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">Sedang Diproses</span> }
+            </div>
+        </div>
+        @if (isPending && stData is null)
+        {
+            @* Subtask belum ada sama sekali (edge case permohonan lama) *@
+            <p class="text-[10px] text-gray-400 mt-1 pl-7">Menunggu konfirmasi dari petugas KDI.</p>
+        }
+    </div>
+}
+
 
                                         @* ── Observasi ── *@
                                         @if (p.IsObservasi)

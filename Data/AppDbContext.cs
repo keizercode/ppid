@@ -243,65 +243,78 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     //   Status 12-15 bukan "sudah selesai" — itu status intermediate yang
     //   nomor ID-nya kebetulan lebih besar dari DataSiap(10) karena ditambah belakangan.
     // ════════════════════════════════════════════════════════════════════════
+    /// <summary>
+    /// Advance status permohonan ke DataSiap HANYA jika SEMUA keperluan
+    /// yang diaktifkan di permohonan (IsPermintaanData, IsObservasi, IsWawancara)
+    /// sudah memiliki subtask yang Selesai atau Dibatalkan.
+    ///
+    /// Subtask yang Pending/InProgress = belum selesai → tidak advance.
+    /// Keperluan yang diaktifkan TAPI belum punya subtask = belum selesai → tidak advance.
+    /// </summary>
     public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
-{
-    // ── Advisory lock: mencegah race condition ────────────────────────────
-    // Menggunakan dua komponen 32-bit dari GUID bytes untuk membentuk int64 unik.
-    // Lebih aman dari GetHashCode() yang dapat menghasilkan collision antar GUID berbeda.
-    var bytes = permohonanId.ToByteArray();
-    long lockKey = (long)BitConverter.ToUInt32(bytes, 0) << 32
-                 | BitConverter.ToUInt32(bytes, 8);
+    {
+        var p = await PermohonanPPID.FindAsync(permohonanId);
+        if (p is null) return false;
 
-    await Database.ExecuteSqlAsync(
-        $"SELECT pg_advisory_xact_lock({lockKey})");
+        // Hanya relevant di status proses paralel
+        var statusAktif = new[]
+        {
+            StatusId.DiProses,
+            StatusId.Didisposisi,
+            StatusId.ObservasiDijadwalkan,
+            StatusId.ObservasiSelesai,
+            StatusId.WawancaraDijadwalkan,
+            StatusId.WawancaraSelesai,
+        };
+        if (!statusAktif.Contains(p.StatusPPIDID ?? 0)) return false;
 
-    // ── Re-read SETELAH lock diperoleh ───────────────────────────────────
-    var tasks = await SubTaskPPID
-        .Where(t => t.PermohonanPPIDID == permohonanId)
-        .ToListAsync();
+        // Kumpulkan semua subtask yang tidak dibatalkan
+        var allSubTasks = await SubTaskPPID
+            .Where(t => t.PermohonanPPIDID == permohonanId)
+            .ToListAsync();
 
-    // Hanya task yang tidak dibatalkan yang diperhitungkan
-    var activeTasks = tasks.Where(t => t.StatusTask != SubTaskStatus.Dibatalkan).ToList();
+        // ── Periksa tiap keperluan yang diaktifkan ─────────────────────────
+        // Aturan: keperluan aktif HARUS punya subtask yang Selesai.
+        // Jika subtask-nya Dibatalkan, keperluan itu dianggap "gugur" (tidak blocking).
+        // Jika subtask belum ada atau masih Pending/InProgress → BLOK advance.
 
-    if (activeTasks.Count == 0)
-        return false;
+        bool CheckKeperluan(bool isActive, string jenisTask)
+        {
+            if (!isActive) return true; // tidak dibutuhkan → skip
 
-    // Semua active task harus Selesai
-    if (!activeTasks.All(t => t.IsSelesai))
-        return false;
+            var st = allSubTasks.FirstOrDefault(t => t.JenisTask == jenisTask
+                                                   && !t.IsDibatalkan);
 
-    var p = await PermohonanPPID.FindAsync(permohonanId);
+            // Subtask belum ada atau masih dalam proses → belum selesai
+            if (st is null)        return false;
+            if (!st.IsSelesai)     return false;
 
-    // ── Guard: hanya advance jika belum di status terminal ────────────────
-    // JANGAN gunakan >= DataSiap karena:
-    //   WawancaraDijadwalkan(12) dan WawancaraSelesai(13) > DataSiap(10) secara angka
-    //   tapi BUKAN terminal state — ini adalah bug EC-CORE-1 yang sudah diperbaiki.
-    if (p is null
-        || p.StatusPPIDID == Models.StatusId.DataSiap
-        || p.StatusPPIDID == Models.StatusId.FeedbackPemohon
-        || p.StatusPPIDID == Models.StatusId.Selesai)
-        return false;
+            return true; // subtask ada dan sudah selesai
+        }
 
-    var lama       = p.StatusPPIDID;
-    p.StatusPPIDID = Models.StatusId.DataSiap;
-    p.UpdatedAt    = DateTime.UtcNow;
+        bool dataOk = CheckKeperluan(p.IsPermintaanData, JenisTask.PermintaanData);
+        bool obsOk  = CheckKeperluan(p.IsObservasi,      JenisTask.Observasi);
+        bool wawOk  = CheckKeperluan(p.IsWawancara,      JenisTask.Wawancara);
 
-    int selesaiCount = activeTasks.Count;
-    int batalCount   = tasks.Count(t => t.IsDibatalkan);
+        if (!dataOk || !obsOk || !wawOk) return false; // ada yang belum selesai
 
-    // Detail per jenis task untuk audit log
-    var detailPerJenis = activeTasks
-        .Select(t => $"{Models.JenisTask.GetLabel(t.JenisTask)} (oleh: {t.Operator ?? "—"})")
-        .ToList();
+        // Semua keperluan terpenuhi → advance ke DataSiap
+        var now    = DateTime.UtcNow;
+        var lama   = p.StatusPPIDID;
+        p.StatusPPIDID = StatusId.DataSiap;
+        p.UpdatedAt    = now;
 
-    string keterangan = $"Semua sub-tugas paralel selesai ({selesaiCount} selesai" +
-                        (batalCount > 0 ? $", {batalCount} dibatalkan" : "") +
-                        $"): {string.Join("; ", detailPerJenis)}. " +
-                        "Status otomatis maju ke Data Siap.";
+        var selesaiList = new List<string>();
+        if (p.IsPermintaanData) selesaiList.Add("Permintaan Data");
+        if (p.IsObservasi)      selesaiList.Add("Observasi");
+        if (p.IsWawancara)      selesaiList.Add("Wawancara");
 
-    AddAuditLog(permohonanId, lama, Models.StatusId.DataSiap, keterangan, operatorName);
-    return true;
-}
+        AddAuditLog(permohonanId, lama, StatusId.DataSiap,
+            $"Semua sub-tugas selesai ({string.Join(" + ", selesaiList)}). Status otomatis → Data Siap.",
+            operatorName);
+
+        return true;
+    }
 
     public async Task<JadwalPPID?> GetJadwalAktif(Guid permohonanId, string jenisJadwal) =>
         await JadwalPPID.FirstOrDefaultAsync(j =>

@@ -147,6 +147,25 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             return RedirectToAction(nameof(Index));
         }
 
+        // Jika subtask sudah InProgress/Selesai → sudah pernah diterima sebelumnya
+        var existingTask = await db.SubTaskPPID
+            .FirstOrDefaultAsync(t => t.PermohonanPPIDID == id
+                                   && t.JenisTask == JenisTask.PermintaanData);
+
+        if (existingTask is not null && existingTask.IsInProgress)
+        {
+            // Subtask sudah aktif → langsung ke halaman kelola
+            TempData["Success"] = "Sub-tugas Permintaan Data sudah aktif dan dapat dikerjakan.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+
+        if (existingTask is not null && existingTask.IsSelesai)
+        {
+            TempData["Success"] = "Sub-tugas Permintaan Data sudah selesai.";
+            return RedirectToAction(nameof(SubTasks), new { id });
+        }
+
+        // Pending (pre-created) atau belum ada → tampilkan form konfirmasi
         return View(new TerimaDisposisiVm
         {
             PermohonanPPIDID = id,
@@ -172,27 +191,53 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             return RedirectToAction(nameof(Index));
         }
 
-        var statusLama = p.StatusPPIDID;
         var now        = DateTime.UtcNow;
+        var statusLama = p.StatusPPIDID;
 
-        // Hanya buat sub-tugas PermintaanData — Obs/Waw dikelola Kepegawaian
-        var existingData = await db.SubTaskPPID
-            .CountAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
-                          && t.JenisTask == JenisTask.PermintaanData);
+        // ── Cek subtask PermintaanData ────────────────────────────────────
+        // Sejak fix, subtask sudah dibuat oleh Loket saat SuratIzin terbit.
+        // KDI "Terima Disposisi" = AKTIVASI subtask dari Pending → InProgress.
+        // Jika subtask belum ada (edge case: permohonan lama sebelum fix),
+        // buat subtask baru sebagai fallback.
+        var existingDataTask = await db.SubTaskPPID
+            .FirstOrDefaultAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
+                                   && t.JenisTask == JenisTask.PermintaanData);
 
-        if (existingData == 0)
+        if (existingDataTask is null)
+        {
+            // Fallback: subtask belum ada (permohonan sebelum fix diterapkan)
             db.CreateSubTasks(
                 vm.PermohonanPPIDID,
                 perluData:    true,
                 perluObs:     false,
                 perluWaw:     false,
                 operatorName: CurrentUser);
+        }
+        else if (existingDataTask.IsPending)
+        {
+            // Normal path: aktivasi subtask yang sudah pre-dibuat oleh Loket
+            existingDataTask.StatusTask = SubTaskStatus.InProgress;
+            existingDataTask.Operator   = CurrentUser;
+            existingDataTask.UpdatedAt  = now;
+        }
+        else if (existingDataTask.IsSelesai || existingDataTask.IsDibatalkan)
+        {
+            // Subtask sudah terminal — tidak perlu aksi apapun
+            TempData["Error"] = $"Sub-tugas Permintaan Data sudah dalam status '{SubTaskStatus.GetLabel(existingDataTask.StatusTask)}'. " +
+                                "Tidak ada perubahan yang dilakukan.";
+            return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+        }
+        // else: InProgress sudah → lanjut update status permohonan saja
 
-        p.StatusPPIDID = StatusId.DiProses;
-        p.UpdatedAt    = now;
+        // Advance status permohonan ke DiProses jika masih di Didisposisi
+        if (p.StatusPPIDID == StatusId.Didisposisi || p.StatusPPIDID == StatusId.SuratIzinTerbit)
+        {
+            p.StatusPPIDID = StatusId.DiProses;
+            p.UpdatedAt    = now;
+        }
 
-        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.DiProses,
-            $"Disposisi diterima KDI. Sub-tugas Permintaan Data dibuat. " +
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, p.StatusPPIDID ?? StatusId.DiProses,
+            $"Disposisi diterima KDI. Sub-tugas Permintaan Data diaktifkan. " +
             $"Catatan: {vm.Catatan}",
             CurrentUser);
 

@@ -596,20 +596,28 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
             $"Surat izin diterbitkan oleh Loket Kepegawaian: {vm.NoSuratIzin}.",
             CurrentUser);
 
-        // ── Buat sub-tugas Obs/Waw — dieksekusi oleh Loket Kepegawaian ───
-        if (vm.IsObservasi || vm.IsWawancara)
+        // ── Buat SEMUA sub-tugas sekaligus saat SuratIzin terbit ─────────
+        // KRITIS: PermintaanData HARUS dibuat di sini bersamaan dengan Obs/Waw
+        // agar AdvanceIfAllSubTasksDone mengetahui ada 3 tugas yang harus
+        // diselesaikan. Jika PermintaanData subtask belum ada saat Obs/Waw
+        // selesai, method tersebut akan salah mengira semua sudah beres.
         {
-            var existingObsWaw = await db.SubTaskPPID
-                .CountAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
-                              && (t.JenisTask == JenisTask.Observasi
-                               || t.JenisTask == JenisTask.Wawancara));
+            // Cek subtask yang sudah ada (idempotent — aman jika di-repost)
+            var existingJenis = await db.SubTaskPPID
+                .Where(t => t.PermohonanPPIDID == vm.PermohonanPPIDID)
+                .Select(t => t.JenisTask)
+                .ToListAsync();
 
-            if (existingObsWaw == 0)
+            bool needData = vm.IsPermintaanData && !existingJenis.Contains(JenisTask.PermintaanData);
+            bool needObs  = vm.IsObservasi      && !existingJenis.Contains(JenisTask.Observasi);
+            bool needWaw  = vm.IsWawancara      && !existingJenis.Contains(JenisTask.Wawancara);
+
+            if (needData || needObs || needWaw)
                 db.CreateSubTasks(
                     vm.PermohonanPPIDID,
-                    perluData: false,
-                    perluObs: vm.IsObservasi,
-                    perluWaw: vm.IsWawancara,
+                    perluData: needData,
+                    perluObs:  needObs,
+                    perluWaw:  needWaw,
                     operatorName: CurrentUser);
         }
 

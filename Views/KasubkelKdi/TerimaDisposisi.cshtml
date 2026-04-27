@@ -33,12 +33,17 @@
             </div>
         </div>
 
-        <!-- Sub-tugas yang akan dibuat -->
-        <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5">
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Sub-tugas yang akan dibuat KDI</p>
-            <div class="flex items-center gap-2 text-sm text-gray-700">
-                <span class="w-5 h-5 bg-blue-100 text-blue-700 rounded flex items-center justify-center text-xs">📊</span>
-                <span><strong>Permintaan Data</strong> — upload file hasil</span>
+        <!-- Sub-tugas yang akan DIAKTIVASI (bukan dibuat baru) -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
+            <p class="text-xs font-bold text-blue-800 mb-3">Yang akan terjadi:</p>
+            <div class="space-y-2">
+                <div class="flex items-center gap-2 text-sm text-blue-700">
+                    <span class="w-5 h-5 bg-blue-100 text-blue-700 rounded flex items-center justify-center text-xs flex-shrink-0">📊</span>
+                    <span>Sub-tugas <strong>Permintaan Data</strong> diaktifkan → status <strong>Sedang Diproses</strong></span>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-blue-600 pl-7">
+                    <span>Selanjutnya upload file data hasil di halaman Sub-tugas</span>
+                </div>
             </div>
         </div>
 
@@ -46,12 +51,11 @@
         <div class="bg-violet-50 border border-violet-200 rounded-xl p-4 mb-5 flex gap-2 items-start">
             <span class="text-violet-500 flex-shrink-0 mt-0.5">ℹ️</span>
             <div>
-                <p class="text-xs font-bold text-violet-800 mb-1">Observasi + Wawancara dikelola Kepegawaian</p>
+                <p class="text-xs font-bold text-violet-800 mb-1">Observasi + Wawancara dikelola Kepegawaian / Loket</p>
                 <p class="text-xs text-violet-700 leading-relaxed">
-                    Jika permohonan ini memiliki keperluan Observasi atau Wawancara,
-                    sub-tugasnya telah dibuat oleh Kepegawaian saat menerbitkan Surat Izin.
-                    KDI hanya perlu mengelola <strong>Permintaan Data</strong>.
-                    Status akan otomatis maju ke <em>Data Siap</em> setelah semua sub-tugas selesai.
+                    Sub-tugas Obs/Waw berjalan paralel dengan Permintaan Data.
+                    Status akan otomatis menjadi <em>Data Siap</em> setelah
+                    <strong>semua sub-tugas</strong> (termasuk ini) selesai.
                 </p>
             </div>
         </div>
@@ -73,7 +77,7 @@
             <div class="flex gap-3">
                 <a href="/kasubkel-kdi" class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">Batal</a>
                 <button type="submit" class="flex-grow bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm">
-                    ✓ Terima & Buat Sub-tugas Data →
+                    ✓ Terima & Mulai Proses Data →
                 </button>
             </div>
         </form>
