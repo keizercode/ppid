@@ -252,69 +252,80 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     /// Keperluan yang diaktifkan TAPI belum punya subtask = belum selesai → tidak advance.
     /// </summary>
     public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
+{
+    var p = await PermohonanPPID.FindAsync(permohonanId);
+    if (p is null) return false;
+
+    var statusAktif = new[]
     {
-        var p = await PermohonanPPID.FindAsync(permohonanId);
-        if (p is null) return false;
+        StatusId.DiProses,
+        StatusId.Didisposisi,
+        StatusId.ObservasiDijadwalkan,
+        StatusId.ObservasiSelesai,
+        StatusId.WawancaraDijadwalkan,
+        StatusId.WawancaraSelesai,
+    };
+    if (!statusAktif.Contains(p.StatusPPIDID ?? 0)) return false;
 
-        // Hanya relevant di status proses paralel
-        var statusAktif = new[]
-        {
-            StatusId.DiProses,
-            StatusId.Didisposisi,
-            StatusId.ObservasiDijadwalkan,
-            StatusId.ObservasiSelesai,
-            StatusId.WawancaraDijadwalkan,
-            StatusId.WawancaraSelesai,
-        };
-        if (!statusAktif.Contains(p.StatusPPIDID ?? 0)) return false;
+    var allSubTasks = await SubTaskPPID
+        .Where(t => t.PermohonanPPIDID == permohonanId)
+        .ToListAsync();
 
-        // Kumpulkan semua subtask yang tidak dibatalkan
-        var allSubTasks = await SubTaskPPID
-            .Where(t => t.PermohonanPPIDID == permohonanId)
-            .ToListAsync();
+    // ── GUARD: minimal satu task harus Selesai ────────────────────────────
+    // Jika semua dibatalkan → tidak otomatis advance, butuh keputusan manual.
+    bool atLeastOneSelesai = allSubTasks.Any(t => t.IsSelesai);
+    if (!atLeastOneSelesai) return false;
 
-        // ── Periksa tiap keperluan yang diaktifkan ─────────────────────────
-        // Aturan: keperluan aktif HARUS punya subtask yang Selesai.
-        // Jika subtask-nya Dibatalkan, keperluan itu dianggap "gugur" (tidak blocking).
-        // Jika subtask belum ada atau masih Pending/InProgress → BLOK advance.
+    bool CheckKeperluan(bool isActive, string jenisTask)
+    {
+        if (!isActive) return true;
 
-        bool CheckKeperluan(bool isActive, string jenisTask)
-        {
-            if (!isActive) return true; // tidak dibutuhkan → skip
+        var st = allSubTasks.FirstOrDefault(t => t.JenisTask == jenisTask
+                                               && !t.IsDibatalkan);
 
-            var st = allSubTasks.FirstOrDefault(t => t.JenisTask == jenisTask
-                                                   && !t.IsDibatalkan);
-
-            // Subtask belum ada atau masih dalam proses → belum selesai
-            if (st is null)        return false;
-            if (!st.IsSelesai)     return false;
-
-            return true; // subtask ada dan sudah selesai
-        }
-
-        bool dataOk = CheckKeperluan(p.IsPermintaanData, JenisTask.PermintaanData);
-        bool obsOk  = CheckKeperluan(p.IsObservasi,      JenisTask.Observasi);
-        bool wawOk  = CheckKeperluan(p.IsWawancara,      JenisTask.Wawancara);
-
-        if (!dataOk || !obsOk || !wawOk) return false; // ada yang belum selesai
-
-        // Semua keperluan terpenuhi → advance ke DataSiap
-        var now    = DateTime.UtcNow;
-        var lama   = p.StatusPPIDID;
-        p.StatusPPIDID = StatusId.DataSiap;
-        p.UpdatedAt    = now;
-
-        var selesaiList = new List<string>();
-        if (p.IsPermintaanData) selesaiList.Add("Permintaan Data");
-        if (p.IsObservasi)      selesaiList.Add("Observasi");
-        if (p.IsWawancara)      selesaiList.Add("Wawancara");
-
-        AddAuditLog(permohonanId, lama, StatusId.DataSiap,
-            $"Semua sub-tugas selesai ({string.Join(" + ", selesaiList)}). Status otomatis → Data Siap.",
-            operatorName);
+        // FIX: st == null artinya semua subtask jenis ini dibatalkan → gugur, tidak blocking.
+        // SEBELUMNYA: if (st is null) return false; ← inilah yang memblokir progress.
+        if (st is null)    return true;
+        if (!st.IsSelesai) return false;
 
         return true;
     }
+
+    bool dataOk = CheckKeperluan(p.IsPermintaanData, JenisTask.PermintaanData);
+    bool obsOk  = CheckKeperluan(p.IsObservasi,      JenisTask.Observasi);
+    bool wawOk  = CheckKeperluan(p.IsWawancara,      JenisTask.Wawancara);
+
+    if (!dataOk || !obsOk || !wawOk) return false;
+
+    var now  = DateTime.UtcNow;
+    var lama = p.StatusPPIDID;
+    p.StatusPPIDID = StatusId.DataSiap;
+    p.UpdatedAt    = now;
+
+    // Audit log: pisahkan mana yang selesai vs gugur (dibatalkan)
+    var selesaiList = new List<string>();
+    var gugurList   = new List<string>();
+
+    void KlasifikasiKeperluan(bool isActive, string jenisTask, string label)
+    {
+        if (!isActive) return;
+        var aktif = allSubTasks.FirstOrDefault(t => t.JenisTask == jenisTask && !t.IsDibatalkan);
+        if (aktif?.IsSelesai == true) selesaiList.Add(label);
+        else                          gugurList.Add(label);
+    }
+
+    KlasifikasiKeperluan(p.IsPermintaanData, JenisTask.PermintaanData, "Permintaan Data");
+    KlasifikasiKeperluan(p.IsObservasi,      JenisTask.Observasi,      "Observasi");
+    KlasifikasiKeperluan(p.IsWawancara,      JenisTask.Wawancara,      "Wawancara");
+
+    var ket = $"Semua tugas aktif selesai → Data Siap. " +
+              $"Selesai: {string.Join(", ", selesaiList)}.";
+    if (gugurList.Any())
+        ket += $" Gugur (dibatalkan, tidak dihitung): {string.Join(", ", gugurList)}.";
+
+    AddAuditLog(permohonanId, lama, StatusId.DataSiap, ket, operatorName);
+    return true;
+}
 
     public async Task<JadwalPPID?> GetJadwalAktif(Guid permohonanId, string jenisJadwal) =>
         await JadwalPPID.FirstOrDefaultAsync(j =>

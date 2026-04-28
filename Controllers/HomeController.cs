@@ -517,20 +517,28 @@ if (!statusBisaFeedback)
     && p.StatusPPIDID != StatusId.Selesai
     && p.StatusPPIDID != StatusId.Dibatalkan)
         {
-            // Task yang aktif (tidak dibatalkan) dan sudah selesai
+            // ── Cek apakah semua feedback task yang wajib sudah terisi ───────
+            // Task yang selesai (bukan dibatalkan) — hanya ini yang perlu feedback
             var completedTaskJenis = await db.SubTaskPPID
                 .Where(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
-                         && t.StatusTask == SubTaskStatus.Selesai)
+                        && t.StatusTask == SubTaskStatus.Selesai)   // ← unchanged, correct
                 .Select(t => t.JenisTask)
                 .ToListAsync();
 
-            // Feedback yang sudah terisi
+            // TAMBAHAN: pastikan tidak ada task yang masih InProgress/Pending
+            // (edge case: task lain belum selesai ketika feedback dikirim lebih awal)
+            bool anyStillRunning = await db.SubTaskPPID
+                .AnyAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
+                        && (t.StatusTask == SubTaskStatus.Pending
+                            || t.StatusTask == SubTaskStatus.InProgress));
+
             var filledFeedbackJenis = await db.FeedbackTaskPPID
                 .Where(f => f.PermohonanPPIDID == vm.PermohonanPPIDID)
                 .Select(f => f.JenisTask)
                 .ToListAsync();
 
-            bool allFeedbacksDone = completedTaskJenis.Count > 0
+            bool allFeedbacksDone = !anyStillRunning        // ← new guard
+                && completedTaskJenis.Count > 0
                 && completedTaskJenis.All(j => filledFeedbackJenis.Contains(j));
 
             if (allFeedbacksDone)

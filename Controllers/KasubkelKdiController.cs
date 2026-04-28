@@ -448,30 +448,39 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
 
         await db.SaveChangesAsync();
 
-        bool rolledBack = false;
+    bool rolledBack = false;
+    bool advanced   = false;   // ← add this
 
-        if (wasSelesai && statusTerminal)
+    if (wasSelesai && statusTerminal)
+    {
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is not null)
         {
-            var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-            if (p is not null)
-            {
-                var lama       = p.StatusPPIDID;
-                p.StatusPPIDID = StatusId.DiProses;
-                p.UpdatedAt    = DateTime.UtcNow;
-                db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
-                    $"Status di-rollback ke DiProses karena Permintaan Data dibatalkan. " +
-                    $"Alasan: {vm.AlasanBatal}", CurrentUser);
-                await db.SaveChangesAsync();
-                rolledBack = true;
-            }
+            var lama       = p.StatusPPIDID;
+            p.StatusPPIDID = StatusId.DiProses;
+            p.UpdatedAt    = DateTime.UtcNow;
+            db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
+                $"Status di-rollback ke DiProses karena Permintaan Data dibatalkan. " +
+                $"Alasan: {vm.AlasanBatal}", CurrentUser);
+            await db.SaveChangesAsync();
+            rolledBack = true;
         }
+    }
+    else
+    {
+        // FIX: always attempt advance — cancelled task should unblock the others
+        advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
+        await db.SaveChangesAsync();
+    }
 
-        TempData["Success"] = rolledBack
-            ? "Sub-tugas Permintaan Data dibatalkan. Status dimundurkan ke <strong>Sedang Diproses</strong>."
+    TempData["Success"] = rolledBack
+        ? "Sub-tugas Permintaan Data dibatalkan. Status dimundurkan ke <strong>Sedang Diproses</strong>."
+        : advanced
+            ? "Sub-tugas dibatalkan. Tugas lain sudah selesai — status menjadi <strong>Data Siap</strong>."
             : "Sub-tugas Permintaan Data berhasil dibatalkan.";
 
-        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
-    }
+    return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+}
 
     // ── Reopen SubTask Data ───────────────────────────────────────────────
 
