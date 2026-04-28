@@ -1,158 +1,945 @@
-@* ══════════════════════════════════════════════════════════════════════
-   Views/KasubkelKdi/JadwalSubTask.cshtml — FIXED RZ1031
-   FIX: @(condition ? "checked" : "") di area atribut tag helper dilarang.
-        asp-for pada <input type="radio"> secara otomatis membandingkan
-        Model.LokasiJenis dengan value="" untuk menentukan checked state —
-        tidak perlu atribut checked eksplisit.
-══════════════════════════════════════════════════════════════════════ *@
+@* ═══════════════════════════════════════════════════════════════════════════
+   Views/KasubkelKdi/JadwalSubTask.cshtml  ──  Smart Calendar Edition v2
+   Digunakan bersama oleh:
+     - PetugasLoket  → jadwal-observasi / jadwal-wawancara
+     - KasubkelKdi   → jadwal-observasi / jadwal-wawancara
+     - LoketUmum     → jadwal-observasi / jadwal-wawancara
+   ViewData["Prefix"] menentukan prefix URL dan role.
+   ═══════════════════════════════════════════════════════════════════════════ *@
 @model JadwalSubTaskVm
+@using PermintaanData.Models
+@using PermintaanData.Models.ViewModels
 @{
-    bool isWaw = Model.JenisTask == JenisTask.Wawancara;
-    ViewData["Title"] = $"Jadwal {(isWaw ? "Wawancara" : "Observasi")}";
-    ViewData["Role"]  = "Kasubkel KDI";
+    var prefix      = ViewData["Prefix"] as string ?? "petugas-loket";
+    bool isObs      = Model.JenisTask == JenisTask.Observasi;
+    bool isWaw      = Model.JenisTask == JenisTask.Wawancara;
+    string jenLbl   = isObs ? "Observasi" : "Wawancara";
+    string jenIcon  = isObs ? "🔍" : "🎤";
+    string postUrl  = isObs
+        ? $"/{prefix}/jadwal-observasi"
+        : $"/{prefix}/jadwal-wawancara";
+    string backUrl  = $"/{prefix}/subtasks/{Model.PermohonanPPIDID}";
+
+    string roleLabel = prefix switch {
+        "petugas-loket" => "Petugas Loket",
+        "kasubkel-kdi"  => "Kasubkel KDI",
+        "loket-umum"    => "Loket Umum",
+        _               => "Operator"
+    };
+
+    ViewData["Title"] = $"Jadwal {jenLbl} — {Model.NoPermohonan}";
+    ViewData["Role"]  = roleLabel;
     Layout = "_LayoutAdmin";
-    string icon    = isWaw ? "🎤" : "🔍";
-    string color   = isWaw ? "violet" : "orange";
-    var prefix = ViewData["Prefix"] as string ?? "kasubkel-kdi";
-    string postUrl = isWaw ? $"/{prefix}/jadwal-wawancara" : $"/{prefix}/jadwal-observasi";
+
+    // Format awal untuk JS
+    string initDateStr = Model.Tanggal.ToString("yyyy-MM-dd");
+    string initWaktu   = Model.Waktu.ToString("HH:mm");
+
+    // Warna aksen berdasarkan jenis
+    string accentBg     = isObs ? "bg-orange-500"        : "bg-violet-600";
+    string accentHov    = isObs ? "hover:bg-orange-600"  : "hover:bg-violet-700";
+    string accentRing   = isObs ? "focus:ring-orange-300": "focus:ring-violet-300";
+    string accentText   = isObs ? "text-orange-600"      : "text-violet-600";
+    string accentBgL    = isObs ? "bg-orange-50"         : "bg-violet-50";
+    string accentBorder = isObs ? "border-orange-200"    : "border-violet-200";
+    string accentDot    = isObs ? "bg-orange-500"        : "bg-violet-500";
 }
-
-<div class="max-w-xl mx-auto">
-<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-
-    <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
-        <div class="w-10 h-10 bg-@color-100 rounded-xl flex items-center justify-center text-xl">@icon</div>
-        <div>
-            <h3 class="font-bold text-gray-800">Buat Jadwal @(isWaw ? "Wawancara" : "Observasi")</h3>
-            <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan · @Model.NamaPemohon</p>
-        </div>
-    </div>
-
-    <div class="p-6">
-
-        @if (!string.IsNullOrEmpty(Model.DetailKeperluan))
-        {
-            <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4">
-                <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Detail Keperluan Pemohon</p>
-                <p class="text-sm text-gray-700 leading-relaxed">@Model.DetailKeperluan</p>
-            </div>
-        }
-
-        @if (!string.IsNullOrEmpty(Model.NamaBidangTerkait))
-        {
-            <div class="bg-@color-50 border border-@color-100 rounded-xl p-3 mb-4">
-                <p class="text-xs text-@color-700">Unit terkait: <strong>@Model.NamaBidangTerkait</strong></p>
-            </div>
-        }
-
-        <form action="@postUrl" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="SubTaskID" />
-            <input type="hidden" asp-for="PermohonanPPIDID" />
-            <input type="hidden" asp-for="NoPermohonan" />
-            <input type="hidden" asp-for="NamaPemohon" />
-            <input type="hidden" asp-for="JenisTask" />
-
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div>
-                    <label class="lbl">Tanggal <span class="req">*</span></label>
-                    <input asp-for="Tanggal" type="date" class="fld" />
-                    <span asp-validation-for="Tanggal" class="err"></span>
-                </div>
-                <div>
-                    <label class="lbl">Jam <span class="req">*</span></label>
-                    <input asp-for="Waktu" type="time" class="fld" />
-                    <span asp-validation-for="Waktu" class="err"></span>
-                </div>
-                <div class="col-span-2">
-                    <label class="lbl">Nama PIC / @(isWaw ? "Narasumber" : "Koordinator") <span class="req">*</span></label>
-                    <input asp-for="NamaPIC" class="fld" placeholder="Nama narasumber atau koordinator" />
-                    <span asp-validation-for="NamaPIC" class="err"></span>
-                </div>
-                <div class="col-span-2">
-                    <label class="lbl">No. Telepon PIC</label>
-                    <input asp-for="TeleponPIC" class="fld" placeholder="08xxxxxxxxxx" />
-                    <span asp-validation-for="TeleponPIC" class="err"></span>
-                </div>
-
-                @* ── LOKASI ONLINE/OFFLINE ──
-                   FIX RZ1031 (line 81 & 87 original):
-                   Hapus @(condition ? "checked" : "") — atribut mentah C# di area
-                   tag helper dilarang compiler Razor. asp-for="LokasiJenis" dengan
-                   value="Offline"/"Online" sudah cukup: tag helper membandingkan
-                   Model.LokasiJenis == value untuk emit checked="checked" otomatis.
-                *@
-                <div class="col-span-2">
-                    <label class="lbl">Jenis Pertemuan <span class="req">*</span></label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-gray-600 has-[:checked]:bg-gray-50 transition-all">
-                            <input asp-for="LokasiJenis" type="radio" value="Offline" id="lokasiOffline"
-                                   class="accent-gray-600" />
-                            <span class="text-sm font-semibold text-gray-700">📍 Offline</span>
-                        </label>
-                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
-                            <input asp-for="LokasiJenis" type="radio" value="Online" id="lokasiOnline"
-                                   class="accent-blue-600" />
-                            <span class="text-sm font-semibold text-gray-700">🌐 Online</span>
-                        </label>
-                    </div>
-                    <span asp-validation-for="LokasiJenis" class="err"></span>
-                </div>
-
-                <div class="col-span-2" id="lokasiDetailWrap">
-                    <label class="lbl" id="lokasiDetailLabel">
-                        <span id="lblOffline">Nama Ruangan</span>
-                        <span id="lblOnline" class="hidden">Link Zoom / Google Meet</span>
-                    </label>
-                    <input asp-for="LokasiDetail" class="fld" id="lokasiDetailInput"
-                           placeholder="Misal: Ruang Rapat Lantai 3 / https://zoom.us/j/..." />
-                </div>
-            </div>
-
-            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
-                <span class="text-yellow-500 flex-shrink-0 mt-0.5">📣</span>
-                <p class="text-xs text-yellow-800 leading-relaxed">
-                    <strong>Kewajiban Petugas:</strong> Setelah jadwal tersimpan, petugas
-                    <strong class="text-yellow-900">wajib mengingatkan produsen data / narasumber</strong>
-                    melalui telepon, WhatsApp, atau tatap muka langsung.
-                </p>
-            </div>
-
-            <div class="flex gap-3">
-                <a href="/@(ViewData["Prefix"] ?? "kasubkel-kdi")/subtasks/@Model.PermohonanPPIDID"
-                   class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50">← Kembali</a>
-                <button type="submit"
-                        class="flex-grow bg-@color-600 hover:bg-@color-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-sm">
-                    📅 Simpan Jadwal →
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-</div>
 
 <style>
-    .lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-    .req{color:#f87171}
-    .fld{display:block;width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
-    .fld:focus{box-shadow:0 0 0 2.5px #8b5cf6;border-color:transparent;background:white}
-    .err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+/* ── Calendar core ──────────────────────────────────────────────────── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day{
+    aspect-ratio:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    border-radius:10px;font-size:13px;font-weight:600;
+    cursor:pointer;position:relative;transition:all .15s;
+    min-height:40px;border:2px solid transparent;
+    line-height:1.2;user-select:none;
+}
+.cal-day:hover:not(.cal-day--past):not(.cal-day--empty){transform:scale(1.08)}
+.cal-day--empty{cursor:default}
+.cal-day--past{color:#d1d5db;cursor:not-allowed;background:#fafafa}
+.cal-day--past:hover{transform:none}
+.cal-day--weekend:not(.cal-day--past):not(.cal-day--selected){
+    background:#fff5f5;color:#dc2626;
+}
+.cal-day--holiday:not(.cal-day--past):not(.cal-day--selected){
+    background:#fef2f2;color:#b91c1c;border-color:#fca5a5;
+}
+.cal-day--holiday.cal-day--weekend:not(.cal-day--past):not(.cal-day--selected){
+    background:#fee2e2;color:#991b1b;border-color:#f87171;
+}
+.cal-day--today:not(.cal-day--selected){
+    border-color:#3b82f6!important;
+    box-shadow:0 0 0 2px rgba(59,130,246,.25);
+}
+.cal-day--selected{
+    background:#0f2563!important;color:white!important;
+    border-color:#0f2563!important;
+    box-shadow:0 4px 14px rgba(15,37,99,.4);
+    transform:scale(1.08);
+}
+.cal-day--available:not(.cal-day--past):not(.cal-day--selected):not(.cal-day--weekend):not(.cal-day--holiday){
+    background:white;color:#1f2937;
+}
+.cal-day--available:hover:not(.cal-day--past):not(.cal-day--selected){
+    background:#eff6ff;border-color:#bfdbfe;
+}
+.holiday-dot{
+    width:5px;height:5px;border-radius:50%;background:#ef4444;
+    position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+}
+.cal-day--selected .holiday-dot{background:rgba(255,255,255,.7)}
+
+/* ── Tooltip ────────────────────────────────────────────────────────── */
+.cal-tooltip{
+    position:fixed;z-index:9999;background:#1f2937;color:white;
+    font-size:11px;font-weight:600;line-height:1.4;
+    padding:6px 10px;border-radius:8px;max-width:210px;
+    pointer-events:none;opacity:0;transition:opacity .15s;
+    box-shadow:0 4px 16px rgba(0,0,0,.3);
+}
+.cal-tooltip.visible{opacity:1}
+
+/* ── Rec card ───────────────────────────────────────────────────────── */
+.rec-card{
+    border:1.5px solid #e5e7eb;border-radius:12px;
+    padding:9px 12px;cursor:pointer;transition:all .15s;background:white;
+    display:flex;align-items:center;gap:9px;
+}
+.rec-card:hover{border-color:#3b82f6;background:#eff6ff;transform:translateX(3px)}
+.rec-card.rec-warning{border-color:#fbbf24;background:#fffbeb}
+.rec-card.rec-warning:hover{border-color:#f59e0b;background:#fef3c7}
+.rec-card.rec-selected{border-color:#0f2563;background:#eff6ff}
+
+/* ── Time presets ───────────────────────────────────────────────────── */
+.time-preset{
+    padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;
+    border:1.5px solid #e5e7eb;cursor:pointer;transition:all .15s;
+    background:white;color:#374151;
+}
+.time-preset:hover{background:#eff6ff;border-color:#93c5fd;color:#1e40af}
+.time-preset.active{background:#0f2563;border-color:#0f2563;color:white}
+
+/* ── Form fields ────────────────────────────────────────────────────── */
+.fld{display:block;width:100%;border:1.5px solid #e5e7eb;border-radius:10px;
+    padding:9px 14px;font-size:13.5px;background:#fafafa;outline:none;transition:all .15s}
+.fld:focus{box-shadow:0 0 0 3px rgba(59,130,246,.2);border-color:#60a5fa;background:white}
+.err{color:#ef4444;font-size:11px;margin-top:3px;display:block}
+.lbl{display:block;font-size:10px;font-weight:800;color:#6b7280;
+    text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.req{color:#f87171}
+
+/* ── Warning banner ─────────────────────────────────────────────────── */
+#dateWarning{display:none;padding:10px 14px;border-radius:12px;
+    font-size:12px;font-weight:600;margin-top:10px;border:1.5px solid}
+#dateWarning.warn-holiday{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+#dateWarning.warn-weekend{background:#fffbeb;border-color:#fde68a;color:#92400e}
+#dateWarning.warn-both{background:#fef2f2;border-color:#f87171;color:#7f1d1d}
 </style>
 
+<div class="max-w-5xl mx-auto">
+
+    <!-- Back link -->
+    <a href="@backUrl"
+       class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium mb-5 transition-colors">
+        ← Kembali ke Sub-tugas
+    </a>
+
+    <!-- Header Card -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 @accentBgL border @accentBorder rounded-xl flex items-center justify-center text-2xl">
+                @jenIcon
+            </div>
+            <div>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5">
+                    Buat Jadwal @jenLbl
+                </p>
+                <h2 class="text-xl font-extrabold text-gray-800 font-mono">@Model.NoPermohonan</h2>
+                <p class="text-sm text-gray-500 mt-0.5 leading-tight">
+                    @Model.NamaPemohon
+                    @if (!string.IsNullOrEmpty(Model.JudulPenelitian))
+                    {
+                        <span class="text-gray-300 mx-1">·</span>
+                        <span class="italic text-gray-400 text-xs">@Model.JudulPenelitian</span>
+                    }
+                </p>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.NamaBidangTerkait))
+        {
+            <div class="hidden sm:flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+                <span class="text-gray-400 text-xs">📂</span>
+                <span class="text-xs font-semibold text-gray-600">@Model.NamaBidangTerkait</span>
+            </div>
+        }
+    </div>
+
+    <!-- Keterangan keperluan pemohon -->
+    @if (!string.IsNullOrEmpty(Model.DetailKeperluan))
+    {
+        <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 flex gap-3 items-start">
+            <span class="text-blue-400 text-lg flex-shrink-0 mt-0.5">📋</span>
+            <div>
+                <p class="text-[10px] text-blue-500 uppercase font-bold tracking-widest mb-0.5">
+                    Detail Keperluan Pemohon
+                </p>
+                <p class="text-sm text-blue-800 leading-relaxed">@Model.DetailKeperluan</p>
+            </div>
+        </div>
+    }
+
+    <form action="@postUrl" method="post" id="jadwalForm" onsubmit="return validateForm()">
+        @Html.AntiForgeryToken()
+
+        <!-- Hidden fields -->
+        <input type="hidden" name="SubTaskID"         value="@Model.SubTaskID" />
+        <input type="hidden" name="PermohonanPPIDID"  value="@Model.PermohonanPPIDID" />
+        <input type="hidden" name="NoPermohonan"      value="@Model.NoPermohonan" />
+        <input type="hidden" name="NamaPemohon"       value="@Model.NamaPemohon" />
+        <input type="hidden" name="JudulPenelitian"   value="@Model.JudulPenelitian" />
+        <input type="hidden" name="JenisTask"         value="@Model.JenisTask" />
+        <input type="hidden" name="NamaBidangTerkait" value="@Model.NamaBidangTerkait" />
+        <input type="hidden" name="DetailKeperluan"   value="@Model.DetailKeperluan" />
+
+        <!-- MAIN GRID: Kalender kiri + Sidebar kanan -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+            <!-- ══ KALENDER (2 cols) ══ -->
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+                    <!-- Calendar header navigasi -->
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+                        <div class="flex items-center gap-3">
+                            <span class="text-base">📅</span>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Pilih Tanggal</p>
+                                <p id="calMonthLabel" class="text-lg font-extrabold text-gray-800 leading-tight"></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="calPrev"
+                                    class="w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 flex items-center justify-center text-gray-500 font-bold text-lg transition-all">‹</button>
+                            <button type="button" id="calToday"
+                                    class="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-100 transition-all">Hari Ini</button>
+                            <button type="button" id="calNext"
+                                    class="w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 flex items-center justify-center text-gray-500 font-bold text-lg transition-all">›</button>
+                        </div>
+                    </div>
+
+                    <!-- Status API badge -->
+                    <div class="px-5 pt-3 flex items-center gap-2">
+                        <span id="apiStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span id="apiStatusText" class="text-[10px] text-gray-400 font-medium">Memuat data hari libur nasional…</span>
+                    </div>
+
+                    <!-- Header nama hari -->
+                    <div class="px-4 pt-3">
+                        <div class="cal-grid mb-1">
+                            @foreach (var d in new[]{"Min","Sen","Sel","Rab","Kam","Jum","Sab"})
+                            {
+                                var isWknd = d is "Min" or "Sab";
+                                <div class="text-center text-[10px] font-bold tracking-widest py-1 @(isWknd ? "text-red-400" : "text-gray-400")">@d</div>
+                            }
+                        </div>
+                        <!-- Grid di-render JS -->
+                        <div id="calendarGrid" class="cal-grid pb-4"></div>
+                    </div>
+
+                    <!-- Legenda -->
+                    <div class="px-5 pb-4 pt-2 border-t border-gray-50 flex flex-wrap gap-x-4 gap-y-2">
+                        @foreach (var (bg, border, lbl) in new[]{
+                            ("bg-white","border-gray-200","Hari Kerja"),
+                            ("bg-red-50","border-red-200","Libur Nasional"),
+                            ("bg-orange-50","border-orange-200","Sabtu/Minggu"),
+                            ("bg-[#0f2563]","border-[#0f2563]","Dipilih"),
+                        })
+                        {
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-4 h-4 rounded-md border @bg @border inline-block flex-shrink-0"></span>
+                                <span class="text-[11px] text-gray-500 font-medium">@lbl</span>
+                            </div>
+                        }
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-md border border-blue-400 bg-white inline-block flex-shrink-0"
+                                  style="box-shadow:0 0 0 2px rgba(59,130,246,.3)"></span>
+                            <span class="text-[11px] text-gray-500 font-medium">Hari Ini</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── FORM DETAIL JADWAL ── -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Detail Jadwal @jenLbl</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        <!-- Waktu -->
+                        <div class="md:col-span-2 lg:col-span-1">
+                            <label class="lbl">Jam Mulai <span class="req">*</span></label>
+                            <div class="flex flex-wrap gap-1.5 mb-2" id="timePresets">
+                                @foreach (var t in new[]{"08:00","09:00","10:00","13:00","14:00","15:00"})
+                                {
+                                    <button type="button"
+                                            class="time-preset @(t == initWaktu ? "active" : "")"
+                                            onclick="setTime('@t')">@t</button>
+                                }
+                            </div>
+                            <input type="time" id="waktuInput" name="Waktu"
+                                   value="@initWaktu"
+                                   class="fld font-mono"
+                                   onchange="syncTimePreset(this.value)"
+                                   required />
+                            <span asp-validation-for="Waktu" class="err"></span>
+                        </div>
+
+                        <!-- Nama PIC / Narasumber -->
+                        <div>
+                            <label class="lbl">
+                                Nama @(isWaw ? "Narasumber" : "PIC / Koordinator")
+                                <span class="req">*</span>
+                            </label>
+                            <input type="text" name="NamaPIC" id="namaPic"
+                                   value="@Model.NamaPIC"
+                                   placeholder="@(isWaw ? "Nama narasumber yang diwawancarai" : "Nama koordinator lapangan")"
+                                   class="fld" required />
+                            <span asp-validation-for="NamaPIC" class="err"></span>
+                        </div>
+
+                        <!-- Telepon PIC -->
+                        <div>
+                            <label class="lbl">No. Telepon @(isWaw ? "Narasumber" : "PIC")</label>
+                            <input type="tel" name="TeleponPIC"
+                                   value="@Model.TeleponPIC"
+                                   placeholder="08xxxxxxxxxx"
+                                   class="fld" />
+                            <span asp-validation-for="TeleponPIC" class="err"></span>
+                        </div>
+
+                        <!-- Jenis Pertemuan toggle -->
+                        <div>
+                            <label class="lbl">Jenis Pertemuan <span class="req">*</span></label>
+                            <div class="flex gap-2">
+                                <label id="btnOffline"
+                                       class="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all
+                                              @(Model.LokasiJenis != "Online" ? "border-[#0f2563] bg-blue-50 text-[#0f2563]" : "border-gray-200 text-gray-500 hover:border-gray-300")"
+                                       onclick="setLokasi('Offline')">
+                                    <input type="radio" name="LokasiJenis" value="Offline"
+                                           class="sr-only"
+                                           @(Model.LokasiJenis != "Online" ? "checked" : "") />
+                                    <span class="text-base">📍</span>
+                                    <span class="text-sm font-bold">Offline</span>
+                                </label>
+                                <label id="btnOnline"
+                                       class="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all
+                                              @(Model.LokasiJenis == "Online" ? "border-[#0f2563] bg-blue-50 text-[#0f2563]" : "border-gray-200 text-gray-500 hover:border-gray-300")"
+                                       onclick="setLokasi('Online')">
+                                    <input type="radio" name="LokasiJenis" value="Online"
+                                           class="sr-only"
+                                           @(Model.LokasiJenis == "Online" ? "checked" : "") />
+                                    <span class="text-base">🌐</span>
+                                    <span class="text-sm font-bold">Online</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Lokasi detail -->
+                        <div>
+                            <label class="lbl" id="lokasiLabel">
+                                @(Model.LokasiJenis == "Online" ? "Link Meeting" : "Nama Ruangan / Lokasi")
+                            </label>
+                            <input type="text" name="LokasiDetail" id="lokasiDetail"
+                                   value="@Model.LokasiDetail"
+                                   placeholder="@(Model.LokasiJenis == "Online" ? "https://meet.google.com/..." : "Ruang Rapat Lantai 3, Gedung A")"
+                                   class="fld" />
+                        </div>
+
+                    </div>
+
+                    <!-- Reminder kewajiban petugas -->
+                    <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex gap-2.5 items-start">
+                        <span class="text-yellow-500 flex-shrink-0 mt-0.5 text-base">📣</span>
+                        <p class="text-xs text-yellow-800 leading-relaxed">
+                            <strong>Kewajiban Petugas:</strong> Setelah jadwal tersimpan, petugas
+                            <strong class="text-yellow-900">wajib mengingatkan
+                            @(isWaw ? "narasumber" : "produsen data / koordinator lapangan")</strong>
+                            melalui telepon, WhatsApp, atau tatap muka langsung.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ SIDEBAR ══ -->
+            <div class="space-y-4">
+
+                <!-- Tanggal dipilih -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Tanggal Dipilih</p>
+
+                    <input type="hidden" id="tanggalInput" name="Tanggal" value="@initDateStr" />
+
+                    <div id="selectedDateDisplay"
+                         class="text-center py-4 rounded-xl bg-gray-50 border border-gray-100 mb-1">
+                        <!-- di-render JS -->
+                    </div>
+
+                    <div id="dateWarning"></div>
+
+                    <!-- Info hari libur -->
+                    <div id="holidayInfo" class="hidden mt-3 bg-red-50 border border-red-200 rounded-xl p-3">
+                        <div class="flex items-start gap-2">
+                            <span class="text-red-500 text-base flex-shrink-0">🔴</span>
+                            <div>
+                                <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-0.5">Hari Libur Nasional</p>
+                                <p id="holidayName" class="text-sm font-semibold text-red-800"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rekomendasi tanggal -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Rekomendasi</p>
+                    <p class="text-[11px] text-gray-400 mb-3">Hari kerja terdekat yang tersedia</p>
+                    <div id="recommendations" class="space-y-2"></div>
+                </div>
+
+                <!-- Info libur bulan ini -->
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                    <p class="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-2">Info Bulan Ini</p>
+                    <div id="monthHolidayInfo" class="space-y-1"></div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="space-y-2">
+                    <button type="submit" id="submitBtn"
+                            class="w-full @accentBg @accentHov text-white font-bold py-3 px-6 rounded-xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
+                        📅 Simpan Jadwal @jenLbl
+                    </button>
+                    <a href="@backUrl"
+                       class="w-full border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                        ← Batal
+                    </a>
+                </div>
+
+                <!-- Error validasi form -->
+                <div id="formError" class="hidden bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold"></div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tooltip overlay -->
+<div id="calTooltip" class="cal-tooltip"></div>
+
+@section Scripts {
 <script>
-// Toggle label dan placeholder sesuai jenis lokasi
-function updateLokasiUI() {
-    const isOnline = document.getElementById('lokasiOnline').checked;
-    document.getElementById('lblOffline').classList.toggle('hidden', isOnline);
-    document.getElementById('lblOnline').classList.toggle('hidden', !isOnline);
-    document.getElementById('lokasiDetailInput').placeholder = isOnline
-        ? 'https://zoom.us/j/123456 atau https://meet.google.com/abc-defg-hij'
-        : 'Misal: Ruang Rapat Lantai 3 Gedung DLH';
+(function () {
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EMBEDDED FALLBACK — data hari libur nasional 2025–2026
+   Sumber: API http://10.50.50.61:5678/webhook/hari-libur-nasional
+   ═══════════════════════════════════════════════════════════════════════ */
+var HOLIDAYS = {
+    "2025-01-01":"Tahun Baru 2025 Masehi",
+    "2025-01-27":"Isra\u2019 Mi\u2019raj Nabi Muhammad SAW",
+    "2025-01-28":"Cuti Bersama Tahun Baru Imlek 2576 Kongzili",
+    "2025-01-29":"Tahun Baru Imlek 2576 Kongzili",
+    "2025-03-28":"Cuti Bersama Hari Raya Nyepi Tahun Baru Saka 1947",
+    "2025-03-29":"Hari Raya Nyepi Tahun Baru Saka 1947",
+    "2025-03-31":"Hari Raya Idul Fitri 1446H",
+    "2025-04-01":"Hari Raya Idul Fitri 1446H",
+    "2025-04-02":"Cuti Bersama Hari Raya Idul Fitri 1446H",
+    "2025-04-03":"Cuti Bersama Hari Raya Idul Fitri 1446H",
+    "2025-04-04":"Cuti Bersama Hari Raya Idul Fitri 1446H",
+    "2025-04-07":"Cuti Bersama Hari Raya Idul Fitri 1446H",
+    "2025-04-18":"Wafat Yesus Kristus",
+    "2025-04-20":"Kebangkitan Yesus Kristus",
+    "2025-05-01":"Hari Buruh Internasional",
+    "2025-05-12":"Hari Raya Waisak 2569 BE",
+    "2025-05-13":"Cuti Bersama Hari Raya Waisak 2569 BE",
+    "2025-05-29":"Kenaikan Yesus Kristus",
+    "2025-05-30":"Cuti Bersama Kenaikan Yesus Kristus",
+    "2025-06-01":"Hari Lahir Pancasila",
+    "2025-06-06":"Hari Raya Idul Adha 1446H",
+    "2025-06-09":"Cuti Bersama Hari Raya Idul Adha 1446H",
+    "2025-06-27":"Tahun Baru Islam 1 Muharram 1447H",
+    "2025-08-17":"Hari Kemerdekaan Republik Indonesia ke-80",
+    "2025-09-05":"Maulid Nabi Muhammad SAW",
+    "2025-12-25":"Hari Raya Natal",
+    "2025-12-26":"Cuti Bersama Hari Raya Natal",
+    "2026-01-01":"Tahun Baru 2026 Masehi",
+    "2026-01-16":"Isra Mikraj Nabi Muhammad S.A.W.",
+    "2026-02-16":"Tahun Baru Imlek 2577 Kongzili",
+    "2026-02-17":"Tahun Baru Imlek 2577 Kongzili",
+    "2026-03-18":"Hari Suci Nyepi (Tahun Baru Saka 1948)",
+    "2026-03-19":"Hari Suci Nyepi (Tahun Baru Saka 1948)",
+    "2026-03-20":"Idul Fitri 1447 Hijriah",
+    "2026-03-21":"Idul Fitri 1447 Hijriah",
+    "2026-03-22":"Idul Fitri 1447 Hijriah",
+    "2026-03-23":"Idul Fitri 1447 Hijriah",
+    "2026-03-24":"Idul Fitri 1447 Hijriah",
+    "2026-04-03":"Wafat Yesus Kristus",
+    "2026-04-05":"Kebangkitan Yesus Kristus (Paskah)",
+    "2026-05-01":"Hari Buruh Internasional",
+    "2026-05-14":"Kenaikan Yesus Kristus",
+    "2026-05-15":"Kenaikan Yesus Kristus",
+    "2026-05-27":"Idul Adha 1447 Hijriah",
+    "2026-05-28":"Idul Adha 1447 Hijriah",
+    "2026-05-31":"Hari Raya Waisak 2570 BE",
+    "2026-06-01":"Hari Lahir Pancasila",
+    "2026-06-16":"1 Muharam Tahun Baru Islam 1448 Hijriah",
+    "2026-08-17":"Proklamasi Kemerdekaan",
+    "2026-08-25":"Maulid Nabi Muhammad S.A.W.",
+    "2026-12-25":"Kelahiran Yesus Kristus"
+};
+
+/* ── Konstanta / state ──────────────────────────────────────────────── */
+var calYear, calMonth;
+var selectedDateStr = '@Html.Raw(initDateStr)';
+var TODAY           = toDateStr(new Date());
+
+var MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni",
+                 "Juli","Agustus","September","Oktober","November","Desember"];
+var DAYS_ID   = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+
+/* ── Utility ────────────────────────────────────────────────────────── */
+function toDateStr(d) {
+    return d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0');
+}
+function parseDate(str) {
+    var p = str.split('-');
+    return new Date(+p[0], +p[1]-1, +p[2]);
+}
+function isHoliday(ds)    { return !!HOLIDAYS[ds]; }
+function isWeekend(ds)    { var d = parseDate(ds); return d.getDay()===0 || d.getDay()===6; }
+function isPast(ds)       { return ds < TODAY; }
+function isNonWorking(ds) { return isHoliday(ds) || isWeekend(ds); }
+
+/* ── Fetch live dari API (best-effort, timeout 5 s) ─────────────────── */
+function fetchHolidaysAPI() {
+    var url = 'http://10.50.50.61:5678/webhook/hari-libur-nasional';
+    var ctrl = typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+        ? { signal: AbortSignal.timeout(5000) } : {};
+
+    fetch(url, ctrl)
+        .then(function(r){ return r.ok ? r.json() : Promise.reject('non-ok'); })
+        .then(function(data){
+            if (!data || !Array.isArray(data.data)) return;
+            data.data.forEach(function(h){
+                if (h.event_date && h.event_name)
+                    HOLIDAYS[h.event_date] = h.event_name;
+            });
+            renderCalendar();
+            renderRecommendations();
+            renderMonthInfo();
+            document.getElementById('apiStatusDot').style.background = '#10b981';
+            document.getElementById('apiStatusDot').classList.remove('animate-pulse');
+            document.getElementById('apiStatusText').textContent =
+                'Data libur nasional terkini'
+        })
+        .catch(function(){
+            document.getElementById('apiStatusDot').style.background = '#f59e0b';
+            document.getElementById('apiStatusDot').classList.remove('animate-pulse');
+            document.getElementById('apiStatusText').textContent =
+                'Mode offline · ' + Object.keys(HOLIDAYS).length + ' entri (embedded)';
+        });
 }
 
-document.getElementById('lokasiOffline').addEventListener('change', updateLokasiUI);
-document.getElementById('lokasiOnline').addEventListener('change', updateLokasiUI);
+/* ═══════════════════════════════════════════════════════════════════════
+   CALENDAR RENDERER
+   ═══════════════════════════════════════════════════════════════════════ */
+function renderCalendar() {
+    var grid  = document.getElementById('calendarGrid');
+    var label = document.getElementById('calMonthLabel');
+    if (!grid) return;
 
-// Init
-updateLokasiUI();
+    label.textContent = MONTHS_ID[calMonth] + ' ' + calYear;
+
+    var firstDay  = new Date(calYear, calMonth, 1).getDay();
+    var daysInMon = new Date(calYear, calMonth+1, 0).getDate();
+    var html      = '';
+
+    // Sel kosong sebelum hari pertama
+    for (var i = 0; i < firstDay; i++)
+        html += '<div class="cal-day cal-day--empty"></div>';
+
+    for (var d = 1; d <= daysInMon; d++) {
+        var ds  = calYear + '-' +
+                  String(calMonth+1).padStart(2,'0') + '-' +
+                  String(d).padStart(2,'0');
+        var cls = ['cal-day'];
+        var dot = '';
+
+        if (isPast(ds)) {
+            cls.push('cal-day--past');
+        } else {
+            cls.push('cal-day--available');
+            if (isHoliday(ds))       cls.push('cal-day--holiday');
+            if (isWeekend(ds))       cls.push('cal-day--weekend');
+            if (ds === TODAY)        cls.push('cal-day--today');
+            if (ds === selectedDateStr) cls.push('cal-day--selected');
+            if (isHoliday(ds))       dot = '<span class="holiday-dot"></span>';
+        }
+
+        var hol   = HOLIDAYS[ds] ? HOLIDAYS[ds].replace(/'/g,"&apos;") : '';
+        var dow   = parseDate(ds).getDay();
+        var tip   = '';
+        if (hol) {
+            tip = ' data-tooltip="' + DAYS_ID[dow] + ', ' + d + ' ' +
+                  MONTHS_ID[calMonth] + ' ' + calYear + '\n🔴 ' + hol + '"';
+        } else if (!isPast(ds)) {
+            tip = ' data-tooltip="' + DAYS_ID[dow] + ', ' + d + ' ' +
+                  MONTHS_ID[calMonth] + ' ' + calYear + '"';
+        }
+
+        var click  = isPast(ds) ? '' : ' onclick="selectDate(\'' + ds + '\')"';
+        var hover  = tip ? ' onmouseenter="showTooltip(event,this)" onmouseleave="hideTooltip()"' : '';
+
+        html += '<div class="' + cls.join(' ') + '"' + tip + click + hover + '>' +
+                d + dot + '</div>';
+    }
+
+    grid.innerHTML = html;
+}
+
+/* ── Pilih tanggal ──────────────────────────────────────────────────── */
+function selectDate(ds) {
+    selectedDateStr = ds;
+    document.getElementById('tanggalInput').value = ds;
+    window._confirmedNonWorking = false;
+    renderCalendar();
+    updateSelectedDisplay();
+    renderRecommendations();
+    updateWarning();
+}
+
+/* ── Panel tanggal terpilih ─────────────────────────────────────────── */
+function updateSelectedDisplay() {
+    var el = document.getElementById('selectedDateDisplay');
+    var hi = document.getElementById('holidayInfo');
+    var hn = document.getElementById('holidayName');
+    if (!el || !selectedDateStr) return;
+
+    var d      = parseDate(selectedDateStr);
+    var dow    = DAYS_ID[d.getDay()];
+    var day    = d.getDate();
+    var mon    = MONTHS_ID[d.getMonth()];
+    var yr     = d.getFullYear();
+    var isHol  = isHoliday(selectedDateStr);
+    var isWknd = isWeekend(selectedDateStr);
+
+    var bg  = isHol  ? 'bg-red-50 border-red-200' :
+              isWknd ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200';
+    var txt = isHol  ? 'text-red-700' :
+              isWknd ? 'text-amber-700' : 'text-blue-800';
+
+    el.className = 'text-center py-4 rounded-xl border ' + bg;
+    el.innerHTML =
+        '<p class="text-[10px] font-bold uppercase tracking-widest ' + txt + ' mb-1">' + dow + '</p>' +
+        '<p class="text-3xl font-black ' + txt + ' leading-none">' + day + '</p>' +
+        '<p class="text-sm font-semibold ' + txt + ' mt-0.5">' + mon + ' ' + yr + '</p>';
+
+    if (isHol) {
+        hi.classList.remove('hidden');
+        hn.textContent = HOLIDAYS[selectedDateStr];
+    } else {
+        hi.classList.add('hidden');
+    }
+}
+
+/* ── Banner peringatan tanggal non-kerja ────────────────────────────── */
+function updateWarning() {
+    var el    = document.getElementById('dateWarning');
+    var isHol = isHoliday(selectedDateStr);
+    var isWknd= isWeekend(selectedDateStr);
+
+    el.className = 'mt-3 px-4 py-3 rounded-xl border-2 text-sm font-semibold flex items-start gap-2';
+    el.removeAttribute('style'); // reset display
+
+    if (isHol && isWknd) {
+        el.classList.add('warn-both');
+        el.style.display = 'flex';
+        el.innerHTML = '<span class="flex-shrink-0">🚨</span>' +
+            '<div><strong>Hari libur nasional + akhir pekan.</strong><br>' +
+            '<span class="font-normal">Pertimbangkan memilih hari kerja agar peserta bisa hadir.</span></div>';
+    } else if (isHol) {
+        el.classList.add('warn-holiday');
+        el.style.display = 'flex';
+        el.innerHTML = '<span class="flex-shrink-0">⚠️</span>' +
+            '<div><strong>Hari libur nasional.</strong> Pastikan narasumber dan PIC konfirmasi ketersediaan.</div>';
+    } else if (isWknd) {
+        el.classList.add('warn-weekend');
+        el.style.display = 'flex';
+        el.innerHTML = '<span class="flex-shrink-0">ℹ️</span>' +
+            '<div><strong>Akhir pekan.</strong> Jadwal di hari kerja lebih umum. Pastikan ada konfirmasi ketersediaan.</div>';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+/* ── Panel rekomendasi 5 hari kerja terdekat ────────────────────────── */
+function renderRecommendations() {
+    var container = document.getElementById('recommendations');
+    if (!container) return;
+
+    var recs  = [];
+    var check = new Date();
+    check.setDate(check.getDate() + 1);
+    var limit = 120;
+
+    while (recs.length < 5 && limit-- > 0) {
+        var ds = toDateStr(check);
+        if (!isNonWorking(ds)) {
+            var nd = new Date(check); nd.setDate(nd.getDate()+1);
+            var pd = new Date(check); pd.setDate(pd.getDate()-1);
+            var nearHol = isHoliday(toDateStr(nd)) || isHoliday(toDateStr(pd));
+            recs.push({ ds: ds, nearHol: nearHol });
+        }
+        check.setDate(check.getDate()+1);
+    }
+
+    if (recs.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Tidak ada rekomendasi tersedia</p>';
+        return;
+    }
+
+    container.innerHTML = recs.map(function(r, i) {
+        var d   = parseDate(r.ds);
+        var dow = DAYS_ID[d.getDay()];
+        var day = d.getDate();
+        var mon = MONTHS_ID[d.getMonth()];
+        var isSel = r.ds === selectedDateStr;
+
+        var cls  = isSel ? 'rec-card rec-selected' : (r.nearHol ? 'rec-card rec-warning' : 'rec-card');
+        var icon = isSel ? '✓' : (i === 0 ? '⚡' : (r.nearHol ? '⚠️' : '→'));
+        var sub  = isSel
+            ? '<p class="text-[10px] text-blue-600 font-semibold mt-0.5">Saat ini dipilih</p>'
+            : r.nearHol
+                ? '<p class="text-[10px] text-amber-600 font-semibold mt-0.5">Dekat hari libur</p>'
+                : '';
+
+        return '<div class="' + cls + '" onclick="selectDate(\'' + r.ds + '\')">' +
+               '<span class="text-base flex-shrink-0 w-6 text-center">' + icon + '</span>' +
+               '<div class="flex-1">' +
+                   '<p class="text-xs font-bold text-gray-800">' + dow + ', ' + day + ' ' + mon + '</p>' +
+                   sub +
+               '</div></div>';
+    }).join('');
+}
+
+/* ── Ringkasan libur bulan ini ──────────────────────────────────────── */
+function renderMonthInfo() {
+    var el = document.getElementById('monthHolidayInfo');
+    if (!el) return;
+
+    var daysInMon = new Date(calYear, calMonth+1, 0).getDate();
+    var list = [];
+
+    for (var d = 1; d <= daysInMon; d++) {
+        var ds = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        if (HOLIDAYS[ds]) list.push({ ds: ds, name: HOLIDAYS[ds] });
+    }
+
+    if (list.length === 0) {
+        el.innerHTML = '<p class="text-xs text-amber-700 font-medium">✅ Tidak ada libur nasional di ' +
+                       MONTHS_ID[calMonth] + ' ' + calYear + '</p>';
+        return;
+    }
+
+    el.innerHTML =
+        '<p class="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1.5">' +
+        list.length + ' Hari Libur di ' + MONTHS_ID[calMonth] + ' ' + calYear + '</p>' +
+        list.map(function(h) {
+            var d = parseDate(h.ds);
+            return '<div class="flex items-start gap-1.5 py-1 border-t border-amber-200 first:border-t-0">' +
+                   '<span class="text-red-500 text-[10px] flex-shrink-0 mt-0.5 font-bold">' + d.getDate() + '</span>' +
+                   '<p class="text-[11px] text-amber-800 font-medium leading-tight">' + h.name + '</p></div>';
+        }).join('');
+}
+
+/* ── Tooltip ────────────────────────────────────────────────────────── */
+var tooltip = document.getElementById('calTooltip');
+
+function showTooltip(e, el) {
+    var text = el.getAttribute('data-tooltip');
+    if (!text || !tooltip) return;
+    tooltip.innerHTML = text.replace(/\n/g, '<br>');
+    tooltip.classList.add('visible');
+    positionTooltip(e);
+}
+function hideTooltip() {
+    if (tooltip) tooltip.classList.remove('visible');
+}
+function positionTooltip(e) {
+    if (!tooltip) return;
+    var x = e.clientX + 14, y = e.clientY - 10;
+    if (x + 220 > window.innerWidth)  x = e.clientX - 230;
+    if (y + 90  > window.innerHeight) y = e.clientY - 100;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top  = y + 'px';
+}
+document.addEventListener('mousemove', function(e) {
+    if (tooltip && tooltip.classList.contains('visible')) positionTooltip(e);
+});
+
+/* ── Navigasi bulan ─────────────────────────────────────────────────── */
+document.getElementById('calPrev').addEventListener('click', function() {
+    calMonth--;
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    renderCalendar();
+    renderMonthInfo();
+});
+document.getElementById('calNext').addEventListener('click', function() {
+    calMonth++;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    renderCalendar();
+    renderMonthInfo();
+});
+document.getElementById('calToday').addEventListener('click', function() {
+    var t = new Date();
+    calYear  = t.getFullYear();
+    calMonth = t.getMonth();
+    renderCalendar();
+    renderMonthInfo();
+});
+
+/* ── Time presets ───────────────────────────────────────────────────── */
+function setTime(t) {
+    document.getElementById('waktuInput').value = t;
+    syncTimePreset(t);
+}
+function syncTimePreset(t) {
+    document.querySelectorAll('.time-preset').forEach(function(btn) {
+        btn.classList.toggle('active', btn.textContent.trim() === t);
+    });
+}
+document.getElementById('waktuInput').addEventListener('change', function() {
+    syncTimePreset(this.value);
+});
+
+/* ── Toggle Online / Offline ────────────────────────────────────────── */
+// Menggunakan inline style — menghindari masalah classList.add/remove dengan
+// Tailwind arbitrary values [ ] # yang tidak reliable via API classList.
+function setLokasi(jenis) {
+    var isOnline = jenis === 'Online';
+    var btnOff   = document.getElementById('btnOffline');
+    var btnOn    = document.getElementById('btnOnline');
+    var lbl      = document.getElementById('lokasiLabel');
+    var inp      = document.getElementById('lokasiDetail');
+
+    // Reset keduanya ke inactive
+    [btnOff, btnOn].forEach(function(btn) {
+        btn.style.borderColor     = '#e5e7eb';
+        btn.style.backgroundColor = '';
+        btn.style.color           = '#6b7280';
+    });
+
+    // Aktifkan tombol yang dipilih
+    var activeBtn = isOnline ? btnOn : btnOff;
+    activeBtn.style.borderColor     = '#0f2563';
+    activeBtn.style.backgroundColor = '#eff6ff';
+    activeBtn.style.color           = '#0f2563';
+
+    // Update label & placeholder
+    if (isOnline) {
+        lbl.textContent = 'Link Meeting (Zoom / Google Meet / Teams)';
+        inp.placeholder = 'https://meet.google.com/xxx-xxxx-xxx';
+    } else {
+        lbl.textContent = 'Nama Ruangan / Lokasi';
+        inp.placeholder = 'Ruang Rapat Lantai 3, Gedung A';
+    }
+
+    // Sync nilai radio button
+    document.querySelectorAll('input[name="LokasiJenis"]').forEach(function(r) {
+        r.checked = r.value === jenis;
+    });
+}
+
+/* ── Validasi form sebelum submit ───────────────────────────────────── */
+function validateForm() {
+    var errEl   = document.getElementById('formError');
+    var tanggal = document.getElementById('tanggalInput').value;
+    var namaPic = document.getElementById('namaPic').value.trim();
+
+    if (!tanggal) {
+        errEl.textContent = '⚠ Pilih tanggal jadwal terlebih dahulu.';
+        errEl.classList.remove('hidden');
+        return false;
+    }
+    if (!namaPic) {
+        errEl.textContent = '⚠ Nama PIC / Narasumber wajib diisi.';
+        errEl.classList.remove('hidden');
+        return false;
+    }
+
+    var isHol  = isHoliday(tanggal);
+    var isWknd = isWeekend(tanggal);
+
+    if ((isHol || isWknd) && !window._confirmedNonWorking) {
+        var d     = parseDate(tanggal);
+        var label = isHol
+            ? 'hari libur nasional (' + HOLIDAYS[tanggal] + ')'
+            : 'akhir pekan (' + DAYS_ID[d.getDay()] + ')';
+
+        var ok = confirm(
+            'Tanggal yang dipilih adalah ' + label + '.\n\n' +
+            'Pastikan narasumber / PIC sudah konfirmasi ketersediaan.\n\n' +
+            'Tetap simpan jadwal ini?'
+        );
+        if (!ok) { errEl.classList.add('hidden'); return false; }
+        window._confirmedNonWorking = true;
+    }
+
+    errEl.classList.add('hidden');
+    return true;
+}
+
+/* ── Expose ke global scope (dipanggil dari inline HTML handlers) ───── */
+// Fungsi-fungsi ini dipanggil via onclick/onsubmit di markup HTML,
+// sehingga HARUS terdaftar di window — tidak bisa hanya ada di dalam IIFE.
+window.selectDate    = selectDate;
+window.showTooltip   = showTooltip;
+window.hideTooltip   = hideTooltip;
+window.setTime       = setTime;
+window.syncTimePreset= syncTimePreset;
+window.setLokasi     = setLokasi;
+window.validateForm  = validateForm;
+
+/* ── Init ───────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+    var initDate = new Date('@Html.Raw(initDateStr)');
+    calYear  = initDate.getFullYear();
+    calMonth = initDate.getMonth();
+
+    renderCalendar();
+    updateSelectedDisplay();
+    updateWarning();
+    renderRecommendations();
+    renderMonthInfo();
+
+    // Fetch data live dari API internal
+    fetchHolidaysAPI();
+});
+
+}());
 </script>
+
+@if (ViewData.ModelState?.IsValid == false)
+{
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var errEl = document.getElementById('formError');
+        if (errEl) {
+            errEl.textContent = 'Periksa kembali isian form di atas.';
+            errEl.classList.remove('hidden');
+        }
+    });
+    </script>
+}
+}
