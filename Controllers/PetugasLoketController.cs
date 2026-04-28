@@ -746,65 +746,76 @@ public async Task<IActionResult> SubTasks(Guid id)
     }
 
     [HttpPost("jadwal-observasi"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
+public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
+{
+    if (!ModelState.IsValid)
+        return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", vm);
+
+    var now = DateTime.UtcNow;
+
+    // ── Deaktivasi jadwal observasi lama yang masih aktif ────────────────
+    // Wajib dilakukan agar jadwal stale sebelum Reopen tidak override jadwal baru.
+    var jadwalLama = await db.JadwalPPID
+        .Where(j => j.PermohonanPPIDID == vm.PermohonanPPIDID
+                 && j.JenisJadwal == "Observasi"
+                 && j.IsAktif)
+        .ToListAsync();
+    foreach (var jl in jadwalLama)
+        jl.IsAktif = false;
+
+    db.JadwalPPID.Add(new JadwalPPID
     {
-        if (!ModelState.IsValid)
-            return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", vm);
+        PermohonanPPIDID = vm.PermohonanPPIDID,
+        JenisJadwal      = "Observasi",
+        Tanggal          = vm.Tanggal,
+        Waktu            = vm.Waktu,
+        NamaPIC          = vm.NamaPIC,
+        TeleponPIC       = vm.TeleponPIC,
+        LokasiJenis      = vm.LokasiJenis,
+        LokasiDetail     = vm.LokasiDetail,
+        IsAktif          = true,   // ← FIX UTAMA
+        CreatedAt        = now
+    });
 
-        var now = DateTime.UtcNow;
+    var sub = vm.SubTaskID != Guid.Empty
+        ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
+        : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Observasi);
 
-        db.JadwalPPID.Add(new JadwalPPID
-        {
-            PermohonanPPIDID = vm.PermohonanPPIDID,
-            JenisJadwal = "Observasi",
-            Tanggal = vm.Tanggal,
-            Waktu = vm.Waktu,
-            NamaPIC = vm.NamaPIC,
-            TeleponPIC = vm.TeleponPIC,
-            LokasiJenis = vm.LokasiJenis,
-            LokasiDetail = vm.LokasiDetail,
-            CreatedAt = now
-        });
-
-        var sub = vm.SubTaskID != Guid.Empty
-            ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
-            : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Observasi);
-
-        if (sub is not null)
-        {
-            sub.StatusTask = SubTaskStatus.InProgress;
-            sub.TanggalJadwal = vm.Tanggal;
-            sub.WaktuJadwal = vm.Waktu;
-            sub.NamaPIC = vm.NamaPIC;
-            sub.TeleponPIC = vm.TeleponPIC;
-            sub.LokasiJenis = vm.LokasiJenis;
-            sub.LokasiDetail = vm.LokasiDetail;
-            sub.Operator = CurrentUser;
-            sub.UpdatedAt = now;
-        }
-
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p is not null)
-        {
-            var lama = p.StatusPPIDID;
-            bool isObsOnly = p.IsObservasi && !p.IsPermintaanData && !p.IsWawancara;
-            if (isObsOnly && p.StatusPPIDID == StatusId.DiProses)
-                p.StatusPPIDID = StatusId.ObservasiDijadwalkan;
-
-            p.UpdatedAt = now;
-            db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
-                $"Observasi dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
-                $"PIC: {vm.NamaPIC}. Dikelola Loket Kepegawaian." +
-                (isObsOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
-                CurrentUser);
-        }
-
-        await db.SaveChangesAsync();
-        TempData["Success"] =
-            $"Jadwal observasi: <strong>{vm.Tanggal:dd MMM yyyy}</strong> pukul {vm.Waktu:HH:mm}";
-
-        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    if (sub is not null)
+    {
+        sub.StatusTask    = SubTaskStatus.InProgress;
+        sub.TanggalJadwal = vm.Tanggal;
+        sub.WaktuJadwal   = vm.Waktu;
+        sub.NamaPIC       = vm.NamaPIC;
+        sub.TeleponPIC    = vm.TeleponPIC;
+        sub.LokasiJenis   = vm.LokasiJenis;
+        sub.LokasiDetail  = vm.LokasiDetail;
+        sub.Operator      = CurrentUser;
+        sub.UpdatedAt     = now;
     }
+
+    var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (p is not null)
+    {
+        var lama       = p.StatusPPIDID;
+        bool isObsOnly = p.IsObservasi && !p.IsPermintaanData && !p.IsWawancara;
+        if (isObsOnly && p.StatusPPIDID == StatusId.DiProses)
+            p.StatusPPIDID = StatusId.ObservasiDijadwalkan;
+
+        p.UpdatedAt = now;
+        db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
+            $"Observasi dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
+            $"PIC: {vm.NamaPIC}. Dikelola Loket Kepegawaian." +
+            (isObsOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
+            CurrentUser);
+    }
+
+    await db.SaveChangesAsync();
+    TempData["Success"] =
+        $"Jadwal observasi: <strong>{vm.Tanggal:dd MMM yyyy}</strong> pukul {vm.Waktu:HH:mm}";
+
+    return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+}
 
     // ── Selesai Observasi ─────────────────────────────────────────────────
 
@@ -929,64 +940,74 @@ public async Task<IActionResult> SubTasks(Guid id)
     }
 
     [HttpPost("jadwal-wawancara"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
+public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
+{
+    if (!ModelState.IsValid)
+        return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", vm);
+
+    var p   = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (p is null) return NotFound();
+
+    var now  = DateTime.UtcNow;
+    var lama = p.StatusPPIDID;
+
+    // ── Deaktivasi jadwal wawancara lama yang masih aktif ────────────────
+    var jadwalLama = await db.JadwalPPID
+        .Where(j => j.PermohonanPPIDID == vm.PermohonanPPIDID
+                 && j.JenisJadwal == "Wawancara"
+                 && j.IsAktif)
+        .ToListAsync();
+    foreach (var jl in jadwalLama)
+        jl.IsAktif = false;
+
+    db.JadwalPPID.Add(new JadwalPPID
     {
-        if (!ModelState.IsValid)
-            return View("~/Views/KasubkelKdi/JadwalSubTask.cshtml", vm);
+        PermohonanPPIDID = vm.PermohonanPPIDID,
+        JenisJadwal      = "Wawancara",
+        Tanggal          = vm.Tanggal,
+        Waktu            = vm.Waktu,
+        NamaPIC          = vm.NamaPIC,
+        TeleponPIC       = vm.TeleponPIC,
+        LokasiJenis      = vm.LokasiJenis,
+        LokasiDetail     = vm.LokasiDetail,
+        IsAktif          = true,   // ← FIX UTAMA
+        CreatedAt        = now
+    });
 
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p is null) return NotFound();
+    var sub = vm.SubTaskID != Guid.Empty
+        ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
+        : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Wawancara);
 
-        var now = DateTime.UtcNow;
-        var lama = p.StatusPPIDID;
-
-        db.JadwalPPID.Add(new JadwalPPID
-        {
-            PermohonanPPIDID = vm.PermohonanPPIDID,
-            JenisJadwal = "Wawancara",
-            Tanggal = vm.Tanggal,
-            Waktu = vm.Waktu,
-            NamaPIC = vm.NamaPIC,
-            TeleponPIC = vm.TeleponPIC,
-            LokasiJenis = vm.LokasiJenis,
-            LokasiDetail = vm.LokasiDetail,
-            CreatedAt = now
-        });
-
-        var sub = vm.SubTaskID != Guid.Empty
-            ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
-            : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Wawancara);
-
-        if (sub is not null)
-        {
-            sub.StatusTask = SubTaskStatus.InProgress;
-            sub.TanggalJadwal = vm.Tanggal;
-            sub.WaktuJadwal = vm.Waktu;
-            sub.NamaPIC = vm.NamaPIC;
-            sub.TeleponPIC = vm.TeleponPIC;
-            sub.LokasiJenis = vm.LokasiJenis;
-            sub.LokasiDetail = vm.LokasiDetail;
-            sub.Operator = CurrentUser;
-            sub.UpdatedAt = now;
-        }
-
-        bool isWawOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
-        if (isWawOnly && p.StatusPPIDID == StatusId.DiProses)
-            p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
-
-        p.UpdatedAt = now;
-        db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
-            $"Wawancara dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
-            $"PIC: {vm.NamaPIC}. Dikelola Loket Kepegawaian." +
-            (isWawOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
-            CurrentUser);
-
-        await db.SaveChangesAsync();
-        TempData["Success"] =
-            $"Jadwal wawancara: <strong>{vm.Tanggal:dd MMM yyyy}</strong> pukul {vm.Waktu:HH:mm}";
-
-        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    if (sub is not null)
+    {
+        sub.StatusTask    = SubTaskStatus.InProgress;
+        sub.TanggalJadwal = vm.Tanggal;
+        sub.WaktuJadwal   = vm.Waktu;
+        sub.NamaPIC       = vm.NamaPIC;
+        sub.TeleponPIC    = vm.TeleponPIC;
+        sub.LokasiJenis   = vm.LokasiJenis;
+        sub.LokasiDetail  = vm.LokasiDetail;
+        sub.Operator      = CurrentUser;
+        sub.UpdatedAt     = now;
     }
+
+    bool isWawOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
+    if (isWawOnly && p.StatusPPIDID == StatusId.DiProses)
+        p.StatusPPIDID = StatusId.WawancaraDijadwalkan;
+
+    p.UpdatedAt = now;
+    db.AddAuditLog(vm.PermohonanPPIDID, lama, p.StatusPPIDID!.Value,
+        $"Wawancara dijadwalkan {vm.Tanggal:dd MMM yyyy} pukul {vm.Waktu:HH:mm}, " +
+        $"PIC: {vm.NamaPIC}. Dikelola Loket Kepegawaian." +
+        (isWawOnly ? "" : " [paralel mode — KDI memproses data secara bersamaan]"),
+        CurrentUser);
+
+    await db.SaveChangesAsync();
+    TempData["Success"] =
+        $"Jadwal wawancara: <strong>{vm.Tanggal:dd MMM yyyy}</strong> pukul {vm.Waktu:HH:mm}";
+
+    return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+}
 
     // ── Selesai Wawancara ─────────────────────────────────────────────────
 
