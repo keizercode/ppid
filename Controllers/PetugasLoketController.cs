@@ -1122,7 +1122,9 @@ public async Task<IActionResult> SubTasks(Guid id)
             WaktuBaru = sub.WaktuJadwal ?? new TimeOnly(9, 0),
             NamaPICBaru = sub.NamaPIC ?? string.Empty,
             TeleponPICBaru = sub.TeleponPIC,
-            LokasiJenisLama = sub.LokasiJenis,
+            LokasiJenis      = sub.LokasiJenis ?? "Offline",   // ← FIX BUG
+            LokasiDetail     = sub.LokasiDetail,               // ← FIX BUG
+            LokasiJenisLama  = sub.LokasiJenis,
             LokasiDetailLama = sub.LokasiDetail,
         });
     }
@@ -1130,6 +1132,7 @@ public async Task<IActionResult> SubTasks(Guid id)
     [HttpPost("reschedule"), ValidateAntiForgeryToken]
     public async Task<IActionResult> ReschedulePost(RescheduleSubTaskVm vm)
     {
+        ViewData["Prefix"] = "petugas-loket";
         if (!ModelState.IsValid)
             return View("~/Views/KasubkelKdi/RescheduleSubTask.cshtml", vm);
 
