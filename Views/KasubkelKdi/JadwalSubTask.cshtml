@@ -541,13 +541,13 @@ function fetchHolidaysAPI() {
             document.getElementById('apiStatusDot').style.background = '#10b981';
             document.getElementById('apiStatusDot').classList.remove('animate-pulse');
             document.getElementById('apiStatusText').textContent =
-                'Data libur nasional terkini'
+                'Kalender'
         })
         .catch(function(){
             document.getElementById('apiStatusDot').style.background = '#f59e0b';
             document.getElementById('apiStatusDot').classList.remove('animate-pulse');
             document.getElementById('apiStatusText').textContent =
-                'Mode offline · ' + Object.keys(HOLIDAYS).length + ' entri (embedded)';
+                'Kalender';
         });
 }
 
