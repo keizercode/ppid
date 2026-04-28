@@ -1,14 +1,24 @@
-@* ─── Views/LoketUmum/InputIdentifikasi.cshtml ────────────────────────────── *@
+@* ─── Views/LoketUmum/InputIdentifikasi.cshtml ───────────────────────────── *@
 @model PermohonanPPID
 @{
     ViewData["Title"] = "Input Identifikasi Awal — Loket Umum";
     ViewData["Role"]  = "Loket Umum";
     Layout = "_LayoutAdmin";
+
     var pr   = Model.Pribadi;
     var ppid = pr?.PribadiPPID;
+
+    // LoketUmum selalu LSM — tidak ada mahasiswa di sini.
+    // Label disesuaikan agar tidak menggunakan terminologi akademik.
+    const string labelJudul         = "Judul / Topik Permohonan";
+    const string labelLatarBelakang = "Latar Belakang";
+    const string labelLembaga       = "Lembaga / Organisasi";
+    const string labelJabatan       = "Jabatan / Posisi";
+
     var detailObs  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Observasi)?.DetailKeperluan;
     var detailData = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.PermintaanData)?.DetailKeperluan;
     var detailWaw  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara)?.DetailKeperluan;
+
     var alamat = string.Join(", ", new[]{ pr?.Alamat, !string.IsNullOrEmpty(pr?.RT)?$"RT {pr!.RT}":null, !string.IsNullOrEmpty(pr?.RW)?$"RW {pr!.RW}":null, pr?.NamaKelurahan, pr?.NamaKecamatan, pr?.NamaKabupaten }.Where(s=>!string.IsNullOrEmpty(s)));
 }
 
@@ -27,11 +37,30 @@
             <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-4">Ringkasan Permohonan</p>
             <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div><span class="text-[10px] text-emerald-500 uppercase font-bold block">No. Permohonan</span><p class="text-emerald-800 font-mono font-bold">@Model.NoPermohonan</p></div>
-                <div><span class="text-[10px] text-emerald-500 uppercase font-bold block">Kategori</span><p class="text-emerald-700 font-medium">🏢 @Model.KategoriPemohon</p></div>
-                <div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Pemohon</span><p class="text-emerald-800 font-semibold">@pr?.Nama <span class="font-mono font-normal text-emerald-500 text-xs">· @pr?.NIK</span></p></div>
-                @if(!string.IsNullOrEmpty(ppid?.Lembaga)){<div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Lembaga</span><p class="text-emerald-700 text-sm">@ppid!.Lembaga</p></div>}
-                @if(!string.IsNullOrEmpty(alamat)){<div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Alamat</span><p class="text-emerald-600 text-xs">@alamat</p></div>}
-                <div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Judul</span><p class="text-emerald-700 leading-snug">@Model.JudulPenelitian</p></div>
+                <div><span class="text-[10px] text-emerald-500 uppercase font-bold block">Kategori</span><p class="text-emerald-700 font-medium">🏛️ @Model.KategoriPemohon</p></div>
+                <div class="col-span-2"><span class="text-[10px] text-emerald-500 uppercase font-bold block">Perwakilan</span><p class="text-emerald-800 font-semibold">@pr?.Nama <span class="font-mono font-normal text-emerald-500 text-xs">· @pr?.NIK</span></p></div>
+                @if(!string.IsNullOrEmpty(ppid?.Lembaga)){
+                    <div class="col-span-2">
+                        <span class="text-[10px] text-emerald-500 uppercase font-bold block">@labelLembaga</span>
+                        <p class="text-emerald-700 text-sm">@ppid!.Lembaga</p>
+                    </div>
+                }
+                @if(!string.IsNullOrEmpty(ppid?.Pekerjaan)){
+                    <div class="col-span-2">
+                        <span class="text-[10px] text-emerald-500 uppercase font-bold block">@labelJabatan</span>
+                        <p class="text-emerald-700 text-sm">@ppid!.Pekerjaan</p>
+                    </div>
+                }
+                @if(!string.IsNullOrEmpty(alamat)){
+                    <div class="col-span-2">
+                        <span class="text-[10px] text-emerald-500 uppercase font-bold block">Alamat</span>
+                        <p class="text-emerald-600 text-xs">@alamat</p>
+                    </div>
+                }
+                <div class="col-span-2">
+                    <span class="text-[10px] text-emerald-500 uppercase font-bold block">@labelJudul</span>
+                    <p class="text-emerald-700 leading-snug">@Model.JudulPenelitian</p>
+                </div>
                 <div class="col-span-2">
                     <span class="text-[10px] text-emerald-500 uppercase font-bold block mb-1">Keperluan</span>
                     <div class="flex flex-wrap gap-1.5">
@@ -42,9 +71,40 @@
                 </div>
             </div>
         </div>
+
+        <!-- Detail keperluan -->
+        @{
+            bool hasDetail = (Model.IsObservasi && !string.IsNullOrEmpty(detailObs)) ||
+                             (Model.IsPermintaanData && !string.IsNullOrEmpty(detailData)) ||
+                             (Model.IsWawancara && !string.IsNullOrEmpty(detailWaw));
+        }
+        @if (hasDetail) {
+            <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5 space-y-3">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Detail Keperluan</p>
+                @if (Model.IsObservasi && !string.IsNullOrEmpty(detailObs)) {
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">Lokasi / Objek Observasi</span>
+                        <p class="text-gray-700 text-xs mt-0.5 leading-relaxed">@detailObs</p>
+                    </div>
+                }
+                @if (Model.IsPermintaanData && !string.IsNullOrEmpty(detailData)) {
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">Data / Dokumen yang Dibutuhkan</span>
+                        <p class="text-gray-700 text-xs mt-0.5 leading-relaxed">@detailData</p>
+                    </div>
+                }
+                @if (Model.IsWawancara && !string.IsNullOrEmpty(detailWaw)) {
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">Topik dan Narasumber Wawancara</span>
+                        <p class="text-gray-700 text-xs mt-0.5 leading-relaxed">@detailWaw</p>
+                    </div>
+                }
+            </div>
+        }
+
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex gap-2.5 items-start">
             <span class="text-amber-500 mt-0.5 flex-shrink-0">⚠️</span>
-            <p class="text-amber-700 text-xs leading-relaxed">Setelah dikonfirmasi, status berubah ke <strong>Identifikasi Awal</strong>. Cetak formulir dan minta pemohon menandatangani.</p>
+            <p class="text-amber-700 text-xs leading-relaxed">Setelah dikonfirmasi, status berubah ke <strong>Identifikasi Awal</strong>. Cetak formulir dan minta perwakilan lembaga menandatangani.</p>
         </div>
         <form asp-action="InputIdentifikasiPost" asp-controller="LoketUmum" asp-route-id="@Model.PermohonanPPIDID" method="post">
             @Html.AntiForgeryToken()

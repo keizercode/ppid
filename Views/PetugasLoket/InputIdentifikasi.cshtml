@@ -3,8 +3,15 @@
     ViewData["Title"] = "Input Identifikasi Awal";
     ViewData["Role"]  = "Petugas Loket";
     Layout = "_LayoutAdmin";
+
     var pr   = Model.Pribadi;
     var ppid = pr?.PribadiPPID;
+
+    // ── Konteks ────────────────────────────────────────────────────────────
+    bool isMahasiswa = Model.KategoriPemohon == "Mahasiswa";
+
+    string labelJudul         = isMahasiswa ? "Judul Penelitian"           : "Judul / Topik Permohonan";
+    string labelLatarBelakang = isMahasiswa ? "Latar Belakang Penelitian"  : "Latar Belakang";
 
     var detailObs  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Observasi)?.DetailKeperluan;
     var detailData = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.PermintaanData)?.DetailKeperluan;
@@ -69,12 +76,26 @@
                 }
                 @if (!string.IsNullOrEmpty(ppid?.Lembaga)) {
                     <div class="col-span-2">
-                        <span class="text-[10px] text-blue-400 uppercase font-bold block">Lembaga</span>
-                        <p class="text-blue-700 text-sm">@ppid.Lembaga @(!string.IsNullOrEmpty(ppid.Jurusan) ? $"/ {ppid.Jurusan}" : "")</p>
+                        <span class="text-[10px] text-blue-400 uppercase font-bold block">
+                            @(isMahasiswa ? "Lembaga Pendidikan" : "Lembaga / Organisasi")
+                        </span>
+                        <p class="text-blue-700 text-sm">
+                            @ppid.Lembaga
+                            @if (isMahasiswa && !string.IsNullOrEmpty(ppid.Jurusan))
+                            {
+                                <span class="text-blue-500 text-xs">/ @ppid.Jurusan</span>
+                            }
+                        </p>
+                    </div>
+                }
+                @if (!isMahasiswa && !string.IsNullOrEmpty(ppid?.Pekerjaan)) {
+                    <div class="col-span-2">
+                        <span class="text-[10px] text-blue-400 uppercase font-bold block">Jabatan / Posisi</span>
+                        <p class="text-blue-700 text-sm">@ppid.Pekerjaan</p>
                     </div>
                 }
                 <div class="col-span-2">
-                    <span class="text-[10px] text-blue-400 uppercase font-bold block">Judul Penelitian</span>
+                    <span class="text-[10px] text-blue-400 uppercase font-bold block">@labelJudul</span>
                     <p class="text-blue-700 text-sm leading-snug">@Model.JudulPenelitian</p>
                 </div>
                 <div class="col-span-2">
@@ -105,19 +126,25 @@
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Detail Keperluan</p>
                 @if (Model.IsObservasi && !string.IsNullOrEmpty(detailObs)) {
                     <div>
-                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">Deskripsi Observasi</span>
+                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">
+                            @(isMahasiswa ? "Deskripsi Observasi" : "Lokasi / Objek Observasi")
+                        </span>
                         <p class="text-gray-700 text-xs mt-0.5 leading-relaxed">@detailObs</p>
                     </div>
                 }
                 @if (Model.IsPermintaanData && !string.IsNullOrEmpty(detailData)) {
                     <div>
-                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">Data yang Diperlukan</span>
+                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">
+                            @(isMahasiswa ? "Data yang Diperlukan" : "Data / Dokumen yang Dibutuhkan")
+                        </span>
                         <p class="text-gray-700 text-xs mt-0.5 leading-relaxed">@detailData</p>
                     </div>
                 }
                 @if (Model.IsWawancara && !string.IsNullOrEmpty(detailWaw)) {
                     <div>
-                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">Materi Wawancara</span>
+                        <span class="text-[10px] text-gray-400 font-semibold uppercase block">
+                            @(isMahasiswa ? "Materi Wawancara" : "Topik dan Narasumber Wawancara")
+                        </span>
                         <p class="text-gray-700 text-xs mt-0.5 leading-relaxed">@detailWaw</p>
                     </div>
                 }
@@ -129,7 +156,8 @@
             <span class="text-amber-500 mt-0.5 flex-shrink-0">⚠️</span>
             <p class="text-amber-700 text-xs leading-relaxed">
                 Setelah dikonfirmasi, status berubah ke <strong>Identifikasi Awal</strong>.
-                Anda akan diarahkan ke halaman <strong>cetak formulir</strong> untuk dicetak dan ditandatangani pemohon.
+                Anda akan diarahkan ke halaman <strong>cetak formulir</strong> untuk dicetak dan ditandatangani
+                @(isMahasiswa ? "pemohon" : "perwakilan lembaga").
             </p>
         </div>
 

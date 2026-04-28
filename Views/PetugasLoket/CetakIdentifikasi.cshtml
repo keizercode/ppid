@@ -1,12 +1,13 @@
 @*
-   Views/PetugasLoket/CetakIdentifikasi.cshtml — PERBAIKAN
+   Views/PetugasLoket/CetakIdentifikasi.cshtml — PERBAIKAN v2
    ─────────────────────────────────────────────────────────────────────────
-   BUG FIX: Tombol toolbar "Upload TTD" sebelumnya hardcoded ke
-   /petugas-loket/upload-ttd/... sehingga salah route ketika diakses
-   dari LoketUmum (/loket-umum/upload-ttd/...).
-
-   SOLUSI: Gunakan ViewData["Prefix"] yang sudah diset controller,
-   atau deteksi dari URL request path.
+   PERUBAHAN:
+   1. Semua label, checkbox tujuan, dan teks formulir kini kontekstual:
+      - Mahasiswa → "Judul Penelitian", "Latar Belakang Penelitian",
+        checkbox Tugas MK / Tugas Akhir / Skripsi / Tesis / Disertasi
+      - LSM/Non-Mahasiswa → "Judul / Topik Permohonan", "Latar Belakang",
+        checkbox Kajian Kebijakan / Advokasi / Laporan Program / dsb.
+   2. Deteksi prefix toolbar (upload-ttd URL) tetap via ViewData["Prefix"].
    ─────────────────────────────────────────────────────────────────────────
 *@
 @model PermohonanPPID
@@ -16,12 +17,45 @@
     var pr   = Model.Pribadi;
     var ppid = pr?.PribadiPPID;
 
-    var tujuan      = Model.TujuanPermohonan ?? "";
-    bool isTugasMK  = tujuan.Contains("Tugas Mata Kuliah");
-    bool isTugasAkh = tujuan.Contains("Tugas Akhir");
-    bool isSkripsi  = tujuan.Contains("Skripsi");
-    bool isLainnya  = !isTugasMK && !isTugasAkh && !isSkripsi && !string.IsNullOrEmpty(tujuan);
+    // ── Konteks pemohon ───────────────────────────────────────────────────
+    bool isMahasiswa = Model.KategoriPemohon == "Mahasiswa";
 
+    var tujuan = Model.TujuanPermohonan ?? "";
+
+    // ── Flag checkbox MAHASISWA ───────────────────────────────────────────
+    bool isTugasMK   = tujuan.Contains("Tugas Mata Kuliah");
+    bool isTugasAkh  = tujuan.Contains("Tugas Akhir");
+    bool isSkripsi   = tujuan.Contains("Skripsi");
+    bool isTesis     = tujuan.Contains("Tesis");
+    bool isDisertasi = tujuan.Contains("Disertasi");
+
+    // ── Flag checkbox LSM / Non-Mahasiswa ─────────────────────────────────
+    bool isKajianKebijakan    = tujuan.Contains("Kajian Kebijakan");
+    bool isAdvokasiLingkungan = tujuan.Contains("Advokasi Lingkungan");
+    bool isLaporanProgram     = tujuan.Contains("Laporan Program");
+    bool isPublikasiMedia     = tujuan.Contains("Publikasi");
+    bool isKerjaSama          = tujuan.Contains("Kerja Sama");
+    bool isKepHukum           = tujuan.Contains("Hukum");
+
+    // ── "Lainnya" — sisa yang tidak cocok dengan salah satu pilihan ───────
+    bool isLainnyaMhs = isMahasiswa &&
+        !isTugasMK && !isTugasAkh && !isSkripsi && !isTesis && !isDisertasi &&
+        !string.IsNullOrEmpty(tujuan);
+
+    bool isLainnyaLsm = !isMahasiswa &&
+        !isKajianKebijakan && !isAdvokasiLingkungan && !isLaporanProgram &&
+        !isPublikasiMedia && !isKerjaSama && !isKepHukum &&
+        !string.IsNullOrEmpty(tujuan);
+
+    bool isLainnya = isMahasiswa ? isLainnyaMhs : isLainnyaLsm;
+
+    // ── Label adaptif ─────────────────────────────────────────────────────
+    string labelJudul         = isMahasiswa ? "Judul Penelitian"           : "Judul / Topik Permohonan";
+    string labelLatarBelakang = isMahasiswa ? "Latar Belakang Penelitian"  : "Latar Belakang";
+    string labelLembaga       = isMahasiswa ? "Lembaga Pendidikan"         : "Lembaga / Organisasi";
+    string labelPosisi        = isMahasiswa ? "Pekerjaan / Jabatan"        : "Jabatan / Posisi";
+
+    // ── Detail keperluan ──────────────────────────────────────────────────
     var detailObs  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Observasi)?.DetailKeperluan  ?? "-";
     var detailData = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.PermintaanData)?.DetailKeperluan ?? "-";
     var detailWaw  = Model.Detail.FirstOrDefault(d => d.KeperluanID == KeperluanId.Wawancara)?.DetailKeperluan  ?? "-";
@@ -40,10 +74,7 @@
         : System.Globalization.CultureInfo.InvariantCulture
             .TextInfo.ToTitleCase(namaPemohon.ToLower());
 
-    @* ── FIX: Deteksi prefix dari ViewData atau path request ── *@
-    @* Controller masing-masing (PetugasLoketController & LoketUmumController)
-       harus meng-set ViewData["Prefix"] sebelum me-render view ini.
-       Fallback: deteksi dari path request jika ViewData tidak tersedia. *@
+    // ── Prefix routing toolbar ────────────────────────────────────────────
     string prefix = ViewData["Prefix"] as string ?? "";
     if (string.IsNullOrEmpty(prefix))
     {
@@ -53,7 +84,6 @@
             : "petugas-loket";
     }
 
-    @* URL yang benar untuk tombol toolbar *@
     string urlUploadTTD = $"/{prefix}/upload-ttd/{Model.PermohonanPPIDID}";
     string urlKembali   = $"/{prefix}";
 }
@@ -195,19 +225,18 @@
 </head>
 <body>
 
-@* ── TOOLBAR — URL dinamis berdasar prefix ─────────────────────────────── *@
+@* ── TOOLBAR ─────────────────────────────────────────────────────────────── *@
 <div class="toolbar">
     <p class="tbrand">
         🖨️ Formulir Identifikasi Awal
         <code>@Model.NoPermohonan</code>
     </p>
     <button class="tbtn tp" onclick="window.print()">🖨️ Cetak</button>
-    @* FIX: gunakan urlUploadTTD yang sudah dihitung di atas (bukan hardcoded) *@
     <a class="tbtn tn" href="@urlUploadTTD">✍️ Upload TTD →</a>
     <a class="tbtn tb" href="@urlKembali">← Kembali</a>
 </div>
 
-@* ── PAPER ── *@
+@* ── PAPER ────────────────────────────────────────────────────────────────── *@
 <div class="page-wrap">
   <div class="paper">
 
@@ -219,6 +248,7 @@
     </p>
     <hr class="thick" />
 
+    @* ── Nomor Permohonan ─── *@
     <div class="nop-box">
         <div class="nop-lbl">Nomor<br />Permohonan</div>
         <div class="nop-div"></div>
@@ -231,6 +261,7 @@
         </div>
     </div>
 
+    @* ── Data Pemohon ─── *@
     <table class="dtbl">
         <colgroup><col class="c-lbl" /><col class="c-sep" /><col class="c-val" /></colgroup>
         <tbody>
@@ -239,7 +270,8 @@
             <tr><td class="lbl">No. Telepon</td><td class="sep">:</td><td><span class="ln">@(pr?.Telepon ?? "")</span></td></tr>
             <tr><td class="lbl">Alamat</td><td class="sep">:</td><td><span class="ln">@alamatLengkap</span></td></tr>
 
-            @if (Model.KategoriPemohon == "Mahasiswa")
+            @* ── Baris institusi/lembaga — berbeda untuk Mahasiswa vs LSM ── *@
+            @if (isMahasiswa)
             {
                 <tr><td class="lbl">Lembaga Pendidikan</td><td class="sep">:</td><td><span class="ln">@(ppid?.Lembaga ?? "")</span></td></tr>
                 <tr><td class="lbl">Fakultas</td><td class="sep">:</td><td><span class="ln">@(ppid?.Fakultas ?? "")</span></td></tr>
@@ -248,25 +280,59 @@
             else
             {
                 <tr><td class="lbl">Lembaga / Organisasi</td><td class="sep">:</td><td><span class="ln">@(ppid?.Lembaga ?? "")</span></td></tr>
-                <tr><td class="lbl">Pekerjaan / Jabatan</td><td class="sep">:</td><td><span class="ln">@(ppid?.Pekerjaan ?? "")</span></td></tr>
+                <tr><td class="lbl">Jabatan / Posisi</td><td class="sep">:</td><td><span class="ln">@(ppid?.Pekerjaan ?? "")</span></td></tr>
             }
 
-            <tr><td class="lbl">Judul Topik</td><td class="sep">:</td><td><span class="ln">@(Model.JudulPenelitian ?? "")</span></td></tr>
-            <tr><td class="lbl">Latar Belakang</td><td class="sep">:</td><td><span class="ln-tall">@(Model.LatarBelakang ?? "")</span></td></tr>
+            @* ── Label judul & latar belakang adaptif ── *@
+            <tr><td class="lbl">@labelJudul</td><td class="sep">:</td><td><span class="ln">@(Model.JudulPenelitian ?? "")</span></td></tr>
+            <tr><td class="lbl">@labelLatarBelakang</td><td class="sep">:</td><td><span class="ln-tall">@(Model.LatarBelakang ?? "")</span></td></tr>
         </tbody>
     </table>
 
-    <div class="cbrow">
-        <span class="cb @(isTugasMK  ? "on" : "")"></span><span class="cbl">Tugas Mata Kuliah</span>
-        <span class="cb @(isTugasAkh ? "on" : "")"></span><span class="cbl">Pembuatan Tugas Akhir</span>
-        <span class="cb @(isSkripsi  ? "on" : "")"></span><span class="cbl">Pembuatan Skripsi</span>
-    </div>
-    <div class="cbrow" style="margin-bottom:7px;">
-        <span class="cb @(isLainnya ? "on" : "")"></span>
-        <span class="cbl">Lainnya, sebutkan :</span>
-        <span style="display:inline-block;border-bottom:1px solid #000;min-width:210px;padding-bottom:1px;vertical-align:bottom;">@(isLainnya ? tujuan : "")</span>
-    </div>
+    @* ════════════════════════════════════════════════════════════════════
+       BAGIAN TUJUAN — seluruhnya berbeda antara Mahasiswa dan LSM
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (isMahasiswa)
+    {
+        @* ── Mahasiswa: pilihan tujuan akademik ── *@
+        <div class="cbrow">
+            <span class="cb @(isTugasMK   ? "on" : "")"></span><span class="cbl">Tugas Mata Kuliah</span>
+            <span class="cb @(isTugasAkh  ? "on" : "")"></span><span class="cbl">Pembuatan Tugas Akhir</span>
+            <span class="cb @(isSkripsi   ? "on" : "")"></span><span class="cbl">Pembuatan Skripsi</span>
+        </div>
+        <div class="cbrow" style="margin-bottom:4px;">
+            <span class="cb @(isTesis     ? "on" : "")"></span><span class="cbl">Pembuatan Tesis</span>
+            <span class="cb @(isDisertasi ? "on" : "")"></span><span class="cbl">Pembuatan Disertasi</span>
+        </div>
+        <div class="cbrow" style="margin-bottom:7px;">
+            <span class="cb @(isLainnya ? "on" : "")"></span>
+            <span class="cbl">Lainnya, sebutkan :</span>
+            <span style="display:inline-block;border-bottom:1px solid #000;min-width:210px;padding-bottom:1px;vertical-align:bottom;">@(isLainnya ? tujuan : "")</span>
+        </div>
+    }
+    else
+    {
+        @* ── LSM / Non-Mahasiswa: pilihan tujuan kelembagaan ── *@
+        <div class="cbrow">
+            <span class="cb @(isKajianKebijakan    ? "on" : "")"></span><span class="cbl">Penelitian dan Kajian Kebijakan</span>
+            <span class="cb @(isAdvokasiLingkungan ? "on" : "")"></span><span class="cbl">Pemantauan dan Advokasi Lingkungan</span>
+        </div>
+        <div class="cbrow">
+            <span class="cb @(isLaporanProgram  ? "on" : "")"></span><span class="cbl">Penyusunan Laporan Program</span>
+            <span class="cb @(isPublikasiMedia  ? "on" : "")"></span><span class="cbl">Keperluan Publikasi / Media</span>
+        </div>
+        <div class="cbrow" style="margin-bottom:4px;">
+            <span class="cb @(isKerjaSama ? "on" : "")"></span><span class="cbl">Kerja Sama Kelembagaan</span>
+            <span class="cb @(isKepHukum  ? "on" : "")"></span><span class="cbl">Keperluan Hukum / Litigasi</span>
+        </div>
+        <div class="cbrow" style="margin-bottom:7px;">
+            <span class="cb @(isLainnya ? "on" : "")"></span>
+            <span class="cbl">Lainnya, sebutkan :</span>
+            <span style="display:inline-block;border-bottom:1px solid #000;min-width:210px;padding-bottom:1px;vertical-align:bottom;">@(isLainnya ? tujuan : "")</span>
+        </div>
+    }
 
+    @* ── Keperluan (sama untuk semua) ── *@
     <div class="stitle">Keperluan <span style="font-weight:normal;font-style:italic;">(pilihan bisa lebih dari satu)</span></div>
     <div class="cbrow" style="margin-bottom:7px;">
         <span class="cb @(Model.IsObservasi      ? "on" : "")"></span><span class="cbl">Observasi</span>
@@ -274,19 +340,29 @@
         <span class="cb @(Model.IsWawancara      ? "on" : "")"></span><span class="cbl">Wawancara</span>
     </div>
 
+    @* ── Detail keperluan — label adaptif ── *@
     <table class="dtbl2">
         <colgroup><col class="c2-lbl" /><col class="c2-sep" /><col class="c2-val" /></colgroup>
         <tbody>
             <tr>
-                <td class="dlbl">Deskripsi observasi yang akan dilakukan<span class="hint">(tulis "–" jika tidak dibutuhkan)</span></td>
+                <td class="dlbl">
+                    @(isMahasiswa ? "Deskripsi observasi yang akan dilakukan" : "Lokasi / objek yang akan diobservasi")
+                    <span class="hint">(tulis "–" jika tidak dibutuhkan)</span>
+                </td>
                 <td class="sep">:</td><td><span class="ln-det">@detailObs</span></td>
             </tr>
             <tr>
-                <td class="dlbl">Data yang diperlukan<span class="hint">(tulis "–" jika tidak dibutuhkan)</span></td>
+                <td class="dlbl">
+                    @(isMahasiswa ? "Data yang diperlukan" : "Data / dokumen yang dibutuhkan")
+                    <span class="hint">(tulis "–" jika tidak dibutuhkan)</span>
+                </td>
                 <td class="sep">:</td><td><span class="ln-det">@detailData</span></td>
             </tr>
             <tr>
-                <td class="dlbl">Materi Wawancara<span class="hint">(tulis "–" jika tidak dibutuhkan)</span></td>
+                <td class="dlbl">
+                    @(isMahasiswa ? "Materi Wawancara" : "Topik dan narasumber wawancara")
+                    <span class="hint">(tulis "–" jika tidak dibutuhkan)</span>
+                </td>
                 <td class="sep">:</td><td><span class="ln-det">@detailWaw</span></td>
             </tr>
             <tr>
@@ -296,6 +372,7 @@
         </tbody>
     </table>
 
+    @* ── Tanda tangan ── *@
     <div class="sign-row">
         <div class="sign-col">
             <div>Mengetahui,</div>
@@ -306,16 +383,20 @@
         </div>
         <div class="sign-col">
             <div>Jakarta, @tanggalCetak</div>
-            <div>Pemohon,</div>
+            <div>@(isMahasiswa ? "Pemohon," : "Perwakilan,")</div>
             <div class="sign-space"></div>
             <div><span class="sign-name">@namaPemohonTitle</span></div>
             <div class="sign-sub">NIK @(pr?.NIK ?? "................................")</div>
+            @if (!isMahasiswa && !string.IsNullOrWhiteSpace(ppid?.Lembaga))
+            {
+                <div class="sign-sub" style="margin-top:2px;font-style:italic;">@ppid!.Lembaga</div>
+            }
         </div>
     </div>
 
     <p class="nb">
         <strong>NB:</strong> Formulir ini dibuat untuk mengetahui kebutuhan pemohon sebagai pendukung
-        pembuatan surat pemberian izin. <strong>Simpan nomor permohonan yang tertera di atas —
+        pembuatan surat @(isMahasiswa ? "pemberian izin" : "izin / rekomendasi"). <strong>Simpan nomor permohonan yang tertera di atas —
         nomor tersebut diperlukan untuk melacak status secara <em>online</em> di portal PPID.</strong>
     </p>
 
