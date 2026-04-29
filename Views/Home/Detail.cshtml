@@ -639,7 +639,7 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
                             @if (isOverdueCard)
                             { <span class="text-[10px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-bold">⏰ Lewat Jadwal</span> }
                             else if (isNewJad)
-                            { <span class="text-[10px] bg-green-100 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-bold animate-pulse">✨ BARU</span> }
+                            { <span class="text-[10px] bg-green-100 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-bold animate-pulse">BARU</span> }
                             @if (rescCount > 0)
                             { <span class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-semibold">🔄 Diubah @rescCount×</span> }
                         </div>
@@ -747,10 +747,22 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
             @foreach (var (icon, label, href, btnColor) in fileItems)
             {
                 <a href="@href" target="_blank"
-                   class="flex items-center gap-2.5 w-full @btnColor text-white text-xs font-bold py-2.5 px-3.5 rounded-xl transition-colors">
-                    <span class="text-base flex-shrink-0">@icon</span>
-                    <span class="flex-1 text-left truncate">@label</span>
-                    <span class="flex-shrink-0 opacity-80">⬇</span>
+                class="group flex items-center gap-3 w-full bg-slate-100 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl transition hover:bg-slate-200">
+
+                    <!-- Icon kiri -->
+                    <span class="flex items-center justify-center w-5 h-5 text-sm opacity-80">
+                        @icon
+                    </span>
+
+                    <!-- Label -->
+                    <span class="flex-1 text-left truncate">
+                        @label
+                    </span>
+
+                    <!-- Icon kanan -->
+                    <span class="flex items-center justify-center w-4 h-4 opacity-50 group-hover:translate-y-0.5 transition">
+                        ↓
+                    </span>
                 </a>
             }
         </div>
@@ -766,8 +778,8 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
         }
     </div>
 }
-
-            @* Upload Laporan Final (dari DataSiap ke atas) *@
+            @* di bawah ini belum dipakai *@
+            @* Upload Laporan Final (dari DataSiap ke atas)
             @{
                 var dokTugas   = p.Dokumen.Where(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
                                           .OrderByDescending(d => d.CreatedAt).ToList();
@@ -802,7 +814,7 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
                         </a>
                     }
                 </div>
-            }
+            } *@
 
             <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
                 <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Butuh Bantuan?</p>
