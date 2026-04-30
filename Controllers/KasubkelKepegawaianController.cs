@@ -169,8 +169,8 @@ public class KasubkelKepegawaianController(
                 : vm.DisposisiUnit;
 
             db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguSuratIzin,
-                $"Verifikasi disetujui. Disposisi: {vm.DisposisiUnit}. Catatan: {vm.CatatanVerifikasi}",
-                CurrentUser);
+            $"Verifikasi disetujui. Disposisi: {p.NamaBidang}. Catatan: {vm.CatatanVerifikasi}",
+            CurrentUser);
 
             TempData["Success"] =
                 $"Permohonan <strong>{vm.NoPermohonan}</strong> diverifikasi — siap surat izin.";
