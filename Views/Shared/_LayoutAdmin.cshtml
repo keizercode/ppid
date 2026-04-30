@@ -81,6 +81,96 @@
 
         .alert-slide { animation:alertSlide .25s ease both; }
         @@keyframes alertSlide { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ── Notification Bell ── */
+        .notif-bell-btn {
+            position: relative;
+            width: 34px; height: 34px;
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--toggle-bg);
+            border: 1px solid var(--toggle-border);
+            color: var(--toggle-icon);
+            cursor: pointer;
+            transition: all .15s;
+            flex-shrink: 0;
+        }
+        .notif-bell-btn:hover { background: var(--toggle-hover); }
+        .notif-bell-btn.has-unread { background: #EFF6FF; border-color: #BFDBFE; color: #2563EB; }
+        [data-theme="dark"] .notif-bell-btn.has-unread { background: rgba(59,130,246,.2); border-color: rgba(59,130,246,.35); color: #93c5fd; }
+
+        .notif-badge {
+            position: absolute;
+            top: -4px; right: -4px;
+            min-width: 16px; height: 16px;
+            padding: 0 4px;
+            border-radius: 99px;
+            background: #EF4444;
+            color: white;
+            font-size: 9px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid var(--bg-topbar);
+            animation: badgePop .25s ease both;
+        }
+        @@keyframes badgePop { from{transform:scale(0)} to{transform:scale(1)} }
+
+        /* ── Notification Popup ── */
+        #notif-popup {
+            position: fixed;
+            top: 60px; right: 20px;
+            width: 380px;
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06);
+            z-index: 9999;
+            overflow: hidden;
+            transform-origin: top right;
+            animation: popupOpen .18s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        [data-theme="dark"] #notif-popup {
+            background: #1E2A3E;
+            border-color: rgba(255,255,255,.08);
+            box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        }
+        @@keyframes popupOpen {
+            from { opacity:0; transform:scale(.92) translateY(-8px); }
+            to   { opacity:1; transform:scale(1)   translateY(0);    }
+        }
+        #notif-popup.closing {
+            animation: popupClose .15s ease both;
+        }
+        @@keyframes popupClose {
+            from { opacity:1; transform:scale(1)   translateY(0);    }
+            to   { opacity:0; transform:scale(.95) translateY(-6px); }
+        }
+
+        .notif-popup-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #F3F4F6;
+            transition: background .1s;
+            cursor: default;
+        }
+        [data-theme="dark"] .notif-popup-item { border-color: rgba(255,255,255,.05); }
+        .notif-popup-item:last-child { border-bottom: none; }
+        .notif-popup-item:hover { background: #F9FAFB; }
+        [data-theme="dark"] .notif-popup-item:hover { background: rgba(255,255,255,.04); }
+        .notif-popup-item.unread { background: #FAFCFF; }
+        [data-theme="dark"] .notif-popup-item.unread { background: rgba(59,130,246,.06); }
+
+        .notif-popup-icon {
+            width: 34px; height: 34px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .notif-popup-icon.danger  { background: #FEF2F2; }
+        .notif-popup-icon.warning { background: #FFFBEB; }
+
+        /* ── Backdrop overlay ── */
+        #notif-backdrop {
+            position: fixed; inset: 0; z-index: 9998;
+        }
     </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -166,9 +256,6 @@
             }
 
             @* ── LOKET UMUM ── *@
-            @* FIX v2: "Permohonan Baru" → /loket-umum/daftar (langsung form LSM).
-               /loket-umum/identifikasi dihapus dari nav karena tidak ada controller action-nya.
-               LoketUmum hanya melayani LSM — tidak perlu langkah identifikasi kategori. *@
             @if (isLoketUmum)
             {
                 <p class="nav-group-label">Loket Umum</p>
@@ -238,7 +325,26 @@
                 <h1 class="text-[14px] font-bold leading-none truncate" style="color:var(--topbar-title)">
                     @ViewData["Title"]
                 </h1>
+
                 <div class="flex items-center gap-2 flex-shrink-0">
+
+                    @* ── Notification Bell (only when NotifApiUrl is set by controller) ── *@
+                    @if (ViewData["NotifApiUrl"] != null)
+                    {
+                        <div class="relative" id="notif-bell-wrap">
+                            <button id="notif-bell-btn"
+                                    class="notif-bell-btn"
+                                    onclick="toggleNotifPopup()"
+                                    title="Notifikasi">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                                <span id="notif-badge" class="notif-badge hidden">0</span>
+                            </button>
+                        </div>
+                    }
+
                     <span class="topbar-pill">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                         @ViewData["Role"]
@@ -280,6 +386,279 @@
         </footer>
     </div>
 </div>
+
+@* ══════════════════════════════════════════════════════════════════════════
+   NOTIFICATION POPUP
+   Dirender jika NotifApiUrl tersedia (diset oleh controller via ViewData).
+   ══════════════════════════════════════════════════════════════════════════ *@
+@if (ViewData["NotifApiUrl"] != null)
+{
+    var notifApiUrl  = ViewData["NotifApiUrl"]  as string;
+    var notifPageUrl = ViewData["NotifPageUrl"] as string ?? "#";
+
+    <!-- Backdrop (close on outside click) -->
+    <div id="notif-backdrop" class="hidden" onclick="closeNotifPopup()"></div>
+
+    <!-- Popup -->
+    <div id="notif-popup" class="hidden">
+
+        @* ── Header ── *@
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100"
+             style="border-color:var(--border-topbar)">
+            <div class="flex items-center gap-2">
+                <span class="text-base">🔔</span>
+                <p class="text-[13px] font-bold" style="color:var(--topbar-title)">Notifikasi</p>
+                <span id="popup-unread-badge"
+                      class="hidden text-[10px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full">
+                    0
+                </span>
+            </div>
+            <button onclick="popupMarkAllRead()"
+                    class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50 transition-all">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                Tandai Semua Dibaca
+            </button>
+        </div>
+
+        @* ── Items list ── *@
+        <div id="popup-list" style="max-height:340px;overflow-y:auto">
+            <div id="popup-skeleton" class="p-4 space-y-3">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="flex gap-3 animate-pulse">
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 flex-shrink-0"></div>
+                        <div class="flex-1 space-y-1.5">
+                            <div class="h-2.5 bg-gray-100 rounded w-2/5"></div>
+                            <div class="h-2.5 bg-gray-100 rounded w-3/4"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div id="popup-empty" class="hidden px-4 py-10 text-center">
+                <p class="text-2xl mb-2">✅</p>
+                <p class="text-xs font-semibold text-gray-500">Tidak ada notifikasi aktif</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">Semua permohonan dalam kondisi baik.</p>
+            </div>
+        </div>
+
+        @* ── Footer ── *@
+        <div class="border-t border-gray-100 px-4 py-2.5 flex items-center justify-center"
+             style="border-color:var(--border-topbar)">
+            <a href="@notifPageUrl" onclick="closeNotifPopup()"
+               class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 hover:underline">
+                Lihat Semua Notifikasi
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <script>
+    // ── Storage helpers ───────────────────────────────────────────────────
+    const NOTIF_READ      = 'ppid_notif_read';
+    const NOTIF_DISMISSED = 'ppid_notif_dismissed';
+
+    function getReadIds()      { try { return new Set(JSON.parse(localStorage.getItem(NOTIF_READ)      || '[]')); } catch { return new Set(); } }
+    function getDismissedIds() { try { return new Set(JSON.parse(localStorage.getItem(NOTIF_DISMISSED) || '[]')); } catch { return new Set(); } }
+    function saveReadIds(s)      { localStorage.setItem(NOTIF_READ,      JSON.stringify([...s])); }
+    function saveDismissedIds(s) { localStorage.setItem(NOTIF_DISMISSED, JSON.stringify([...s])); }
+
+    // ── State ─────────────────────────────────────────────────────────────
+    const API_URL       = '@notifApiUrl';
+    const NOTIF_PAGE    = '@notifPageUrl';
+    const MAX_IN_POPUP  = 5;
+
+    let _allNotifs   = [];
+    let _popupOpen   = false;
+    let _initialized = false;
+
+    // ── Bell badge update ─────────────────────────────────────────────────
+    function updateBellBadge(notifs) {
+        const dismissed = getDismissedIds();
+        const read      = getReadIds();
+        const unread    = notifs.filter(n => !dismissed.has(n.id) && !read.has(n.id)).length;
+        const badge     = document.getElementById('notif-badge');
+        const bell      = document.getElementById('notif-bell-btn');
+        const popupBadge= document.getElementById('popup-unread-badge');
+
+        if (!badge || !bell) return;
+
+        if (unread > 0) {
+            badge.textContent = unread > 99 ? '99+' : unread;
+            badge.classList.remove('hidden');
+            bell.classList.add('has-unread');
+        } else {
+            badge.classList.add('hidden');
+            bell.classList.remove('has-unread');
+        }
+
+        if (popupBadge) {
+            if (unread > 0) {
+                popupBadge.textContent = unread;
+                popupBadge.classList.remove('hidden');
+            } else {
+                popupBadge.classList.add('hidden');
+            }
+        }
+    }
+
+    // ── Fetch notifications ───────────────────────────────────────────────
+    async function fetchNotifs() {
+        try {
+            const res = await fetch(API_URL);
+            _allNotifs = await res.json();
+            _initialized = true;
+            updateBellBadge(_allNotifs);
+            if (_popupOpen) renderPopup();
+        } catch (e) {
+            console.warn('Notifikasi: gagal fetch', e);
+        }
+    }
+
+    // ── Render popup items ────────────────────────────────────────────────
+    function renderPopup() {
+        const dismissed = getDismissedIds();
+        const read      = getReadIds();
+
+        const visible = _allNotifs.filter(n => !dismissed.has(n.id));
+        const preview = visible.slice(0, MAX_IN_POPUP);
+        const hasMore = visible.length > MAX_IN_POPUP;
+
+        const list    = document.getElementById('popup-list');
+        const skeleton= document.getElementById('popup-skeleton');
+        const empty   = document.getElementById('popup-empty');
+
+        if (skeleton) skeleton.remove();
+
+        if (visible.length === 0) {
+            list.innerHTML = '';
+            list.appendChild(empty);
+            empty.classList.remove('hidden');
+            updateBellBadge(_allNotifs);
+            return;
+        }
+        empty.classList.add('hidden');
+
+        const itemsHtml = preview.map(n => {
+            const isRead = read.has(n.id);
+            const dot    = !isRead ? '<span class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-1"></span>' : '';
+            return `
+            <div class="notif-popup-item ${isRead ? '' : 'unread'}" data-id="${n.id}">
+                <div class="notif-popup-icon ${n.severity}">${n.icon}</div>
+                <div class="flex-1 min-w-0 py-0.5">
+                    <p class="text-[11.5px] font-bold leading-tight ${n.severity === 'danger' ? 'text-red-700' : n.severity === 'warning' ? 'text-amber-700' : 'text-gray-800'} truncate">
+                        ${n.title}
+                    </p>
+                    <p class="text-[11px] text-gray-600 mt-0.5 truncate">${n.message}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5 truncate">${n.detail || ''}</p>
+                    <a href="${n.href}"
+                       onclick="popupItemClick('${n.id}')"
+                       class="inline-block text-[10.5px] font-semibold text-blue-600 hover:text-blue-800 mt-1">
+                        Lihat detail →
+                    </a>
+                </div>
+                ${dot}
+            </div>`;
+        }).join('');
+
+        const moreHtml = hasMore
+            ? `<div class="px-4 py-2 text-center border-t border-gray-50">
+                   <a href="${NOTIF_PAGE}" onclick="closeNotifPopup()"
+                      class="text-[11px] font-semibold text-gray-500 hover:text-blue-600">
+                       +${visible.length - MAX_IN_POPUP} notifikasi lainnya
+                   </a>
+               </div>`
+            : '';
+
+        // Keep footer intact, only replace items area
+        const itemsContainer = document.createElement('div');
+        itemsContainer.innerHTML = itemsHtml + moreHtml;
+
+        // Clear previous items (but keep skeleton div placeholder)
+        const existing = list.querySelectorAll('.notif-popup-item, .more-items');
+        existing.forEach(el => el.remove());
+
+        // Insert before footer-like elements — just append
+        list.innerHTML = itemsHtml + moreHtml;
+        list.appendChild(empty); // keep empty div in DOM
+
+        updateBellBadge(_allNotifs);
+    }
+
+    // ── Toggle popup ──────────────────────────────────────────────────────
+    function toggleNotifPopup() {
+        _popupOpen ? closeNotifPopup() : openNotifPopup();
+    }
+
+    function openNotifPopup() {
+        const popup    = document.getElementById('notif-popup');
+        const backdrop = document.getElementById('notif-backdrop');
+        popup.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+        _popupOpen = true;
+
+        if (!_initialized) {
+            fetchNotifs();
+        } else {
+            renderPopup();
+        }
+    }
+
+    function closeNotifPopup() {
+        const popup    = document.getElementById('notif-popup');
+        const backdrop = document.getElementById('notif-backdrop');
+        if (!popup || popup.classList.contains('hidden')) return;
+
+        popup.classList.add('closing');
+        setTimeout(() => {
+            popup.classList.add('hidden');
+            popup.classList.remove('closing');
+            backdrop.classList.add('hidden');
+        }, 150);
+        _popupOpen = false;
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────────
+    function popupItemClick(id) {
+        const read = getReadIds();
+        read.add(id);
+        saveReadIds(read);
+        updateBellBadge(_allNotifs);
+        closeNotifPopup();
+    }
+
+    function popupMarkAllRead() {
+        const dismissed = getDismissedIds();
+        const read      = getReadIds();
+        _allNotifs
+            .filter(n => !dismissed.has(n.id))
+            .forEach(n => read.add(n.id));
+        saveReadIds(read);
+        if (_popupOpen) renderPopup();
+        updateBellBadge(_allNotifs);
+    }
+
+    // ── Boot: fetch on page load (background, no popup) ──────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchNotifs();
+        // Refresh every 5 minutes
+        setInterval(fetchNotifs, 5 * 60 * 1000);
+    });
+
+    // ── Listen for updates from notification page ─────────────────────────
+    window.addEventListener('notifUpdated', e => {
+        updateBellBadge(_allNotifs);
+    });
+
+    // ── Keyboard: close on Escape ─────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && _popupOpen) closeNotifPopup();
+    });
+    </script>
+}
 
 <script>
 function toggleTheme() {

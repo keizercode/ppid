@@ -26,6 +26,138 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
 {
     private string CurrentUser => User.Identity?.Name ?? AppRoles.Loket;
 
+    // Override OnActionExecuting — agar bell icon muncul di semua halaman Loket
+    public override void OnActionExecuting(
+        Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+    {
+        base.OnActionExecuting(context);
+        ViewData["NotifApiUrl"]  = "/petugas-loket/notifikasi-json";
+        ViewData["NotifPageUrl"] = "/petugas-loket/notifikasi";
+    }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // NOTIFIKASI
+        // ══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Halaman penuh rincian notifikasi.
+        /// Notifikasi dirender client-side dari data JSON yang sama dengan endpoint
+        /// di bawah — agar tidak ada duplikasi query DB.
+        /// </summary>
+        [HttpGet("notifikasi")]
+        public IActionResult Notifikasi()
+        {
+            ViewData["Title"] = "Semua Notifikasi";
+            return View();
+        }
+
+
+        /// <summary>
+/// JSON endpoint — dipanggil oleh bell popup DAN halaman notifikasi.
+/// Mengembalikan daftar notifikasi aktif (overdue + jadwal mendekati).
+/// </summary>
+[HttpGet("notifikasi-json")]
+public async Task<IActionResult> NotifikasiJson()
+{
+    var today   = DateOnly.FromDateTime(DateTime.Today);
+    var in3Days = today.AddDays(3);
+    var nowUtc  = DateTime.UtcNow;
+
+    // ── 1. Permohonan yang lewat batas waktu ─────────────────────────────
+    var overdueList = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Where(p =>
+            p.BatasWaktu.HasValue &&
+            p.BatasWaktu < today &&
+            p.StatusPPIDID < StatusId.Selesai &&
+            p.StatusPPIDID != StatusId.Dibatalkan)
+        .OrderBy(p => p.BatasWaktu)
+        .Take(30)
+        .ToListAsync();
+
+    // ── 2. Jadwal obs/waw dalam 3 hari ke depan ───────────────────────────
+    var jadwalList = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Include(p => p.Jadwal)
+        .Where(p => p.Jadwal.Any(j =>
+            (j.JenisJadwal == "Wawancara" || j.JenisJadwal == "Observasi") &&
+            j.IsAktif &&
+            j.Tanggal >= today &&
+            j.Tanggal <= in3Days))
+        .Take(30)
+        .ToListAsync();
+
+    var items = new List<object>();
+
+    foreach (var p in overdueList)
+    {
+        var hariLewat = (today.ToDateTime(TimeOnly.MinValue)
+                       - p.BatasWaktu!.Value.ToDateTime(TimeOnly.MinValue)).Days;
+        items.Add(new
+        {
+            id        = $"overdue_{p.PermohonanPPIDID}",
+            type      = "overdue",
+            icon      = "⏰",
+            title     = "Batas Waktu Terlewat",
+            message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+            detail    = $"Lewat {hariLewat} hari (batas: {p.BatasWaktu?.ToString("dd MMM yyyy")})",
+            href      = $"/petugas-loket/detail/{p.PermohonanPPIDID}",
+            dateIso   = p.BatasWaktu?.ToString("yyyy-MM-dd"),
+            dateLabel = p.BatasWaktu?.ToString("dd MMM yyyy"),
+            severity  = "danger",
+            createdAt = p.BatasWaktu?.ToString("yyyy-MM-dd")
+        });
+    }
+
+    foreach (var p in jadwalList)
+    {
+        var jadwals = p.Jadwal
+            .Where(j =>
+                (j.JenisJadwal == "Wawancara" || j.JenisJadwal == "Observasi") &&
+                j.IsAktif &&
+                j.Tanggal >= today &&
+                j.Tanggal <= in3Days)
+            .OrderBy(j => j.Tanggal);
+
+        foreach (var j in jadwals)
+        {
+            var hariLagi = (j.Tanggal!.Value.ToDateTime(TimeOnly.MinValue)
+                          - DateTime.Today).Days;
+            var isWaw    = j.JenisJadwal == "Wawancara";
+            var waktuStr = j.Waktu.HasValue
+                         ? j.Waktu.Value.ToString("HH:mm")
+                         : "—";
+
+            items.Add(new
+            {
+                id        = $"jadwal_{p.PermohonanPPIDID}_{j.JenisJadwal}",
+                type      = isWaw ? "jadwal_wawancara" : "jadwal_observasi",
+                icon      = isWaw ? "🎤" : "🔍",
+                title     = $"{j.JenisJadwal} {(hariLagi == 0 ? "Hari Ini" : hariLagi == 1 ? "Besok" : $"dalam {hariLagi} hari")}",
+                message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+                detail    = $"{j.Tanggal?.ToString("dd MMM yyyy")} pukul {waktuStr}" +
+                            (j.NamaPIC != null ? $" · PIC: {j.NamaPIC}" : ""),
+                href      = $"/petugas-loket/subtasks/{p.PermohonanPPIDID}",
+                dateIso   = j.Tanggal?.ToString("yyyy-MM-dd"),
+                dateLabel = j.Tanggal?.ToString("dd MMM yyyy"),
+                severity  = hariLagi == 0 ? "danger" : "warning",
+                createdAt = j.CreatedAt?.ToString("yyyy-MM-dd")
+            });
+        }
+    }
+
+    // Urutkan: danger dulu, lalu berdasarkan tanggal terdekat
+    var ordered = items
+        .Cast<dynamic>()
+        .OrderBy(i => i.severity == "danger" ? 0 : 1)
+        .ThenBy(i => (string)i.dateIso)
+        .Cast<object>()
+        .ToList();
+
+    return Json(ordered);
+}
+
+
     // ══════════════════════════════════════════════════════════════════════
     // DASHBOARD
     // ══════════════════════════════════════════════════════════════════════

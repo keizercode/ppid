@@ -1,0 +1,278 @@
+@{
+    ViewData["Title"] = "Semua Notifikasi";
+    ViewData["Role"]  = "Petugas Loket";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="max-w-3xl mx-auto">
+
+    @* ── Header ── *@
+    <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#0f1f4a] flex items-center justify-center text-xl flex-shrink-0 shadow">
+                🔔
+            </div>
+            <div>
+                <h2 class="text-base font-bold text-gray-800">Semua Notifikasi</h2>
+                <p class="text-xs text-gray-400" id="notif-count-label">Memuat…</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="markAllRead()"
+                    class="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg px-3 py-1.5 transition-all bg-white shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Tandai Semua Dibaca
+            </button>
+            <button onclick="clearAllDismissed()"
+                    title="Tampilkan kembali notifikasi yang sudah dihapus"
+                    class="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-1.5 transition-all bg-white">
+                Reset
+            </button>
+        </div>
+    </div>
+
+    @* ── Filter tabs ── *@
+    <div class="flex gap-1.5 mb-4" id="filter-tabs">
+        <button onclick="setFilter('all')"    class="filter-tab active" data-filter="all">Semua</button>
+        <button onclick="setFilter('unread')" class="filter-tab"        data-filter="unread">Belum Dibaca</button>
+        <button onclick="setFilter('danger')" class="filter-tab"        data-filter="danger">⚠ Mendesak</button>
+        <button onclick="setFilter('warning')"class="filter-tab"        data-filter="warning">📅 Jadwal</button>
+    </div>
+
+    @* ── List container ── *@
+    <div id="notif-list" class="space-y-2">
+        @* Skeleton loading *@
+        <div id="notif-skeleton" class="space-y-2">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="bg-white rounded-xl border border-gray-100 p-4 animate-pulse flex gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-3 bg-gray-100 rounded w-1/3"></div>
+                        <div class="h-3 bg-gray-100 rounded w-2/3"></div>
+                        <div class="h-2.5 bg-gray-50 rounded w-1/2"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ── Empty state ── *@
+    <div id="notif-empty" class="hidden py-16 text-center">
+        <div class="w-16 h-16 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🎉</div>
+        <p class="text-sm font-semibold text-gray-600 mb-1">Tidak ada notifikasi</p>
+        <p class="text-xs text-gray-400">Semua permohonan dalam kondisi baik.</p>
+    </div>
+
+</div>
+
+<style>
+.filter-tab {
+    padding: 5px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    color: #6B7280;
+    background: #F9FAFB;
+    cursor: pointer;
+    transition: all .12s;
+}
+.filter-tab:hover { background: #F3F4F6; color: #374151; }
+.filter-tab.active {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border-color: #BFDBFE;
+}
+
+.notif-item {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #F3F4F6;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all .15s;
+    animation: slideIn .2s ease both;
+}
+.notif-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); border-color: #E5E7EB; }
+.notif-item.unread { border-left: 3px solid #3B82F6; padding-left: 13px; }
+.notif-item.unread.danger { border-left-color: #EF4444; }
+.notif-item.unread.warning { border-left-color: #F59E0B; }
+.notif-item.read { opacity: .72; }
+
+@@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.notif-icon-wrap {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+.notif-icon-wrap.danger  { background: #FEF2F2; }
+.notif-icon-wrap.warning { background: #FFFBEB; }
+.notif-icon-wrap.info    { background: #EFF6FF; }
+
+.notif-delete-btn {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    color: #D1D5DB; background: transparent;
+    border: none; cursor: pointer;
+    transition: all .12s; flex-shrink: 0;
+}
+.notif-delete-btn:hover { background: #FEF2F2; color: #EF4444; }
+</style>
+
+@section Scripts {
+<script>
+// ── State management via localStorage ─────────────────────────────────────
+const STORAGE_READ      = 'ppid_notif_read';
+const STORAGE_DISMISSED = 'ppid_notif_dismissed';
+
+function getRead()      { try { return new Set(JSON.parse(localStorage.getItem(STORAGE_READ)      || '[]')); } catch { return new Set(); } }
+function getDismissed() { try { return new Set(JSON.parse(localStorage.getItem(STORAGE_DISMISSED) || '[]')); } catch { return new Set(); } }
+function saveRead(s)      { localStorage.setItem(STORAGE_READ,      JSON.stringify([...s])); }
+function saveDismissed(s) { localStorage.setItem(STORAGE_DISMISSED, JSON.stringify([...s])); }
+
+let _allNotifs = [];
+let _currentFilter = 'all';
+
+// ── Fetch ─────────────────────────────────────────────────────────────────
+async function loadNotifs() {
+    try {
+        const res  = await fetch('/petugas-loket/notifikasi-json');
+        _allNotifs = await res.json();
+        renderList();
+    } catch(e) {
+        document.getElementById('notif-skeleton').innerHTML =
+            '<p class="text-sm text-red-500 text-center py-6">Gagal memuat notifikasi.</p>';
+    }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderList() {
+    const read      = getRead();
+    const dismissed = getDismissed();
+    const list      = document.getElementById('notif-list');
+    const skeleton  = document.getElementById('notif-skeleton');
+    const empty     = document.getElementById('notif-empty');
+
+    // Filter: remove dismissed
+    let visible = _allNotifs.filter(n => !dismissed.has(n.id));
+
+    // Apply tab filter
+    if (_currentFilter === 'unread')  visible = visible.filter(n => !read.has(n.id));
+    if (_currentFilter === 'danger')  visible = visible.filter(n => n.severity === 'danger');
+    if (_currentFilter === 'warning') visible = visible.filter(n => n.severity === 'warning');
+
+    // Update count label
+    const unreadCount = _allNotifs.filter(n => !dismissed.has(n.id) && !read.has(n.id)).length;
+    document.getElementById('notif-count-label').textContent =
+        `${visible.length} notifikasi${unreadCount > 0 ? ` · ${unreadCount} belum dibaca` : ' · Semua sudah dibaca'}`;
+
+    if (skeleton) skeleton.remove();
+
+    if (visible.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    list.innerHTML = visible.map(n => buildItem(n, read)).join('');
+
+    // Dispatch event untuk update bell badge di layout
+    window.dispatchEvent(new CustomEvent('notifUpdated', { detail: { unreadCount } }));
+}
+
+function buildItem(n, read) {
+    const isRead  = read.has(n.id);
+    const classes = ['notif-item', isRead ? 'read' : 'unread', n.severity].filter(Boolean).join(' ');
+
+    return `
+    <div class="${classes}" data-id="${n.id}" id="notif-${n.id.replace(/[^a-z0-9]/gi,'_')}">
+        <div class="notif-icon-wrap ${n.severity}">
+            <span>${n.icon}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2 mb-0.5">
+                <p class="text-xs font-bold ${n.severity === 'danger' ? 'text-red-700' : n.severity === 'warning' ? 'text-amber-700' : 'text-gray-700'}">
+                    ${n.title}
+                    ${!isRead ? '<span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 ml-1 mb-0.5"></span>' : ''}
+                </p>
+                <span class="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">${n.dateLabel || '—'}</span>
+            </div>
+            <p class="text-xs text-gray-700 font-medium truncate">${n.message}</p>
+            <p class="text-[11px] text-gray-400 mt-0.5">${n.detail || ''}</p>
+            <div class="flex items-center gap-3 mt-2">
+                <a href="${n.href}" onclick="markOneRead('${n.id}')"
+                   class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                    Lihat →
+                </a>
+                ${!isRead ? `<button onclick="markOneRead('${n.id}')" class="text-[11px] text-gray-400 hover:text-gray-600">Tandai dibaca</button>` : ''}
+            </div>
+        </div>
+        <button class="notif-delete-btn" onclick="dismissNotif('${n.id}')" title="Hapus notifikasi">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+function markOneRead(id) {
+    const read = getRead();
+    read.add(id);
+    saveRead(read);
+    renderList();
+}
+
+function markAllRead() {
+    const dismissed = getDismissed();
+    const read      = getRead();
+    _allNotifs
+        .filter(n => !dismissed.has(n.id))
+        .forEach(n => read.add(n.id));
+    saveRead(read);
+    renderList();
+}
+
+function dismissNotif(id) {
+    const el = document.getElementById('notif-' + id.replace(/[^a-z0-9]/gi,'_'));
+    if (el) {
+        el.style.transition = 'all .2s ease';
+        el.style.opacity    = '0';
+        el.style.transform  = 'translateX(20px)';
+        setTimeout(() => {
+            const dismissed = getDismissed();
+            dismissed.add(id);
+            saveDismissed(dismissed);
+            renderList();
+        }, 200);
+    }
+}
+
+function clearAllDismissed() {
+    localStorage.removeItem(STORAGE_DISMISSED);
+    renderList();
+}
+
+function setFilter(f) {
+    _currentFilter = f;
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === f);
+    });
+    renderList();
+}
+
+loadNotifs();
+</script>
+}
