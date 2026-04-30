@@ -187,10 +187,7 @@
                                             <span class="text-sm">🔍</span>
                                             <span class="text-xs font-semibold @(stObs.IsSelesai ? "text-emerald-700" : stObs.IsInProgress ? "text-amber-700" : "text-gray-400")">
                                                 Observasi
-                                                @if (stObs.TanggalJadwal.HasValue)
-                                                {
-                                                    <span class="font-normal opacity-75 ml-1">· @stObs.TanggalJadwal.Value.ToString("dd MMM")</span>
-                                                }
+
                                             </span>
                                         </div>
                                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full @SubTaskBadge(stObs)">
@@ -205,10 +202,6 @@
                                             <span class="text-sm">🎤</span>
                                             <span class="text-xs font-semibold @(stWaw.IsSelesai ? "text-emerald-700" : stWaw.IsInProgress ? "text-amber-700" : "text-gray-400")">
                                                 Wawancara
-                                                @if (stWaw.TanggalJadwal.HasValue)
-                                                {
-                                                    <span class="font-normal opacity-75 ml-1">· @stWaw.TanggalJadwal.Value.ToString("dd MMM")</span>
-                                                }
                                             </span>
                                         </div>
                                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full @SubTaskBadge(stWaw)">
