@@ -3,6 +3,13 @@
     ViewData["Title"] = "Upload Dokumen TTD";
     ViewData["Role"]  = "Petugas Loket";
     Layout = "_LayoutAdmin";
+
+    // FIX: Gunakan Prefix dari ViewData agar form POST ke controller yang benar,
+    // baik ketika di-render oleh PetugasLoketController maupun LoketUmumController.
+    // Default ke "petugas-loket" agar backward-compatible.
+    var prefix      = ViewData["Prefix"] as string ?? "petugas-loket";
+    var backHref    = $"/{prefix}";
+    var formAction  = $"/{prefix}/upload-ttd";
 }
 
 <div class="max-w-lg mx-auto">
@@ -38,36 +45,39 @@
             </ol>
         </div>
 
-        <form asp-action="UploadTTDPost" asp-controller="PetugasLoket" method="post" enctype="multipart/form-data">
+        @* FIX: action ditulis manual (string) — bukan asp-action + asp-controller —
+           agar tidak tergantung pada controller aktif saat render, melainkan pada Prefix. *@
+        <form action="@formAction" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="PermohonanPPIDID" />
             <input type="hidden" asp-for="NoPermohonan" />
             <input type="hidden" asp-for="NamaPemohon" />
+            <input type="hidden" asp-for="LoketJenis" />
 
             <div class="mb-6">
                 <label class="lbl">Dokumen Identifikasi (Sudah TTD) <span class="text-red-400">*</span></label>
 
                 <!-- Dropzone -->
                 <div id="dropzone"
-                     class="border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-xl p-8 text-center transition-all cursor-pointer bg-gray-50 hover:bg-blue-50 group">
+                     class="border-2 border-dashed border-gray-200 hover:border-amber-400 rounded-xl p-8 text-center transition-all cursor-pointer bg-gray-50 hover:bg-amber-50 group">
                     <div class="text-3xl mb-2">📎</div>
-                    <p class="text-sm font-semibold text-gray-600 group-hover:text-blue-700 transition-colors">Klik untuk pilih file</p>
+                    <p class="text-sm font-semibold text-gray-600 group-hover:text-amber-700 transition-colors">Klik untuk pilih file</p>
                     <p class="text-xs text-gray-400 mt-1">PDF, JPG, PNG — maks. 10MB</p>
                     <input asp-for="FileDokumenTTD" type="file" id="fileTTD"
                            accept=".pdf,.jpg,.jpeg,.png" class="hidden" />
-                    <p id="fileName" class="text-xs text-blue-600 mt-2.5 font-semibold hidden"></p>
+                    <p id="fileName" class="text-xs text-amber-600 mt-2.5 font-semibold hidden"></p>
                 </div>
                 <span asp-validation-for="FileDokumenTTD" class="text-red-500 text-xs mt-1.5 block"></span>
             </div>
 
             <div class="flex gap-3">
-                <a href="/petugas-loket"
+                <a href="@backHref"
                    class="flex-1 text-center border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">
                     Batal
                 </a>
                 <button type="submit"
                         class="flex-grow bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-colors">
-                    ⬆ Upload Dokumen
+                    ⬆ Upload Dokumen TTD
                 </button>
             </div>
         </form>
@@ -86,14 +96,28 @@ const fileInput = document.getElementById('fileTTD');
 const fileName  = document.getElementById('fileName');
 
 dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('border-amber-400','bg-amber-50'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-amber-400','bg-amber-50'));
+dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        showFile(file.name);
+    }
+    dropzone.classList.remove('border-amber-400','bg-amber-50');
+});
 
 fileInput.addEventListener('change', function() {
-    if (this.files[0]) {
-        fileName.textContent = '✓ ' + this.files[0].name;
-        fileName.classList.remove('hidden');
-        dropzone.classList.add('border-blue-400', 'bg-blue-50');
-        dropzone.classList.remove('border-gray-200', 'bg-gray-50');
-    }
+    if (this.files[0]) showFile(this.files[0].name);
 });
+
+function showFile(name) {
+    fileName.textContent = '✓ ' + name;
+    fileName.classList.remove('hidden');
+    dropzone.classList.add('border-amber-400','bg-amber-50');
+}
 </script>
 }

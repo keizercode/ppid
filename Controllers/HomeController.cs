@@ -451,10 +451,21 @@ if (!statusBisaFeedback)
     }
 
     [HttpPost("feedback-task"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
+public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
+{
+    // Catatan wajib diisi
+    if (string.IsNullOrWhiteSpace(vm.Catatan))
+        ModelState.AddModelError(nameof(vm.Catatan), "Masukan / saran wajib diisi.");
+
+    // File laporan wajib: harus ada file baru ATAU sudah ada file lama
+    if ((vm.FileLaporan == null || vm.FileLaporan.Length == 0)
+        && string.IsNullOrEmpty(vm.FilePathLama))
     {
-        if (!ModelState.IsValid)
-            return View("FeedbackTask", vm);
+        ModelState.AddModelError(nameof(vm.FileLaporan), "File laporan/hasil wajib diunggah.");
+    }
+
+    if (!ModelState.IsValid)
+        return View("FeedbackTask", vm);
 
         var now    = DateTime.UtcNow;
         string? fp = null;

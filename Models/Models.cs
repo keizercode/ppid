@@ -468,6 +468,11 @@ public static class JenisDokumenId
     public const int SuratIzin          = 6;
     public const int DataHasil          = 7;
     public const int TugasFinal = 8;
+
+    // ── hasil per jenis sub-tugas
+    public const int DataHasilObservasi  = 9;
+    public const int DataHasilWawancara  = 10;
+    public const int DataHasilPermintaan = 11;
 }
 
 public static class KeperluanId

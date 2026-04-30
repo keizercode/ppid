@@ -869,7 +869,7 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
                 PermohonanPPIDID = vm.PermohonanPPIDID,
                 NamaDokumenPPID = "Hasil Observasi",
                 UploadDokumenPPID = fp,
-                JenisDokumenPPIDID = JenisDokumenId.DataHasil,
+                JenisDokumenPPIDID = JenisDokumenId.DataHasilObservasi,
                 CreatedAt = now
             });
         }
@@ -1061,7 +1061,7 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
                 PermohonanPPIDID = vm.PermohonanPPIDID,
                 NamaDokumenPPID = "Hasil Wawancara",
                 UploadDokumenPPID = fp,
-                JenisDokumenPPIDID = JenisDokumenId.DataHasil,
+                JenisDokumenPPIDID = JenisDokumenId.DataHasilWawancara,
                 CreatedAt = now
             });
         }
@@ -1496,7 +1496,11 @@ public async Task<IActionResult> MintaFeedback(Guid id)
 
     ViewData["NoPermohonan"] = p.NoPermohonan;
     ViewData["NamaPemohon"]  = p.Pribadi?.Nama;
-    ViewData["HasData"]      = p.Dokumen.Any(d => d.JenisDokumenPPIDID == JenisDokumenId.DataHasil);
+    ViewData["HasData"] = p.Dokumen.Any(d =>
+    d.JenisDokumenPPIDID == JenisDokumenId.DataHasil            ||
+    d.JenisDokumenPPIDID == JenisDokumenId.DataHasilObservasi   ||
+    d.JenisDokumenPPIDID == JenisDokumenId.DataHasilWawancara   ||
+    d.JenisDokumenPPIDID == JenisDokumenId.DataHasilPermintaan);
 
     return View(p);
 }

@@ -342,7 +342,8 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
                 PermohonanPPIDID   = vm.PermohonanPPIDID,
                 NamaDokumenPPID    = "Data Hasil",
                 UploadDokumenPPID  = fp,
-                JenisDokumenPPIDID = JenisDokumenId.DataHasil,
+
+                JenisDokumenPPIDID = JenisDokumenId.DataHasilPermintaan,
                 CreatedAt          = now
             });
         }
@@ -623,7 +624,7 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             PermohonanPPIDID   = vm.PermohonanPPIDID,
             NamaDokumenPPID    = $"Revisi Data Hasil ({now:dd MMM HH:mm})",
             UploadDokumenPPID  = fp,
-            JenisDokumenPPIDID = JenisDokumenId.DataHasil,
+            JenisDokumenPPIDID = JenisDokumenId.DataHasilPermintaan,
             CreatedAt          = now
         });
 
