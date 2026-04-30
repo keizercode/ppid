@@ -7,6 +7,42 @@
     var pr   = Model.Pribadi;
     var ppid = pr?.PribadiPPID;
 
+    // ── Metadata dokumen per JenisDokumenID ──────────────────────────────
+    static (string Icon, string Label, string Group) DocMeta(int? id) => id switch
+    {
+        JenisDokumenId.KTP                   => ("🪪", "KTP Pemohon",           "Identitas"),
+        JenisDokumenId.SuratPermohonan       => ("📝", "Surat Permohonan",       "Permohonan"),
+        JenisDokumenId.AktaNotaris           => ("📜", "Akta Notaris",           "Permohonan"),
+        JenisDokumenId.Proposal              => ("📋", "Proposal Penelitian",    "Permohonan"),
+        JenisDokumenId.IdentifikasiSigned    => ("✍️",  "Identifikasi TTD",       "Proses"),
+        JenisDokumenId.SuratIzin             => ("📄", "Surat Izin",             "Proses"),
+        JenisDokumenId.DataHasilObservasi    => ("🔭", "Hasil Observasi",        "Output"),
+        JenisDokumenId.DataHasilWawancara    => ("🎙️",  "Hasil Wawancara",        "Output"),
+        JenisDokumenId.DataHasilPermintaan   => ("📊", "Hasil Permintaan Data",  "Output"),
+        JenisDokumenId.DataHasil             => ("📊", "Hasil / Data",           "Output"),
+        JenisDokumenId.TugasFinal            => ("🗂️",  "Tugas Final Pemohon",    "Output"),
+        _                                    => ("📎", "Dokumen",                "Lainnya"),
+    };
+
+    var groupOrder = new[] { "Identitas", "Permohonan", "Proses", "Output", "Lainnya" };
+
+    var groupedDocs = Model.Dokumen
+        .Select(d => new { Doc = d, Meta = DocMeta(d.JenisDokumenPPIDID) })
+        .GroupBy(x => x.Meta.Group)
+        .OrderBy(g => Array.IndexOf(groupOrder, g.Key))
+        .ToList();
+
+    static string GroupBadgeColor(string g) => g switch
+    {
+        "Identitas"  => "bg-blue-50 text-blue-600 border-blue-100",
+        "Permohonan" => "bg-indigo-50 text-indigo-600 border-indigo-100",
+        "Proses"     => "bg-amber-50 text-amber-700 border-amber-100",
+        "Output"     => "bg-emerald-50 text-emerald-700 border-emerald-100",
+        _            => "bg-gray-50 text-gray-500 border-gray-100",
+    };
+
+
+
     string statusColor = Model.StatusPPIDID >= StatusId.DataSiap
         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
         : Model.StatusPPIDID == StatusId.TerdaftarSistem
@@ -25,9 +61,6 @@
         <div>
             <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Nomor Permohonan</p>
             <h2 class="text-2xl font-extrabold font-mono text-gray-800">@Model.NoPermohonan</h2>
-            @* {{!-- FIX: dua blok Pengampu duplikat dihapus dari sini.
-                 Pengampu ditampilkan satu kali saja di card "Data Permohonan" di bawah,
-                 lengkap dengan nomor telepon. --}} *@
             <div class="flex flex-wrap items-center gap-x-3 mt-1.5 text-xs text-gray-400">
                 <span>Masuk: @Model.CratedAt?.ToString("dd MMM yyyy HH:mm")</span>
                 @if (Model.BatasWaktu.HasValue)
@@ -81,7 +114,6 @@
                             </dd>
                         </div>
                         <div><dt class="text-[10px] text-gray-400 uppercase font-semibold tracking-wide">Judul</dt><dd class="text-gray-700 text-sm mt-0.5 leading-snug">@Model.JudulPenelitian</dd></div>
-                        @* {{!-- FIX: Pengampu hanya tampil satu kali di sini, lengkap dengan telepon --}} *@
                         @if (!string.IsNullOrEmpty(Model.Pengampu))
                         {
                             <div>
@@ -127,23 +159,61 @@
                 </div>
             }
 
-            <!-- Dokumen -->
+            <!-- ── DOKUMEN TERLAMPIR ── -->
             @if (Model.Dokumen.Any())
             {
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Dokumen Terlampir</p>
-                    <div class="divide-y divide-gray-50">
-                        @foreach (var d in Model.Dokumen)
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dokumen Terlampir</p>
+                        <span class="text-[10px] bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 font-semibold">@Model.Dokumen.Count file</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        @foreach (var grp in groupedDocs)
                         {
-                            <div class="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                                <div class="flex items-center gap-2.5">
-                                    <span class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-sm">📄</span>
-                                    <span class="text-gray-700 text-sm font-medium">@d.NamaDokumenPPID</span>
+                            <div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest border px-2 py-0.5 rounded-full @GroupBadgeColor(grp.Key)">
+                                        @grp.Key
+                                    </span>
+                                    <div class="flex-1 h-px bg-gray-100"></div>
                                 </div>
-                                <a href="@d.UploadDokumenPPID" target="_blank"
-                                   class="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline">Lihat →</a>
+                                <div class="space-y-1.5">
+                                    @foreach (var item in grp.OrderBy(x => x.Doc.CreatedAt))
+                                    {
+                                        var isKeyDoc = false;
+                                        <div class="flex items-center justify-between rounded-xl px-3 py-2.5 transition-colors
+                                                    @(isKeyDoc ? "bg-amber-50/60 border border-amber-100 hover:bg-amber-100/40" : "bg-gray-50 hover:bg-gray-100/80")">
+                                            <div class="flex items-center gap-2.5 min-w-0">
+                                                <span class="text-lg flex-shrink-0">@item.Meta.Icon</span>
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-semibold text-gray-800 truncate">@item.Meta.Label</p>
+                                                    <p class="text-[10px] text-gray-400 mt-0.5">
+                                                        @(item.Doc.CreatedAt.HasValue
+                                                            ? item.Doc.CreatedAt.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                                            : "-")
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <a href="@item.Doc.UploadDokumenPPID" target="_blank"
+                                               class="flex-shrink-0 ml-3 text-xs font-bold text-blue-600 hover:text-blue-800 bg-white border border-blue-100 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-all">
+                                                Buka →
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
                             </div>
                         }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Dokumen Terlampir</p>
+                    <div class="text-center py-6 text-gray-400">
+                        <div class="text-3xl mb-2">📂</div>
+                        <p class="text-xs">Belum ada dokumen terlampir</p>
                     </div>
                 </div>
             }
