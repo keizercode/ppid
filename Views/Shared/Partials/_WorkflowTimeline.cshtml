@@ -108,11 +108,6 @@
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
     <div class="flex items-center justify-between mb-5">
         <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Alur Proses Permohonan</p>
-        <span class="text-xs font-semibold
-            @(current >= StatusId.DataSiap ? "text-emerald-600" :
-              current == StatusId.TerdaftarSistem ? "text-gray-400" : "text-amber-600")">
-            @(Model.Status?.NamaStatusPPID ?? "—")
-        </span>
     </div>
 
     <ol class="space-y-0">
