@@ -124,10 +124,6 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
     }
 
     // ── DAFTAR PEMOHON ────────────────────────────────────────────────────
-    //
-    // v2: Tidak ada lagi langkah Identifikasi terpisah.
-    //     GET /loket-umum/daftar langsung menampilkan formulir pendaftaran LSM.
-    //     Kategori dikunci "LSM", LoketJenis dikunci "Umum".
 
     [HttpGet("daftar")]
     public IActionResult DaftarPemohon()
@@ -140,7 +136,6 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
     [HttpPost("daftar"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DaftarPemohonPost(DaftarPemohonVm vm)
     {
-        // Paksa selalu Loket Umum + LSM — tidak bisa di-override dari form
         vm.LoketJenis = LoketJenis.Umum;
         if (string.IsNullOrEmpty(vm.Kategori)) vm.Kategori = "LSM";
 
@@ -384,6 +379,8 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             return RedirectToAction("Detail", new { id });
         }
 
+        // FIX: set Prefix agar shared view tahu harus POST ke controller mana
+        ViewData["Prefix"] = "loket-umum";
         return View("~/Views/PetugasLoket/UploadTTD.cshtml", new UploadTTDVm
         {
             PermohonanPPIDID = id,
@@ -396,7 +393,11 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
     [HttpPost("upload-ttd"), ValidateAntiForgeryToken]
     public async Task<IActionResult> UploadTTDPost(UploadTTDVm vm)
     {
-        if (!ModelState.IsValid) return View("~/Views/PetugasLoket/UploadTTD.cshtml", vm);
+        if (!ModelState.IsValid)
+        {
+            ViewData["Prefix"] = "loket-umum";
+            return View("~/Views/PetugasLoket/UploadTTD.cshtml", vm);
+        }
 
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p == null) return NotFound();
@@ -415,6 +416,7 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         if (error != null)
         {
             ModelState.AddModelError(nameof(vm.FileDokumenTTD), error);
+            ViewData["Prefix"] = "loket-umum";
             return View("~/Views/PetugasLoket/UploadTTD.cshtml", vm);
         }
 
@@ -442,6 +444,9 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
             .Include(x => x.AuditLog)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p == null) return NotFound();
+
+        // FIX: Prefix wajib diset agar shared Detail.cshtml tahu konteks controller-nya
+        ViewData["Prefix"] = "loket-umum";
 
         ViewData["SubTasks"] = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == id)
