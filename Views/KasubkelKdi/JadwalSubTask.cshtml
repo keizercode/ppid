@@ -717,7 +717,7 @@ function renderRecommendations() {
         var isSel = r.ds === selectedDateStr;
 
         var cls  = isSel ? 'rec-card rec-selected' : (r.nearHol ? 'rec-card rec-warning' : 'rec-card');
-        var icon = isSel ? '✓' : (i === 0 ? '⚡' : (r.nearHol ? '⚠️' : '→'));
+        var icon = isSel ? '✓' : (i === 0 ? '→' : (r.nearHol ? '⚠️' : '→'));
         var sub  = isSel
             ? '<p class="text-[10px] text-blue-600 font-semibold mt-0.5">Saat ini dipilih</p>'
             : r.nearHol

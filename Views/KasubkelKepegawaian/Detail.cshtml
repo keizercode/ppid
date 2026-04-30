@@ -305,7 +305,8 @@
                                                         Pantau melalui riwayat aktivitas di atas.</p>
                                                     </div>
                                                 }
-                else if (Model.StatusPPIDID == StatusId.DataSiap || Model.StatusPPIDID == StatusId.FeedbackPemohon)
+                                                @* di bawah ini hanya loket kepegawaian yang bisa melihat feedback *@
+                                                @* else if (Model.StatusPPIDID == StatusId.DataSiap || Model.StatusPPIDID == StatusId.FeedbackPemohon)
                                                 {
                                                     <div
                                                         class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2 items-start text-xs text-blue-700">
@@ -318,7 +319,7 @@
                                                             📋 Lihat Hasil Feedback Pemohon
                                                         </a>
                                                     </div>
-                                                }
+                                                } *@
                                                 else if (Model.StatusPPIDID == StatusId.Selesai)
                                                 {
                                                     <div

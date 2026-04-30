@@ -164,13 +164,14 @@
                                             📄 Menunggu Loket
                                         </span>
                                     }
-                                    @if (item.StatusPPIDID >= StatusId.DataSiap)
+                                    @* hanya loket kepegawaian yang saat ini hanya boleh melihat feedback *@
+                                    @* @if (item.StatusPPIDID >= StatusId.DataSiap)
                                     {
                                         <a href="/kasubkel-kepegawaian/feedback/@item.PermohonanPPIDID"
                                             class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg font-medium">
                                             📋 Feedback
                                         </a>
-                                    }
+                                    } *@
                                 </div>
                             </td>
 
