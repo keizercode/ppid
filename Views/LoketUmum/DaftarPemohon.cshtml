@@ -5,6 +5,12 @@
    - Tidak ada lagi langkah Identifikasi terpisah
    - Kategori dikunci ke "LSM", LoketJenis dikunci ke "Umum"
    - Langsung ke formulir setelah klik "+ Permohonan Baru"
+
+   v2.1 — TUJUAN BUTTON ADVANCED:
+   - Toggle: klik ulang button aktif → batalkan pilihan, field dikosongkan
+   - Switch: klik button lain → ganti pilihan seketika
+   - Append-friendly: setelah pilih, kursor di akhir field → bisa langsung ketik tambahan
+   - Sync: mengetik manual di field → highlight button bila cocok persis
    ════════════════════════════════════════════════════════════════════════ *@
 @model DaftarPemohonVm
 @{
@@ -27,7 +33,6 @@
             <p class="text-xs text-emerald-500 font-medium">Kategori Pemohon — Loket Umum</p>
             <p class="text-emerald-800 font-bold">LSM</p>
         </div>
-
     </div>
 
     @* ── NIK Lookup ── *@
@@ -186,8 +191,9 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="lbl">Tujuan Permohonan <span class="req">*</span></label>
-                    @* Quick-fill buttons untuk LSM *@
-                    <div class="flex flex-wrap gap-2 mt-1 mb-2">
+
+                    @* ── Quick-fill buttons: klik untuk isi, klik lagi untuk batalkan ── *@
+                    <div class="flex flex-wrap gap-2 mt-1 mb-2" id="tujuan-buttons">
                         <button type="button" class="tujuan-btn" data-value="Penelitian dan Kajian Kebijakan">🔍 Kajian Kebijakan</button>
                         <button type="button" class="tujuan-btn" data-value="Pemantauan dan Advokasi Lingkungan">🌿 Advokasi Lingkungan</button>
                         <button type="button" class="tujuan-btn" data-value="Penyusunan Laporan Program">📋 Laporan Program</button>
@@ -195,7 +201,7 @@
                         <button type="button" class="tujuan-btn" data-value="Kerja Sama Kelembagaan">🤝 Kerja Sama Lembaga</button>
                         <button type="button" class="tujuan-btn" data-value="Keperluan Hukum / Litigasi">⚖️ Keperluan Hukum</button>
                     </div>
-                    <input asp-for="TujuanPermohonan" id="f-tujuan" class="fld" placeholder="Atau ketik tujuan lainnya..." />
+                    <input asp-for="TujuanPermohonan" id="f-tujuan" class="fld" placeholder="Atau ketik tujuan secara bebas, atau pilih + tambahkan keterangan di atas..." />
                     <span asp-validation-for="TujuanPermohonan" class="err"></span>
                 </div>
             </div>
@@ -303,9 +309,29 @@
     .sec-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #f9fafb}
     .sec-num{width:24px;height:24px;background:#059669;border-radius:6px;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .sec-title{font-weight:700;color:#374151;font-size:.875rem}
-    .tujuan-btn{padding:6px 12px;border-radius:8px;border:1px solid #d1fae5;font-size:12px;font-weight:600;color:#065f46;cursor:pointer;background:#ecfdf5;transition:all .15s}
+
+    /* ── Tujuan buttons ── */
+    .tujuan-btn{
+        padding:6px 12px;border-radius:8px;border:1px solid #d1fae5;
+        font-size:12px;font-weight:600;color:#065f46;cursor:pointer;
+        background:#ecfdf5;transition:all .18s;display:inline-flex;align-items:center;gap:4px;
+    }
     .tujuan-btn:hover{background:#d1fae5;border-color:#059669}
-    .tujuan-btn.active{background:#059669;border-color:#059669;color:white}
+    .tujuan-btn.active{
+        background:#059669;border-color:#047857;color:white;
+        box-shadow:0 1px 4px rgba(5,150,105,.35);
+    }
+    .tujuan-btn.active:hover{background:#047857}
+    /* × badge di dalam button aktif */
+    .tujuan-cancel{
+        display:inline-flex;align-items:center;justify-content:center;
+        width:15px;height:15px;border-radius:50%;
+        background:rgba(255,255,255,.3);font-size:10px;font-weight:900;
+        line-height:1;transition:background .15s;
+    }
+    .tujuan-btn.active:hover .tujuan-cancel{background:rgba(255,255,255,.5)}
+    /* Highlight field when a button is active (user can still type) */
+    #f-tujuan.has-preset{border-color:#059669;background:#f0fdf4}
 </style>
 
 @section Scripts {
@@ -339,16 +365,90 @@ g('nik-input').addEventListener('keydown',function(e){if(e.key==='Enter'){e.prev
 g('btn-cari').addEventListener('click',cariNik);
 async function cariNik(){var nik=g('nik-input').value.replace(/\D/g,'');var btn=g('btn-cari');if(nik.length!==16){nikMsg('NIK harus 16 digit angka.','err');return}btn.disabled=true;btn.innerHTML='⏳';nikMsg('Mencari...','info');var d;try{d=await fetchJSON('/api/cek-nik?nik='+nik)}catch(e){nikMsg('❌ Gagal menghubungi server.','err');setF('f-nik',nik);switchTab('manual');btn.disabled=false;btn.textContent='Cari';return}if(!d||!d.nama){nikMsg('⚠️ NIK tidak ditemukan. Isi manual.','warn');setF('f-nik',nik);switchTab('manual');btn.disabled=false;btn.textContent='Cari';return}setF('f-nik',nik);setF('f-nama',d.nama);setF('f-telepon',d.telepon);setF('f-email',d.email);setF('f-rt',d.rt);setF('f-rw',d.rw);setF('f-alamat',d.alamat);setF('f-lembaga',d.lembaga);setF('f-pekerjaan',d.pekerjaan);if(d.provinsiID){setF('f-provinsiID',d.provinsiID);setF('f-namaProvinsi',d.namaProvinsi);pickSel('sel-provinsi',d.provinsiID,'f-provinsiID','f-namaProvinsi')}setF('f-kabupatenID',d.kabupatenID);setF('f-namaKabupaten',d.kota);setF('f-kecamatanID',d.kecamatanID);setF('f-namaKecamatan',d.kecamatan);setF('f-kelurahanID',d.kelurahanID);setF('f-namaKelurahan',d.kelurahan);if(d.kabupatenID||d.kecamatanID||d.kelurahanID)await cascadeWilayah(d.kabupatenID,d.kecamatanID,d.kelurahanID,d.kota,d.kecamatan,d.kelurahan);nikMsg('✅ Data ditemukan: <strong>'+d.nama+'</strong>','ok');switchTab('manual');btn.disabled=false;btn.textContent='Cari'}
 
-// Tujuan quick-fill buttons
-document.querySelectorAll('.tujuan-btn').forEach(function(btn){
-    btn.addEventListener('click',function(){
-        g('f-tujuan').value=this.dataset.value;
-        document.querySelectorAll('.tujuan-btn').forEach(function(b){b.classList.remove('active')});
-        this.classList.add('active');
-    });
-});
-
 function toggleDetail(id,cb){var el=g(id);if(el)el.classList.toggle('hidden',!cb.checked)}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TUJUAN QUICK-FILL — ADVANCED TOGGLE LOGIC
+// ══════════════════════════════════════════════════════════════════════════
+(function initTujuanButtons() {
+    var field   = g('f-tujuan');
+    if (!field) return;
+
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.tujuan-btn'));
+
+    // Simpan innerHTML asli setiap button sebelum dimodifikasi
+    buttons.forEach(function (btn) { btn.dataset.originalHtml = btn.innerHTML; });
+
+    // Tandai satu button sebagai aktif, sisanya non-aktif
+    function setActive(activeBtn) {
+        buttons.forEach(function (btn) {
+            var isThis = (btn === activeBtn);
+            btn.classList.toggle('active', isThis);
+            btn.innerHTML = isThis
+                ? btn.dataset.originalHtml
+                  + ' <span class="tujuan-cancel" title="Batalkan pilihan" aria-label="Batalkan">×</span>'
+                : btn.dataset.originalHtml;
+        });
+        field.classList.add('has-preset');
+    }
+
+    // Lepas semua state aktif
+    function clearActive() {
+        buttons.forEach(function (btn) {
+            btn.classList.remove('active');
+            btn.innerHTML = btn.dataset.originalHtml;
+        });
+        field.classList.remove('has-preset');
+    }
+
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            // Abaikan klik jika target adalah tanda × sendiri tapi button sudah aktif
+            // (tetap jalankan logika toggle di bawah)
+            var isActive = this.classList.contains('active');
+
+            if (isActive) {
+                // ── DESELECT: klik tombol aktif → batalkan pilihan, kosongkan field ──
+                clearActive();
+                field.value = '';
+                field.focus();
+            } else {
+                // ── SELECT: pilih baru → isi field, tandai aktif ──
+                field.value = this.dataset.value;
+                setActive(this);
+                // Fokus ke field dan tempatkan kursor di AKHIR teks
+                // agar user bisa langsung append tanpa harus klik lagi
+                field.focus();
+                var len = field.value.length;
+                try { field.setSelectionRange(len, len); } catch(e2){}
+            }
+        });
+    });
+
+    // ── SYNC DARI TYPING ────────────────────────────────────────────────
+    // Saat user mengetik di field:
+    //   • Teks cocok persis dengan salah satu button  → highlight button itu
+    //   • Teks berubah (append / hapus / ganti)       → lepas semua highlight,
+    //     teks di field TETAP terjaga (tidak dihapus)
+    field.addEventListener('input', function () {
+        var val = this.value.trim();
+        var matched = null;
+        buttons.forEach(function (btn) {
+            if (btn.dataset.value === val) matched = btn;
+        });
+        if (matched) {
+            setActive(matched);
+        } else {
+            clearActive();
+            // field.classList bisa tetap non-preset;
+            // teks tidak disentuh — user bebas mengetik apapun
+        }
+    });
+
+    // Sync awal jika field sudah terisi (mis. validation error page reload)
+    if (field.value.trim()) field.dispatchEvent(new Event('input'));
+})();
+// ══════════════════════════════════════════════════════════════════════════
 
 (async function init(){
     switchTab('nik');

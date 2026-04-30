@@ -163,9 +163,10 @@ public class KasubkelKepegawaianController(
             p.StatusPPIDID = StatusId.MenungguSuratIzin;
             p.UpdatedAt    = now;
 
-            if (vm.DisposisiUnit == "BidangTerkait" &&
-                !string.IsNullOrEmpty(vm.NamaBidangDisposisi))
-                p.NamaBidang = vm.NamaBidangDisposisi;
+            // Simpan unit disposisi — termasuk PSMDI
+            p.NamaBidang = vm.DisposisiUnit == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangDisposisi)
+                ? vm.NamaBidangDisposisi
+                : vm.DisposisiUnit;
 
             db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguSuratIzin,
                 $"Verifikasi disetujui. Disposisi: {vm.DisposisiUnit}. Catatan: {vm.CatatanVerifikasi}",

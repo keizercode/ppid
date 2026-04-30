@@ -223,6 +223,26 @@
                                 </div>
                             }
 
+                            <!-- Riwayat Aktivitas -->
+                        @if (Model.AuditLog.Any())
+                        {
+                            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Riwayat Aktivitas</p>
+                                <div class="space-y-2">
+                                    @foreach (var log in Model.AuditLog.OrderByDescending(l => l.CreatedAt))
+                                    {
+                                        <div class="flex gap-3 text-xs">
+                                            <span class="text-gray-400 whitespace-nowrap flex-shrink-0">
+                                                @log.CreatedAt.ToLocalTime().ToString("dd MMM HH:mm")
+                                            </span>
+                                            <span class="text-gray-500 font-medium">@log.Operator</span>
+                                            <span class="text-gray-600 leading-relaxed">@log.Keterangan</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
                             <!-- Aksi — tombol batalkan hanya di sini, bukan di tabel Index -->
                             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap gap-2.5">
                                 @if (Model.StatusPPIDID == StatusId.TerdaftarSistem)
