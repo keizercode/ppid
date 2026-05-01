@@ -1,25 +1,27 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/KasubkelKepegawaian/Permohonan.cshtml — FIXED
-   Perubahan: tombol aksi per status (Verifikasi vs Surat Izin vs -)
-════════════════════════════════════════════════════════════════════════════ *@
 @model List<PermohonanPPID>
 @{
-    ViewData["Title"] = "Permohonan Baru — Kasubkel Kepegawaian";
+    ViewData["Title"] = "Daftar Permohonan — Kasubkel Kepegawaian";
     ViewData["Role"]  = "Kasubkel Kepegawaian";
     Layout = "_LayoutAdmin";
     var q      = ViewData["Q"]      as string;
     var status = ViewData["Status"] as int?;
 }
 
+<partial name="Partials/_FormStyles" />
+<partial name="Partials/_ActionMenu" />
+
 <div class="flex items-center justify-between mb-4">
     <div>
         <p class="font-bold text-gray-700 text-sm">Daftar Permohonan</p>
         <p class="text-xs text-gray-400 mt-0.5">Semua permohonan Loket Kepegawaian (Mahasiswa/Peneliti)</p>
     </div>
-    <a href="/kasubkel-kepegawaian" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">← Dashboard</a>
+    <a href="/kasubkel-kepegawaian"
+       class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+        ← Dashboard
+    </a>
 </div>
 
-<!-- Search + Filter -->
+@* ── Search + Filter ── *@
 <form method="get" class="flex gap-2 mb-4 flex-wrap">
     <input type="text" name="q" value="@q" placeholder="Cari nomor / nama pemohon..."
            class="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
@@ -33,21 +35,37 @@
         <option value="10" selected="@(status==10)">Data Siap</option>
         <option value="11" selected="@(status==11)">Selesai</option>
     </select>
-    <button type="submit" class="btn-submit w-full bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
+    <button type="submit"
+            class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">
+        Cari
+    </button>
     @if (!string.IsNullOrEmpty(q) || status.HasValue)
     {
-        <a href="/kasubkel-kepegawaian/permohonan" class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+        <a href="/kasubkel-kepegawaian/permohonan"
+           class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+            Reset
+        </a>
     }
 </form>
 
+@* ── Tabel ── *@
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     @if (!Model.Any())
     {
-        <div class="text-center py-20">
-            <div class="text-4xl mb-3">📋</div>
-            <p class="text-gray-400 text-sm font-medium">
-                @(string.IsNullOrEmpty(q) && !status.HasValue ? "Belum ada permohonan" : "Tidak ada hasil yang cocok")
-            </p>
+        <div class="px-6 py-20 text-center">
+            <div class="max-w-xs mx-auto">
+                <div class="w-16 h-16 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">📋</div>
+                <p class="text-sm font-semibold text-gray-600 mb-1">
+                    @(string.IsNullOrEmpty(q) && !status.HasValue ? "Belum ada permohonan" : "Tidak ada hasil yang cocok")
+                </p>
+                @if (!string.IsNullOrEmpty(q) || status.HasValue)
+                {
+                    <a href="/kasubkel-kepegawaian/permohonan"
+                       class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline mt-2">
+                        ↩ Reset filter
+                    </a>
+                }
+            </div>
         </div>
     }
     else
@@ -65,17 +83,15 @@
                         <th class="col-th">Status</th>
                         <th class="col-th">Tgl Selesai</th>
                         <th class="col-th">Pengampu</th>
-                        <th class="col-th">Action</th>
+                        <th class="col-th">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @foreach (var item in Model)
                     {
-                        bool overdue = item.IsOverdue;
-
-                        // ── Per-status action resolution ─────────────────────────────────
+                        bool overdue      = item.IsOverdue;
                         bool bisaVerif    = item.StatusPPIDID == StatusId.MenungguVerifikasi
-                                         || item.StatusPPIDID == StatusId.IdentifikasiAwal;
+                                        || item.StatusPPIDID == StatusId.IdentifikasiAwal;
                         bool bisaSuratIzin = item.StatusPPIDID == StatusId.MenungguSuratIzin;
 
                         string badgeCls = item.StatusPPIDID switch
@@ -90,20 +106,27 @@
 
                         <tr class="hover:bg-blue-50/30 transition-colors group @(overdue ? "bg-red-50/20" : "")">
 
-                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold whitespace-nowrap">
-                                @item.NoPermohonan
+                            @* No Permohonan *@
+                            <td class="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
+                                <div class="flex items-center gap-1.5">
+                                    @if (overdue)
+                                    {
+                                        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
+                                    }
+                                    <span class="text-blue-600">@item.NoPermohonan</span>
+                                </div>
                             </td>
 
-                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">
-                                @item.Pribadi?.Nama
+                            @* Nama *@
+                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
+
+                            @* Kategori *@
+                            <td class="px-4 py-3 text-xs font-medium
+                                @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
+                                @(item.KategoriPemohon == "Mahasiswa" ? "🎓" : "🏢") @item.KategoriPemohon
                             </td>
 
-                            <td class="px-4 py-3">
-                                <span class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
-                                    @(item.KategoriPemohon == "Mahasiswa" ? "🎓" : "🏢") @item.KategoriPemohon
-                                </span>
-                            </td>
-
+                            @* Keperluan *@
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap gap-1">
                                     @if (item.IsObservasi)      { <span class="tag-badge bg-orange-50 text-orange-700 border-orange-100">Obs</span> }
@@ -112,10 +135,12 @@
                                 </div>
                             </td>
 
+                            @* Tgl Permohonan *@
                             <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
                                 @item.TanggalPermohonan?.ToString("dd MMM yyyy")
                             </td>
 
+                            @* Batas Waktu *@
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if (item.BatasWaktu.HasValue)
                                 {
@@ -124,54 +149,66 @@
                                         @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
                                         {
                                             <span class="block text-[10px] @(overdue ? "text-red-400" : "text-gray-400")">
-                                                @(overdue ? $"Terlambat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
+                                                @(overdue
+                                                    ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari"
+                                                    : $"Sisa {item.HariSisa.Value} hari")
                                             </span>
                                         }
                                     </span>
                                 }
-                                else { <span class="text-gray-300 text-xs">—</span> }
+                                else
+                                {
+                                    <span class="text-gray-300 text-xs">—</span>
+                                }
                             </td>
 
+                            @* Status *@
                             <td class="px-4 py-3">
-                                <span class="text-[11px] @badgeCls px-2.5 py-0.5 rounded-full font-medium">
+                                <span class="text-[11px] @badgeCls px-2.5 py-0.5 rounded-full font-semibold">
                                     @item.Status?.NamaStatusPPID
                                 </span>
                             </td>
 
+                            @* Tgl Selesai *@
                             <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
                                 @(item.TanggalSelesai?.ToString("dd MMM yyyy") ?? "—")
                             </td>
 
+                            @* Pengampu *@
                             <td class="px-4 py-3 text-xs text-gray-500">
                                 @(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)
                             </td>
 
+                            @* Aksi — pola action-cell (primary + dropdown ⋯) *@
                             <td class="px-4 py-3">
-                                <div class="flex gap-1.5 flex-wrap opacity-80 group-hover:opacity-100 transition-opacity">
-                                    <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID"
-                                       class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a>
-
+                                <div class="action-cell">
                                     @if (bisaVerif)
                                     {
                                         <a href="/kasubkel-kepegawaian/verifikasi/@item.PermohonanPPIDID"
-                                           class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-semibold">✅ Verifikasi</a>
+                                           class="btn-action-primary verif">✅ Verifikasi</a>
                                     }
-
-                                    @if (bisaSuratIzin)
+                                    else if (bisaSuratIzin)
                                     {
-                                        @* Surat izin kini diproses Loket Kepegawaian — tampilkan info saja *@
-                                        <span class="text-[11px] bg-blue-50 border border-blue-200 text-blue-600 px-2.5 py-1 rounded-lg font-medium">
+                                        <span class="inline-flex items-center text-[11px] font-medium
+                                                     bg-blue-50 border border-blue-200 text-blue-500
+                                                     px-2.5 py-1 rounded-lg cursor-default select-none"
+                                              title="Penerbitan surat izin dilakukan oleh Loket Kepegawaian">
                                             📄 Menunggu Loket
                                         </span>
                                     }
-                                    @* hanya loket kepegawaian yang saat ini hanya boleh melihat feedback *@
-                                    @* @if (item.StatusPPIDID >= StatusId.DataSiap)
+                                    else
                                     {
-                                        <a href="/kasubkel-kepegawaian/feedback/@item.PermohonanPPIDID"
-                                            class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg font-medium">
-                                            📋 Feedback
-                                        </a>
-                                    } *@
+                                        <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID"
+                                           class="btn-action-primary" style="background:#6b7280">Detail</a>
+                                    }
+
+                                    <div class="action-more-wrap">
+                                        <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
+                                        <div class="action-dropdown hidden">
+                                            <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID"
+                                               class="action-dd-item">📋 Detail</a>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
 
@@ -184,6 +221,36 @@
 </div>
 
 <style>
-    .col-th { padding:12px 16px; text-align:left; font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em; }
-    .tag-badge { font-size:10px; padding:1px 7px; border-radius:999px; font-weight:600; border:1px solid; }
+    .col-th {
+        padding: 12px 16px;
+        text-align: left;
+        font-size: 10px;
+        font-weight: 700;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        white-space: nowrap;
+    }
+    .tag-badge {
+        font-size: 10px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        font-weight: 600;
+        border: 1px solid;
+    }
+    .btn-action-primary {
+        display: inline-flex;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 8px;
+        background: #374151;
+        color: white;
+        white-space: nowrap;
+        transition: opacity .15s;
+        text-decoration: none;
+    }
+    .btn-action-primary:hover { opacity: .85; }
+    .btn-action-primary.verif { background: #0369a1; }
 </style>
