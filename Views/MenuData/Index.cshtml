@@ -107,123 +107,179 @@
 </form>
 
 <!-- ══ TABLE ══ -->
-<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-    <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-        <p class="font-bold text-gray-700 text-sm">Semua Data Permohonan</p>
-        <span class="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">@Model.Total entri</span>
+<div class="tbl-card">
+    <!-- Header bar -->
+    <div class="tbl-topbar">
+        <div class="flex items-center gap-3">
+            <div class="tbl-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            </div>
+            <div>
+                <p class="tbl-title">Semua Data Permohonan</p>
+                <p class="tbl-subtitle">Menampilkan @Model.Total entri · diurutkan terbaru</p>
+            </div>
+        </div>
+        <div class="tbl-count-chip">@Model.Total entri</div>
     </div>
 
     @if (!Model.List.Any())
     {
-        <div class="text-center py-16">
-            <div class="text-4xl mb-3">📂</div>
-            <p class="text-sm text-gray-400 font-medium">
-                @(string.IsNullOrEmpty(q) ? "Belum ada data permohonan" : $"Tidak ditemukan data untuk \"{q}\"")
+        <div class="tbl-empty">
+            <div class="tbl-empty-icon">📂</div>
+            <p class="tbl-empty-title">
+                @(string.IsNullOrEmpty(q) ? "Belum ada data permohonan" : $"Tidak ditemukan hasil untuk \"{q}\"")
             </p>
+            <p class="tbl-empty-sub">Coba ubah kata kunci pencarian atau tambah permohonan baru</p>
         </div>
     }
     else
     {
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="tbl">
                 <thead>
-                    <tr class="border-b border-gray-50">
-                        <th class="col-th">No Permohonan</th>
-                        <th class="col-th">Nama Pemohon</th>
-                        <th class="col-th">Kategori</th>
-                        <th class="col-th">Lembaga / Organisasi</th>
-                        <th class="col-th">Keperluan</th>
-                        <th class="col-th">Tgl Permohonan</th>
-                        <th class="col-th">Batas Waktu</th>
-                        <th class="col-th">Status</th>
-                        <th class="col-th">Tgl Selesai</th>
-                        <th class="col-th">Pengampu</th>
-                        <th class="col-th">Aksi</th>
+                    <tr>
+                        <th class="th" style="width:148px">No. Permohonan</th>
+                        <th class="th">Pemohon</th>
+                        <th class="th" style="width:110px">Kategori</th>
+                        <th class="th" style="width:150px">Lembaga</th>
+                        <th class="th" style="width:120px">Keperluan</th>
+                        <th class="th" style="width:110px">Tgl Masuk</th>
+                        <th class="th" style="width:130px">Batas Waktu</th>
+                        <th class="th" style="width:150px">Status</th>
+                        <th class="th" style="width:105px">Tgl Selesai</th>
+                        <th class="th" style="width:110px">Pengampu</th>
+                        <th class="th" style="width:72px; text-align:center">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-50">
+                <tbody>
                     @foreach (var item in Model.List)
                     {
                         bool terlambat = item.IsOverdue;
-                        <tr class="hover:bg-blue-50/30 transition-colors group @(terlambat ? "bg-red-50/20" : "")">
+                        string rowCls = terlambat ? "tr tr--overdue" : "tr";
+                        <tr class="@rowCls">
 
-                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold whitespace-nowrap">
-                                @item.NoPermohonan
+                            <!-- No. Permohonan -->
+                            <td class="td">
+                                <span class="no-perm">@item.NoPermohonan</span>
                             </td>
 
-                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">
-                                @item.Pribadi?.Nama
+                            <!-- Pemohon -->
+                            <td class="td">
+                                <span class="pemohon-nama">@item.Pribadi?.Nama</span>
                                 @if (!string.IsNullOrEmpty(item.Pribadi?.NIK))
                                 {
-                                    <span class="block text-[10px] text-gray-400 font-normal font-mono">@item.Pribadi.NIK</span>
+                                    <span class="pemohon-nik">@item.Pribadi.NIK</span>
                                 }
                             </td>
 
-                            <td class="px-4 py-3">
-                                <span class="text-xs font-medium @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
-                                    @(item.KategoriPemohon == "Mahasiswa" ? "Mahasiswa" : "Organisasi/LSM")
+                            <!-- Kategori -->
+                            <td class="td">
+                                @if (item.KategoriPemohon == "Mahasiswa")
+                                {
+                                    <span class="kat-chip kat-mhs">
+                                        <span class="kat-dot" style="background:#3b82f6"></span>Mahasiswa
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="kat-chip kat-lsm">
+                                        <span class="kat-dot" style="background:#10b981"></span>LSM / Org
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Lembaga -->
+                            <td class="td">
+                                <span class="lembaga-txt" title="@(item.Pribadi?.PribadiPPID?.Lembaga ?? "")">
+                                    @(item.Pribadi?.PribadiPPID?.Lembaga ?? "—")
                                 </span>
                             </td>
 
-                            <td class="px-4 py-3 text-xs text-gray-500 max-w-[140px] truncate">
-                                @(item.Pribadi?.PribadiPPID?.Lembaga ?? "—")
-                            </td>
-
-                            <td class="px-4 py-3">
-                                <div class="flex flex-wrap gap-1">
-                                    @if (item.IsObservasi)      { <span class="badge bg-orange-50 text-orange-700 border-orange-100">Obs</span> }
-                                    @if (item.IsPermintaanData) { <span class="badge bg-blue-50 text-blue-700 border-blue-100">Data</span> }
-                                    @if (item.IsWawancara)      { <span class="badge bg-violet-50 text-violet-700 border-violet-100">Waw</span> }
+                            <!-- Keperluan -->
+                            <td class="td">
+                                <div class="kep-group">
+                                    @if (item.IsObservasi)      { <span class="kep obs" title="Observasi">Obs</span> }
+                                    @if (item.IsPermintaanData) { <span class="kep data" title="Permintaan Data">Data</span> }
+                                    @if (item.IsWawancara)      { <span class="kep waw" title="Wawancara">Waw</span> }
                                 </div>
                             </td>
 
-                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                                @item.TanggalPermohonan?.ToString("dd MMM yyyy")
+                            <!-- Tgl Masuk -->
+                            <td class="td">
+                                <span class="date-txt">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</span>
                             </td>
 
-                            <td class="px-4 py-3 whitespace-nowrap">
+                            <!-- Batas Waktu -->
+                            <td class="td">
                                 @if (item.BatasWaktu.HasValue)
                                 {
-                                    <span class="text-xs @(terlambat ? "text-red-600 font-semibold" : item.HariSisa <= 3 ? "text-amber-600 font-medium" : "text-gray-500")">
-                                        @(terlambat ? "Lewat " : "")@item.BatasWaktu.Value.ToString("dd MMM yyyy")
+                                    string bwCls = terlambat ? "bw bw--late" : item.HariSisa <= 3 ? "bw bw--warn" : "bw";
+                                    <span class="@bwCls">
+                                        @if (terlambat)
+                                        {
+                                            <svg class="bw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                        }
+                                        @item.BatasWaktu.Value.ToString("dd MMM yyyy")
                                         @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
                                         {
-                                            <span class="block text-[10px] @(terlambat ? "text-red-400" : "text-gray-400")">
-                                                @(terlambat ? $"Terlambat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
+                                            <span class="bw-sub">
+                                                @(terlambat ? $"Terlambat {Math.Abs(item.HariSisa.Value)}h" : $"Sisa {item.HariSisa.Value} hari")
                                             </span>
                                         }
                                     </span>
                                 }
-                                else { <span class="text-gray-300 text-xs">—</span> }
+                                else
+                                {
+                                    <span class="date-txt" style="color:#d1d5db">—</span>
+                                }
                             </td>
 
-                            <td class="px-4 py-3">
+                            <!-- Status -->
+                            <td class="td">
                                 @{
-                                    string cls = item.StatusPPIDID switch
+                                    string stCls = item.StatusPPIDID switch
                                     {
-                                        StatusId.Selesai           => "bg-emerald-100 text-emerald-800",
-                                        StatusId.DataSiap          => "bg-emerald-50 text-emerald-700",
-                                        StatusId.MenungguVerifikasi => "bg-violet-50 text-violet-700",
-                                        StatusId.TerdaftarSistem   => "bg-gray-100 text-gray-500",
-                                        _                          => "bg-amber-50 text-amber-700"
+                                        StatusId.Selesai            => "st st--selesai",
+                                        StatusId.DataSiap           => "st st--siap",
+                                        StatusId.FeedbackPemohon    => "st st--feedback",
+                                        StatusId.MenungguVerifikasi => "st st--verif",
+                                        StatusId.Dibatalkan         => "st st--batal",
+                                        StatusId.TerdaftarSistem    => "st st--daftar",
+                                        _                           => "st st--proses"
+                                    };
+                                    string stDot = item.StatusPPIDID switch
+                                    {
+                                        StatusId.Selesai            => "#059669",
+                                        StatusId.DataSiap           => "#10b981",
+                                        StatusId.FeedbackPemohon    => "#0ea5e9",
+                                        StatusId.MenungguVerifikasi => "#8b5cf6",
+                                        StatusId.Dibatalkan         => "#ef4444",
+                                        StatusId.TerdaftarSistem    => "#9ca3af",
+                                        _                           => "#f59e0b"
                                     };
                                 }
-                                <span class="text-[11px] @cls px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                                <span class="@stCls">
+                                    <span class="st-dot" style="background:@stDot"></span>
                                     @item.Status?.NamaStatusPPID
                                 </span>
                             </td>
 
-                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                                @(item.TanggalSelesai?.ToString("dd MMM yyyy") ?? "—")
+                            <!-- Tgl Selesai -->
+                            <td class="td">
+                                <span class="date-txt">@(item.TanggalSelesai?.ToString("dd MMM yyyy") ?? "—")</span>
                             </td>
 
-                            <td class="px-4 py-3 text-xs text-gray-500">
-                                @(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)
+                            <!-- Pengampu -->
+                            <td class="td">
+                                <span class="pengampu-txt" title="@item.Pengampu">
+                                    @(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)
+                                </span>
                             </td>
 
-                            <td class="px-4 py-3">
-                                <a href="@baseUrl/detail/@item.PermohonanPPIDID"
-                                   class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium opacity-80 group-hover:opacity-100 transition-opacity">
+                            <!-- Aksi -->
+                            <td class="td" style="text-align:center">
+                                <a href="@baseUrl/detail/@item.PermohonanPPIDID" class="btn-detail" title="Lihat detail">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                     Detail
                                 </a>
                             </td>
@@ -232,10 +288,291 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Footer -->
+        <div class="tbl-footer">
+            <span>Menampilkan <strong>@Model.List.Count</strong> dari <strong>@Model.Total</strong> permohonan</span>
+        </div>
     }
 </div>
 
 <style>
-    .col-th { padding:10px 16px; text-align:left; font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em; }
-    .badge  { font-size:10px; padding:1px 6px; border-radius:999px; font-weight:600; border:1px solid; }
+/* ─────────────────────────────────────────────
+   TABLE CARD WRAPPER
+   ───────────────────────────────────────────── */
+.tbl-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   TOP BAR
+   ───────────────────────────────────────────── */
+.tbl-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1.5px solid #f3f4f6;
+    background: linear-gradient(to right, #fafbff, #fff);
+}
+.tbl-icon-wrap {
+    width: 32px;
+    height: 32px;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+.tbl-title    { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.2; }
+.tbl-subtitle { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+.tbl-count-chip {
+    font-size: 11px; font-weight: 700; color: #4b5563;
+    background: #f3f4f6; border: 1px solid #e5e7eb;
+    border-radius: 20px; padding: 3px 10px;
+    white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+   EMPTY STATE
+   ───────────────────────────────────────────── */
+.tbl-empty       { text-align: center; padding: 64px 24px; }
+.tbl-empty-icon  { font-size: 40px; margin-bottom: 12px; }
+.tbl-empty-title { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+.tbl-empty-sub   { font-size: 12px; color: #9ca3af; }
+
+/* ─────────────────────────────────────────────
+   TABLE BASE
+   ───────────────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+/* ─────────────────────────────────────────────
+   HEADER
+   ───────────────────────────────────────────── */
+.th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    background: #f9fafb;
+    border-bottom: 1.5px solid #e5e7eb;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.th:first-child { padding-left: 20px; border-radius: 0; }
+.th:last-child  { padding-right: 20px; }
+
+/* ─────────────────────────────────────────────
+   ROWS
+   ───────────────────────────────────────────── */
+.tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background .1s ease;
+}
+.tr:last-child         { border-bottom: none; }
+.tr:hover              { background: #f0f6ff; }
+
+/* Overdue rows get a subtle left border accent */
+.tr--overdue           { background: #fff8f8; }
+.tr--overdue:hover     { background: #fef2f2; }
+.tr--overdue .td:first-child {
+    border-left: 3px solid #fca5a5;
+    padding-left: 17px;
+}
+
+/* ─────────────────────────────────────────────
+   CELLS
+   ───────────────────────────────────────────── */
+.td {
+    padding: 11px 14px;
+    vertical-align: middle;
+}
+.td:first-child { padding-left: 20px; }
+.td:last-child  { padding-right: 20px; }
+
+/* ─────────────────────────────────────────────
+   NO. PERMOHONAN
+   ───────────────────────────────────────────── */
+.no-perm {
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 6px;
+    padding: 3px 8px;
+    white-space: nowrap;
+    letter-spacing: .01em;
+    display: inline-block;
+}
+
+/* ─────────────────────────────────────────────
+   PEMOHON
+   ───────────────────────────────────────────── */
+.pemohon-nama { display: block; font-weight: 600; color: #111827; font-size: 12.5px; line-height: 1.3; }
+.pemohon-nik  {
+    display: block; font-size: 10px; color: #9ca3af;
+    font-family: ui-monospace, monospace; margin-top: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   KATEGORI CHIP
+   ───────────────────────────────────────────── */
+.kat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 20px;
+    padding: 3px 9px;
+    white-space: nowrap;
+    border: 1px solid;
+}
+.kat-mhs  { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+.kat-lsm  { color: #065f46; background: #f0fdf4; border-color: #a7f3d0; }
+.kat-dot  { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ─────────────────────────────────────────────
+   LEMBAGA
+   ───────────────────────────────────────────── */
+.lembaga-txt {
+    font-size: 11.5px; color: #4b5563;
+    display: block; max-width: 140px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+   KEPERLUAN BADGES
+   ───────────────────────────────────────────── */
+.kep-group { display: flex; flex-wrap: wrap; gap: 4px; }
+.kep {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 4px;
+    border: 1px solid; letter-spacing: .03em;
+    text-transform: uppercase; white-space: nowrap;
+    cursor: default;
+}
+.obs  { color: #c2410c; background: #fff7ed; border-color: #fed7aa; }
+.data { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+.waw  { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
+
+/* ─────────────────────────────────────────────
+   DATE TEXT
+   ───────────────────────────────────────────── */
+.date-txt { font-size: 11.5px; color: #6b7280; white-space: nowrap; }
+
+/* ─────────────────────────────────────────────
+   BATAS WAKTU
+   ───────────────────────────────────────────── */
+.bw {
+    display: inline-flex;
+    flex-direction: column;
+    font-size: 11.5px;
+    color: #6b7280;
+    white-space: nowrap;
+    gap: 2px;
+    line-height: 1.3;
+}
+.bw-icon {
+    width: 11px; height: 11px;
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 3px;
+}
+.bw-sub {
+    font-size: 10px; font-weight: 700;
+    display: block; letter-spacing: .01em;
+}
+.bw--late           { color: #dc2626; }
+.bw--late .bw-sub   { color: #ef4444; }
+.bw--warn           { color: #d97706; }
+.bw--warn .bw-sub   { color: #f59e0b; }
+
+/* ─────────────────────────────────────────────
+   STATUS BADGE
+   ───────────────────────────────────────────── */
+.st {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 600;
+    border-radius: 20px;
+    padding: 3px 9px;
+    white-space: nowrap;
+    border: 1px solid;
+    line-height: 1.4;
+}
+.st-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.st--selesai  { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
+.st--siap     { color: #047857; background: #f0fdf4; border-color: #bbf7d0; }
+.st--feedback { color: #0369a1; background: #f0f9ff; border-color: #bae6fd; }
+.st--verif    { color: #5b21b6; background: #f5f3ff; border-color: #ddd6fe; }
+.st--batal    { color: #9f1239; background: #fff1f2; border-color: #fecdd3; }
+.st--daftar   { color: #374151; background: #f9fafb; border-color: #e5e7eb; }
+.st--proses   { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+
+/* ─────────────────────────────────────────────
+   PENGAMPU
+   ───────────────────────────────────────────── */
+.pengampu-txt {
+    font-size: 11.5px; color: #6b7280;
+    display: block; max-width: 100px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+   DETAIL BUTTON
+   ───────────────────────────────────────────── */
+.btn-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #374151;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 7px;
+    padding: 5px 10px;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background .12s, border-color .12s, color .12s, box-shadow .12s;
+}
+.btn-detail:hover {
+    background: #0f1f4a;
+    color: #fff;
+    border-color: #0f1f4a;
+    box-shadow: 0 2px 8px rgba(15,31,74,.2);
+}
+
+/* ─────────────────────────────────────────────
+   FOOTER
+   ───────────────────────────────────────────── */
+.tbl-footer {
+    padding: 10px 20px;
+    border-top: 1px solid #f3f4f6;
+    background: #fafbff;
+    font-size: 11px;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+.tbl-footer strong { color: #374151; }
 </style>
