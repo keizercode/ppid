@@ -147,12 +147,33 @@ let _currentFilter = 'all';
 // ── Fetch ─────────────────────────────────────────────────────────────────
 async function loadNotifs() {
     try {
-        const res  = await fetch('/petugas-loket/notifikasi-json');
-        _allNotifs = await res.json();
+        const res = await fetch('/petugas-loket/notifikasi-json');
+
+        // BUG FIX: periksa HTTP status sebelum parse JSON.
+        // Tanpa ini, response error HTML dari server (500) akan menyebabkan
+        // SyntaxError di res.json() yang ditangkap catch, lalu skeleton
+        // tidak ditemukan karena sudah di-remove oleh renderList sebelumnya.
+        if (!res.ok) throw new Error(`Server error: HTTP ${res.status}`);
+
+        const data = await res.json();
+        _allNotifs = Array.isArray(data) ? data : [];
         renderList();
-    } catch(e) {
-        document.getElementById('notif-skeleton').innerHTML =
-            '<p class="text-sm text-red-500 text-center py-6">Gagal memuat notifikasi.</p>';
+    } catch (e) {
+        console.error('[Notifikasi] Gagal memuat:', e);
+        // Skeleton mungkin sudah di-remove — gunakan notif-list sebagai fallback
+        const target = document.getElementById('notif-skeleton')
+                    ?? document.getElementById('notif-list');
+        if (target) {
+            target.innerHTML = `
+                <div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
+                    <p class="text-sm font-semibold text-red-600 mb-1">Gagal memuat notifikasi</p>
+                    <p class="text-xs text-red-400 mb-3">Terjadi kesalahan saat menghubungi server.</p>
+                    <button onclick="loadNotifs()"
+                            class="text-xs font-semibold text-red-600 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-100 transition-all">
+                        ↻ Coba Lagi
+                    </button>
+                </div>`;
+        }
     }
 }
 
