@@ -79,7 +79,17 @@
 <!-- ══ TABLE ══ -->
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm table-fixed">
+<colgroup>
+    <col class="w-[15%]" />
+    <col class="w-[17%]" />
+    <col class="w-[8%]"  />
+    <col class="w-[13%]" />
+    <col class="w-[14%]" />
+    <col class="w-[12%]" />
+    <col class="w-[12%]" />
+    <col class="w-[9%]"  />
+</colgroup>
             <thead>
                 <tr class="border-b border-gray-100 bg-gray-50/50">
                     <th class="col-th">No Permohonan</th>
@@ -188,7 +198,7 @@
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
                                         ⏳ Belum dijadwalkan
                                     </span>
                                 }
@@ -202,7 +212,7 @@
                                     @if (!string.IsNullOrEmpty(st.TeleponPIC))
                                     { <a href="tel:@st.TeleponPIC" class="text-[10px] text-blue-500 hover:underline">📞 @st.TeleponPIC</a> }
                                     @if (!string.IsNullOrEmpty(st.LokasiDetail))
-                                    { <p class="text-[10px] text-gray-400 mt-0.5">@(st.LokasiJenis == "Online" ? "🌐" : "📍") @st.LokasiDetail</p> }
+                                    { <p class="text-[10px] text-gray-400 mt-0.5 break-all">@(st.LokasiJenis == "Online" ? "🌐" : "📍") @st.LokasiDetail</p> }
                                     else if (!string.IsNullOrEmpty(st.LokasiJenis))
                                     { <p class="text-[10px] text-gray-400 mt-0.5">@(st.LokasiJenis == "Online" ? "🌐 Online" : "📍 Offline")</p> }
                                 }
@@ -211,7 +221,7 @@
 
                             @* {{!-- ── Status Sub-Tugas ── --}} *@
                             <td class="px-4 py-3">
-                                <span class="@StTaskCls(st?.StatusTask)">
+                                <span class="@StTaskCls(st?.StatusTask)" style="white-space:normal;word-break:break-word">
                                     <span class="st-dot" style="background:@StTaskDot(st?.StatusTask)"></span>
                                     @badgeLbl
                                 </span>
