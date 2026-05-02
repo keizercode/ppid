@@ -5,6 +5,29 @@
     Layout = "_LayoutAdmin";
     var q      = ViewData["Q"]      as string;
     var status = ViewData["Status"] as int?;
+
+    string StCls(int? s) => (s ?? 0) switch {
+        StatusId.Selesai            => "st st--selesai",
+        StatusId.DataSiap           => "st st--siap",
+        StatusId.FeedbackPemohon    => "st st--feedback",
+        StatusId.MenungguVerifikasi => "st st--verif",
+        StatusId.IdentifikasiAwal   => "st st--daftar",
+        StatusId.Dibatalkan         => "st st--batal",
+        StatusId.TerdaftarSistem    => "st st--daftar",
+        StatusId.MenungguSuratIzin  => "st st--surat",
+        _                           => "st st--proses"
+    };
+    string StDot(int? s) => (s ?? 0) switch {
+        StatusId.Selesai            => "#059669",
+        StatusId.DataSiap           => "#10b981",
+        StatusId.FeedbackPemohon    => "#0ea5e9",
+        StatusId.MenungguVerifikasi => "#8b5cf6",
+        StatusId.IdentifikasiAwal   => "#9ca3af",
+        StatusId.Dibatalkan         => "#ef4444",
+        StatusId.TerdaftarSistem    => "#9ca3af",
+        StatusId.MenungguSuratIzin  => "#3b82f6",
+        _                           => "#f59e0b"
+    };
 }
 
 <partial name="Partials/_FormStyles" />
@@ -15,13 +38,9 @@
         <p class="font-bold text-gray-700 text-sm">Daftar Permohonan</p>
         <p class="text-xs text-gray-400 mt-0.5">Semua permohonan Loket Kepegawaian (Mahasiswa/Peneliti)</p>
     </div>
-    <a href="/kasubkel-kepegawaian"
-       class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
-        ← Dashboard
-    </a>
+    <a href="/kasubkel-kepegawaian" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">← Dashboard</a>
 </div>
 
-@* ── Search + Filter ── *@
 <form method="get" class="flex gap-2 mb-4 flex-wrap">
     <input type="text" name="q" value="@q" placeholder="Cari nomor / nama pemohon..."
            class="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
@@ -35,20 +54,13 @@
         <option value="10" selected="@(status==10)">Data Siap</option>
         <option value="11" selected="@(status==11)">Selesai</option>
     </select>
-    <button type="submit"
-            class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">
-        Cari
-    </button>
+    <button type="submit" class="bg-[#002d7a] hover:bg-blue-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">Cari</button>
     @if (!string.IsNullOrEmpty(q) || status.HasValue)
     {
-        <a href="/kasubkel-kepegawaian/permohonan"
-           class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
-            Reset
-        </a>
+        <a href="/kasubkel-kepegawaian/permohonan" class="border border-gray-200 text-gray-500 text-xs font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
     }
 </form>
 
-@* ── Tabel ── *@
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     @if (!Model.Any())
     {
@@ -60,10 +72,7 @@
                 </p>
                 @if (!string.IsNullOrEmpty(q) || status.HasValue)
                 {
-                    <a href="/kasubkel-kepegawaian/permohonan"
-                       class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline mt-2">
-                        ↩ Reset filter
-                    </a>
+                    <a href="/kasubkel-kepegawaian/permohonan" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline mt-2">↩ Reset filter</a>
                 }
             </div>
         </div>
@@ -89,58 +98,46 @@
                 <tbody class="divide-y divide-gray-50">
                     @foreach (var item in Model)
                     {
-                        bool overdue      = item.IsOverdue;
-                        bool bisaVerif    = item.StatusPPIDID == StatusId.MenungguVerifikasi
-                                        || item.StatusPPIDID == StatusId.IdentifikasiAwal;
+                        bool overdue       = item.IsOverdue;
+                        bool bisaVerif     = item.StatusPPIDID == StatusId.MenungguVerifikasi
+                                         || item.StatusPPIDID == StatusId.IdentifikasiAwal;
                         bool bisaSuratIzin = item.StatusPPIDID == StatusId.MenungguSuratIzin;
-
-                        string badgeCls = item.StatusPPIDID switch
-                        {
-                            StatusId.Selesai            => "bg-emerald-100 text-emerald-800",
-                            StatusId.DataSiap           => "bg-emerald-50 text-emerald-700",
-                            StatusId.MenungguSuratIzin  => "bg-blue-50 text-blue-700",
-                            StatusId.MenungguVerifikasi => "bg-violet-50 text-violet-700",
-                            StatusId.TerdaftarSistem    => "bg-gray-100 text-gray-500",
-                            _                           => "bg-amber-50 text-amber-700"
-                        };
 
                         <tr class="hover:bg-blue-50/30 transition-colors group @(overdue ? "bg-red-50/20" : "")">
 
-                            @* No Permohonan *@
-                            <td class="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
+                            @* {{!-- ── No. Permohonan ── --}} *@
+                            <td class="px-4 py-3">
                                 <div class="flex items-center gap-1.5">
-                                    @if (overdue)
-                                    {
-                                        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
-                                    }
-                                    <span class="text-blue-600">@item.NoPermohonan</span>
+                                    @if (overdue) { <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span> }
+                                    <span class="no-perm">@item.NoPermohonan</span>
                                 </div>
                             </td>
 
-                            @* Nama *@
                             <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
 
-                            @* Kategori *@
-                            <td class="px-4 py-3 text-xs font-medium
-                                @(item.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
-                                @(item.KategoriPemohon == "Mahasiswa" ? "🎓" : "🏢") @item.KategoriPemohon
+                            @* {{!-- ── Kategori ── --}} *@
+                            <td class="px-4 py-3">
+                                @if (item.KategoriPemohon == "Mahasiswa")
+                                {
+                                    <span class="kat-chip kat-mhs"><span class="kat-dot" style="background:#3b82f6"></span>Mahasiswa</span>
+                                }
+                                else
+                                {
+                                    <span class="kat-chip kat-lsm"><span class="kat-dot" style="background:#10b981"></span>@item.KategoriPemohon</span>
+                                }
                             </td>
 
-                            @* Keperluan *@
+                            @* {{!-- ── Keperluan ── --}} *@
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap gap-1">
-                                    @if (item.IsObservasi)      { <span class="tag-badge bg-orange-50 text-orange-700 border-orange-100">Obs</span> }
-                                    @if (item.IsPermintaanData) { <span class="tag-badge bg-blue-50 text-blue-700 border-blue-100">Data</span> }
-                                    @if (item.IsWawancara)      { <span class="tag-badge bg-violet-50 text-violet-700 border-violet-100">Waw</span> }
+                                    @if (item.IsObservasi)      { <span class="badge bg-orange-50 text-orange-700 border-orange-100">Obs</span> }
+                                    @if (item.IsPermintaanData) { <span class="badge bg-blue-50 text-blue-700 border-blue-100">Data</span> }
+                                    @if (item.IsWawancara)      { <span class="badge bg-violet-50 text-violet-700 border-violet-100">Waw</span> }
                                 </div>
                             </td>
 
-                            @* Tgl Permohonan *@
-                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                                @item.TanggalPermohonan?.ToString("dd MMM yyyy")
-                            </td>
+                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</td>
 
-                            @* Batas Waktu *@
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if (item.BatasWaktu.HasValue)
                                 {
@@ -149,69 +146,50 @@
                                         @if (item.HariSisa.HasValue && item.StatusPPIDID < StatusId.Selesai)
                                         {
                                             <span class="block text-[10px] @(overdue ? "text-red-400" : "text-gray-400")">
-                                                @(overdue
-                                                    ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari"
-                                                    : $"Sisa {item.HariSisa.Value} hari")
+                                                @(overdue ? $"Lewat {Math.Abs(item.HariSisa.Value)} hari" : $"Sisa {item.HariSisa.Value} hari")
                                             </span>
                                         }
                                     </span>
                                 }
-                                else
-                                {
-                                    <span class="text-gray-300 text-xs">—</span>
-                                }
+                                else { <span class="text-gray-300 text-xs">—</span> }
                             </td>
 
-                            @* Status *@
+                            @* {{!-- ── Status ── --}} *@
                             <td class="px-4 py-3">
-                                <span class="text-[11px] @badgeCls px-2.5 py-0.5 rounded-full font-semibold">
+                                <span class="@StCls(item.StatusPPIDID)">
+                                    <span class="st-dot" style="background:@StDot(item.StatusPPIDID)"></span>
                                     @item.Status?.NamaStatusPPID
                                 </span>
                             </td>
 
-                            @* Tgl Selesai *@
-                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                                @(item.TanggalSelesai?.ToString("dd MMM yyyy") ?? "—")
-                            </td>
+                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">@(item.TanggalSelesai?.ToString("dd MMM yyyy") ?? "—")</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">@(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)</td>
 
-                            @* Pengampu *@
-                            <td class="px-4 py-3 text-xs text-gray-500">
-                                @(string.IsNullOrEmpty(item.Pengampu) ? "—" : item.Pengampu)
-                            </td>
-
-                            @* Aksi — pola action-cell (primary + dropdown ⋯) *@
                             <td class="px-4 py-3">
                                 <div class="action-cell">
                                     @if (bisaVerif)
                                     {
-                                        <a href="/kasubkel-kepegawaian/verifikasi/@item.PermohonanPPIDID"
-                                           class="btn-action-primary verif">✅ Verifikasi</a>
+                                        <a href="/kasubkel-kepegawaian/verifikasi/@item.PermohonanPPIDID" class="btn-action-primary verif">✅ Verifikasi</a>
                                     }
                                     else if (bisaSuratIzin)
                                     {
-                                        <span class="inline-flex items-center text-[11px] font-medium
-                                                     bg-blue-50 border border-blue-200 text-blue-500
-                                                     px-2.5 py-1 rounded-lg cursor-default select-none"
+                                        <span class="inline-flex items-center text-[11px] font-medium bg-blue-50 border border-blue-200 text-blue-500 px-2.5 py-1 rounded-lg cursor-default select-none"
                                               title="Penerbitan surat izin dilakukan oleh Loket Kepegawaian">
                                             📄 Menunggu Loket
                                         </span>
                                     }
                                     else
                                     {
-                                        <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID"
-                                           class="btn-action-primary" style="background:#6b7280">Detail</a>
+                                        <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID" class="btn-action-primary" style="background:#6b7280">Detail</a>
                                     }
-
                                     <div class="action-more-wrap">
                                         <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
                                         <div class="action-dropdown hidden">
-                                            <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID"
-                                               class="action-dd-item">📋 Detail</a>
+                                            <a href="/kasubkel-kepegawaian/detail/@item.PermohonanPPIDID" class="action-dd-item">📋 Detail</a>
                                         </div>
                                     </div>
                                 </div>
                             </td>
-
                         </tr>
                     }
                 </tbody>
@@ -221,36 +199,24 @@
 </div>
 
 <style>
-    .col-th {
-        padding: 12px 16px;
-        text-align: left;
-        font-size: 10px;
-        font-weight: 700;
-        color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        white-space: nowrap;
-    }
-    .tag-badge {
-        font-size: 10px;
-        padding: 1px 7px;
-        border-radius: 999px;
-        font-weight: 600;
-        border: 1px solid;
-    }
-    .btn-action-primary {
-        display: inline-flex;
-        align-items: center;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 4px 10px;
-        border-radius: 8px;
-        background: #374151;
-        color: white;
-        white-space: nowrap;
-        transition: opacity .15s;
-        text-decoration: none;
-    }
-    .btn-action-primary:hover { opacity: .85; }
-    .btn-action-primary.verif { background: #0369a1; }
+    .col-th{padding:12px 16px;text-align:left;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+    .no-perm{font-family:'JetBrains Mono','Fira Code',ui-monospace,monospace;font-size:11.5px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #dbeafe;border-radius:6px;padding:3px 8px;white-space:nowrap;letter-spacing:.01em;display:inline-block}
+    .kat-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border-radius:20px;padding:3px 9px;white-space:nowrap;border:1px solid}
+    .kat-mhs{color:#1d4ed8;background:#eff6ff;border-color:#bfdbfe}
+    .kat-lsm{color:#065f46;background:#f0fdf4;border-color:#a7f3d0}
+    .kat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:20px;padding:3px 9px;white-space:nowrap;border:1px solid;line-height:1.4}
+    .st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .st--selesai{color:#065f46;background:#ecfdf5;border-color:#a7f3d0}
+    .st--siap{color:#047857;background:#f0fdf4;border-color:#bbf7d0}
+    .st--feedback{color:#0369a1;background:#f0f9ff;border-color:#bae6fd}
+    .st--verif{color:#5b21b6;background:#f5f3ff;border-color:#ddd6fe}
+    .st--batal{color:#9f1239;background:#fff1f2;border-color:#fecdd3}
+    .st--daftar{color:#374151;background:#f9fafb;border-color:#e5e7eb}
+    .st--proses{color:#92400e;background:#fffbeb;border-color:#fde68a}
+    .st--surat{color:#1e40af;background:#eff6ff;border-color:#bfdbfe}
+    .badge{font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600;border:1px solid}
+    .btn-action-primary{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:#374151;color:white;white-space:nowrap;transition:opacity .15s;text-decoration:none}
+    .btn-action-primary:hover{opacity:.85}
+    .btn-action-primary.verif{background:#0369a1}
 </style>

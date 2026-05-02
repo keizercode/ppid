@@ -18,9 +18,43 @@
                                              || p.StatusPPIDID == StatusId.WawancaraSelesai).ToList();
     var dataSiap   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.DataSiap).ToList();
     var feedback   = disposisiAktif.Where(p => p.StatusPPIDID == StatusId.FeedbackPemohon).ToList();
+
+    /* ── Status helpers ── */
+    string StCls(int? s) => (s ?? 0) switch {
+        StatusId.Selesai              => "st st--selesai",
+        StatusId.DataSiap             => "st st--siap",
+        StatusId.FeedbackPemohon      => "st st--feedback",
+        StatusId.MenungguVerifikasi   => "st st--verif",
+        StatusId.Dibatalkan           => "st st--batal",
+        StatusId.TerdaftarSistem      => "st st--daftar",
+        StatusId.IdentifikasiAwal     => "st st--daftar",
+        StatusId.Didisposisi          => "st st--dispos",
+        StatusId.ObservasiDijadwalkan => "st st--obs",
+        StatusId.ObservasiSelesai     => "st st--obs",
+        StatusId.WawancaraDijadwalkan => "st st--waw",
+        StatusId.WawancaraSelesai     => "st st--waw",
+        StatusId.MenungguSuratIzin    => "st st--surat",
+        _                             => "st st--proses"
+    };
+    string StDot(int? s) => (s ?? 0) switch {
+        StatusId.Selesai              => "#059669",
+        StatusId.DataSiap             => "#10b981",
+        StatusId.FeedbackPemohon      => "#0ea5e9",
+        StatusId.MenungguVerifikasi   => "#8b5cf6",
+        StatusId.Dibatalkan           => "#ef4444",
+        StatusId.TerdaftarSistem      => "#9ca3af",
+        StatusId.IdentifikasiAwal     => "#9ca3af",
+        StatusId.Didisposisi          => "#06b6d4",
+        StatusId.ObservasiDijadwalkan => "#f97316",
+        StatusId.ObservasiSelesai     => "#f97316",
+        StatusId.WawancaraDijadwalkan => "#7c3aed",
+        StatusId.WawancaraSelesai     => "#7c3aed",
+        StatusId.MenungguSuratIzin    => "#3b82f6",
+        _                             => "#f59e0b"
+    };
 }
 
-@* {{!-- ══ ALERT 1: Disposisi baru menunggu diterima ══ --}} *@
+@* ══ ALERT 1 ══ *@
 @if (baru.Any())
 {
     <div class="bg-cyan-50 border border-cyan-300 rounded-2xl p-4 mb-4 flex items-start gap-3">
@@ -50,11 +84,7 @@
     </div>
 }
 
-@* {{!-- ══ ALERT 2: Data Siap — langkah selanjutnya jelas terlihat ══
-     FIX ISSUE 4: DataSiap callout yang menonjol agar KDI tidak melewatkan
-     tindak lanjut penting setelah semua sub-tugas selesai.
-     Sebelumnya tersembunyi di dalam tabel dan halaman SubTasks.
---}} *@
+@* ══ ALERT 2 ══ *@
 @if (dataSiap.Any())
 {
     <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 mb-4">
@@ -89,7 +119,7 @@
     </div>
 }
 
-@* {{!-- ══ ALERT 3: Feedback menunggu respons pemohon ══ --}} *@
+@* ══ ALERT 3 ══ *@
 @if (feedback.Any())
 {
     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-4 flex items-start gap-3">
@@ -185,46 +215,46 @@
                         int total = tasks?.Count ?? 0;
 
                         string rowBg = isNew ? "bg-cyan-50/60" : isDataSiap ? "bg-emerald-50/40" : "";
-                        string badgeCls = p.StatusPPIDID switch
-                        {
-                            StatusId.Didisposisi          => "bg-cyan-50 text-cyan-700",
-                            StatusId.DiProses             => "bg-amber-50 text-amber-700",
-                            StatusId.ObservasiDijadwalkan => "bg-orange-50 text-orange-700",
-                            StatusId.ObservasiSelesai     => "bg-orange-100 text-orange-800",
-                            StatusId.WawancaraDijadwalkan => "bg-violet-50 text-violet-700",
-                            StatusId.WawancaraSelesai     => "bg-violet-100 text-violet-800",
-                            StatusId.DataSiap             => "bg-emerald-50 text-emerald-700",
-                            StatusId.FeedbackPemohon      => "bg-amber-50 text-amber-700",
-                            _                             => "bg-gray-100 text-gray-500"
-                        };
 
                         <tr class="hover:bg-blue-50/20 transition-colors group @rowBg">
-                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">
-                                @p.NoPermohonan
-                                @if (isNew)      { <span class="ml-1 text-[10px] bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded font-bold">BARU</span> }
-                                @if (isDataSiap) { <span class="ml-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">SIAP</span> }
+
+                            @* {{!-- ── No. Permohonan ── --}} *@
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="no-perm">@p.NoPermohonan</span>
+                                    @if (isNew)      { <span class="text-[10px] bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded font-bold">BARU</span> }
+                                    @if (isDataSiap) { <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">SIAP</span> }
+                                </div>
                             </td>
+
                             <td class="px-4 py-3">
                                 <p class="font-semibold text-gray-800 text-sm">@p.Pribadi?.Nama</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">@p.KategoriPemohon</p>
                             </td>
+
+                            @* {{!-- ── Keperluan ── --}} *@
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap gap-1">
-                                    @if (p.IsPermintaanData) { <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-full">Data</span> }
-                                    @if (p.IsObservasi)      { <span class="text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-1.5 py-0.5 rounded-full">Obs</span> }
-                                    @if (p.IsWawancara)      { <span class="text-[10px] bg-violet-50 text-violet-700 border border-violet-100 px-1.5 py-0.5 rounded-full">Waw</span> }
+                                    @if (p.IsPermintaanData) { <span class="badge bg-blue-50 text-blue-700 border-blue-100">Data</span> }
+                                    @if (p.IsObservasi)      { <span class="badge bg-orange-50 text-orange-700 border-orange-100">Obs</span> }
+                                    @if (p.IsWawancara)      { <span class="badge bg-violet-50 text-violet-700 border-violet-100">Waw</span> }
                                 </div>
                             </td>
+
                             <td class="px-4 py-3 text-xs @(p.IsOverdue ? "text-red-600 font-semibold" : "text-gray-500")">
                                 @(p.BatasWaktu?.ToString("dd MMM yyyy") ?? "—")
                                 @if (p.IsOverdue) { <span class="block text-[10px] text-red-400">⚠ Terlambat @Math.Abs(p.HariSisa??0) hari</span> }
                                 else if (p.HariSisa.HasValue && p.HariSisa <= 3) { <span class="block text-[10px] text-amber-500">Sisa @p.HariSisa hari</span> }
                             </td>
+
+                            @* {{!-- ── Status ── --}} *@
                             <td class="px-4 py-3">
-                                <span class="text-[11px] @badgeCls px-2 py-0.5 rounded-full font-medium">
+                                <span class="@StCls(p.StatusPPIDID)">
+                                    <span class="st-dot" style="background:@StDot(p.StatusPPIDID)"></span>
                                     @p.Status?.NamaStatusPPID
                                 </span>
                             </td>
+
                             <td class="px-4 py-3">
                                 @if (isNew)
                                 {
@@ -245,6 +275,7 @@
                                     <span class="text-[11px] text-emerald-600 font-semibold">✓ Semua selesai</span>
                                 }
                             </td>
+
                             <td class="px-4 py-3">
                                 <div class="flex gap-1.5 opacity-80 group-hover:opacity-100 flex-wrap">
                                     @if (isNew)
@@ -254,11 +285,10 @@
                                     }
                                     else if (isDataSiap)
                                     {
-                                    @* {{!-- FIX ISSUE 4: tombol utama untuk status DataSiap lebih menonjol --}} *@
-                                    <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
-                                    class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-medium">
-                                    📦 Lihat Data Siap
-                                    </a>
+                                        <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
+                                        class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-medium">
+                                        📦 Lihat Data Siap
+                                        </a>
                                     }
                                     else if (isFeedback)
                                     {
@@ -305,7 +335,25 @@
 </div>
 
 <style>
-    .col-th { padding: 12px 16px; text-align:left; font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em; }
+    .col-th { padding:12px 16px;text-align:left;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em }
+    /* ── No. Permohonan ── */
+    .no-perm{font-family:'JetBrains Mono','Fira Code',ui-monospace,monospace;font-size:11.5px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #dbeafe;border-radius:6px;padding:3px 8px;white-space:nowrap;letter-spacing:.01em;display:inline-block}
+    /* ── Status Badge ── */
+    .st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:20px;padding:3px 9px;white-space:nowrap;border:1px solid;line-height:1.4}
+    .st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .st--selesai{color:#065f46;background:#ecfdf5;border-color:#a7f3d0}
+    .st--siap{color:#047857;background:#f0fdf4;border-color:#bbf7d0}
+    .st--feedback{color:#0369a1;background:#f0f9ff;border-color:#bae6fd}
+    .st--verif{color:#5b21b6;background:#f5f3ff;border-color:#ddd6fe}
+    .st--batal{color:#9f1239;background:#fff1f2;border-color:#fecdd3}
+    .st--daftar{color:#374151;background:#f9fafb;border-color:#e5e7eb}
+    .st--proses{color:#92400e;background:#fffbeb;border-color:#fde68a}
+    .st--dispos{color:#164e63;background:#ecfeff;border-color:#a5f3fc}
+    .st--obs{color:#7c2d12;background:#fff7ed;border-color:#fed7aa}
+    .st--waw{color:#5b21b6;background:#f5f3ff;border-color:#ddd6fe}
+    .st--surat{color:#1e40af;background:#eff6ff;border-color:#bfdbfe}
+    /* ── Keperluan Badge ── */
+    .badge{font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600;border:1px solid}
 </style>
 
 @section Scripts {

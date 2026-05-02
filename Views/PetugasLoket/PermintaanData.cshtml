@@ -4,21 +4,44 @@
     ViewData["Role"]  = "Petugas Loket";
     Layout = "_LayoutAdmin";
     var q = ViewData["Q"] as string;
+
+    string StCls(int? s) => (s ?? 0) switch {
+        StatusId.Selesai            => "st st--selesai",
+        StatusId.DataSiap           => "st st--siap",
+        StatusId.FeedbackPemohon    => "st st--feedback",
+        StatusId.MenungguVerifikasi => "st st--verif",
+        StatusId.Dibatalkan         => "st st--batal",
+        StatusId.TerdaftarSistem    => "st st--daftar",
+        StatusId.IdentifikasiAwal   => "st st--daftar",
+        StatusId.MenungguSuratIzin  => "st st--surat",
+        _                           => "st st--proses"
+    };
+    string StDot(int? s) => (s ?? 0) switch {
+        StatusId.Selesai            => "#059669",
+        StatusId.DataSiap           => "#10b981",
+        StatusId.FeedbackPemohon    => "#0ea5e9",
+        StatusId.MenungguVerifikasi => "#8b5cf6",
+        StatusId.Dibatalkan         => "#ef4444",
+        StatusId.TerdaftarSistem    => "#9ca3af",
+        StatusId.IdentifikasiAwal   => "#9ca3af",
+        StatusId.MenungguSuratIzin  => "#3b82f6",
+        _                           => "#f59e0b"
+    };
 }
 
-@* Re-use tab navigation *@
 <div class="flex flex-wrap gap-2 mb-4">
-    <a href="/petugas-loket" class="tab-btn">📋 Semua</a>
+    <a href="/petugas-loket"                 class="tab-btn">📋 Semua</a>
     <a href="/petugas-loket/permintaan-data" class="tab-btn active">📊 Permintaan Data</a>
-    <a href="/petugas-loket/wawancara" class="tab-btn">🎤 Wawancara</a>
-    <a href="/petugas-loket/observasi" class="tab-btn">🔍 Observasi</a>
+    <a href="/petugas-loket/wawancara"       class="tab-btn">🎤 Wawancara</a>
+    <a href="/petugas-loket/observasi"       class="tab-btn">🔍 Observasi</a>
 </div>
 
 <form method="get" class="flex gap-2 mb-4">
     <input type="text" name="q" value="@q" placeholder="Cari nomor / nama pemohon..."
            class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
     <button type="submit" class="bg-[#002d7a] text-white text-xs font-semibold px-4 py-2 rounded-xl">Cari</button>
-    @if (!string.IsNullOrEmpty(q)) { <a href="/petugas-loket/permintaan-data" class="border border-gray-200 text-gray-500 text-xs px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a> }
+    @if (!string.IsNullOrEmpty(q))
+    { <a href="/petugas-loket/permintaan-data" class="border border-gray-200 text-gray-500 text-xs px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a> }
 </form>
 
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -39,29 +62,62 @@
             <tbody class="divide-y divide-gray-50">
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="8" class="px-6 py-16 text-center text-gray-400 text-sm">Belum ada permintaan data</td></tr>
+                    <tr>
+                        <td colspan="8" class="px-6 py-16 text-center">
+                            <div class="max-w-xs mx-auto">
+                                <div class="w-16 h-16 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">📊</div>
+                                <p class="text-sm font-semibold text-gray-600 mb-1">Belum ada permintaan data</p>
+                            </div>
+                        </td>
+                    </tr>
                 }
                 else
                 {
                     @foreach (var item in Model)
                     {
+                        bool overdue = item.IsOverdue;
+
                         <tr class="hover:bg-blue-50/30 transition-colors group">
-                            <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">@item.NoPermohonan</td>
-                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
-                            <td class="px-4 py-3 text-xs @(item.KategoriPemohon=="Mahasiswa"?"text-blue-600":"text-emerald-600") font-medium">
-                                @(item.KategoriPemohon == "Mahasiswa" ? "🎓" : "🏢") @item.KategoriPemohon
-                            </td>
-                            <td class="px-4 py-3 text-xs text-gray-400">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</td>
-                            <td class="px-4 py-3 text-xs @(item.IsOverdue ? "text-red-600 font-semibold" : "text-gray-500")">
-                                @(item.BatasWaktu?.ToString("dd MMM yyyy") ?? "—")
-                                @if (item.IsOverdue) { <span> ⚠</span> }
-                            </td>
+
+                            @* {{!-- ── No. Permohonan ── --}} *@
                             <td class="px-4 py-3">
-                                <span class="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                                <div class="flex items-center gap-1.5">
+                                    @if (overdue) { <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span> }
+                                    <span class="no-perm">@item.NoPermohonan</span>
+                                </div>
+                            </td>
+
+                            <td class="px-4 py-3 font-semibold text-gray-800 text-sm">@item.Pribadi?.Nama</td>
+
+                            @* {{!-- ── Kategori ── --}} *@
+                            <td class="px-4 py-3">
+                                @if (item.KategoriPemohon == "Mahasiswa")
+                                {
+                                    <span class="kat-chip kat-mhs"><span class="kat-dot" style="background:#3b82f6"></span>Mahasiswa</span>
+                                }
+                                else
+                                {
+                                    <span class="kat-chip kat-lsm"><span class="kat-dot" style="background:#10b981"></span>LSM</span>
+                                }
+                            </td>
+
+                            <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">@item.TanggalPermohonan?.ToString("dd MMM yyyy")</td>
+
+                            <td class="px-4 py-3 text-xs @(overdue ? "text-red-600 font-semibold" : "text-gray-500") whitespace-nowrap">
+                                @(item.BatasWaktu?.ToString("dd MMM yyyy") ?? "—")
+                                @if (overdue) { <span> ⚠</span> }
+                            </td>
+
+                            @* {{!-- ── Status ── --}} *@
+                            <td class="px-4 py-3">
+                                <span class="@StCls(item.StatusPPIDID)">
+                                    <span class="st-dot" style="background:@StDot(item.StatusPPIDID)"></span>
                                     @item.Status?.NamaStatusPPID
                                 </span>
                             </td>
+
                             <td class="px-4 py-3 text-xs text-gray-500">@(item.Pengampu ?? "—")</td>
+
                             <td class="px-4 py-3">
                                 <a href="/petugas-loket/detail/@item.PermohonanPPIDID"
                                    class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a>
@@ -75,8 +131,23 @@
 </div>
 
 <style>
-    .col-th { @("padding: 12px 16px; text-align:left; font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em;") }
-    .tab-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:10px; font-size:12px; font-weight:600; border:1px solid #e5e7eb; color:#6b7280; background:white; text-decoration:none; transition:all .15s; }
-    .tab-btn:hover { background:#f9fafb; color:#374151; }
-    .tab-btn.active { background:#002d7a; color:white; border-color:#002d7a; }
+    .col-th{padding:12px 16px;text-align:left;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em}
+    .no-perm{font-family:'JetBrains Mono','Fira Code',ui-monospace,monospace;font-size:11.5px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #dbeafe;border-radius:6px;padding:3px 8px;white-space:nowrap;letter-spacing:.01em;display:inline-block}
+    .kat-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border-radius:20px;padding:3px 9px;white-space:nowrap;border:1px solid}
+    .kat-mhs{color:#1d4ed8;background:#eff6ff;border-color:#bfdbfe}
+    .kat-lsm{color:#065f46;background:#f0fdf4;border-color:#a7f3d0}
+    .kat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:20px;padding:3px 9px;white-space:nowrap;border:1px solid;line-height:1.4}
+    .st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .st--selesai{color:#065f46;background:#ecfdf5;border-color:#a7f3d0}
+    .st--siap{color:#047857;background:#f0fdf4;border-color:#bbf7d0}
+    .st--feedback{color:#0369a1;background:#f0f9ff;border-color:#bae6fd}
+    .st--verif{color:#5b21b6;background:#f5f3ff;border-color:#ddd6fe}
+    .st--batal{color:#9f1239;background:#fff1f2;border-color:#fecdd3}
+    .st--daftar{color:#374151;background:#f9fafb;border-color:#e5e7eb}
+    .st--proses{color:#92400e;background:#fffbeb;border-color:#fde68a}
+    .st--surat{color:#1e40af;background:#eff6ff;border-color:#bfdbfe}
+    .tab-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid #e5e7eb;color:#6b7280;background:white;text-decoration:none;transition:all .15s}
+    .tab-btn:hover{background:#f9fafb;color:#374151}
+    .tab-btn.active{background:#002d7a;color:white;border-color:#002d7a}
 </style>
