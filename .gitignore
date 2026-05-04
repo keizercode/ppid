@@ -12,6 +12,7 @@ bin/
 obj/
 publish/
 wwwroot/lib/
+wwwroot/css/app.css
 
 # User-specific
 *.user

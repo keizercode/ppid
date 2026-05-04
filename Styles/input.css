@@ -1,0 +1,11 @@
+/* ══════════════════════════════════════════════════════════════
+   Styles/input.css
+   Entry point Tailwind CSS v4 — dikompilasi ke wwwroot/css/app.css
+   Jangan import manual utilities; v4 sudah otomatis inject semua.
+   ══════════════════════════════════════════════════════════════ */
+
+@import "tailwindcss";
+
+/* ── Beritahu CLI di mana Tailwind harus scan class ── */
+@source "../Views/**/*.cshtml";
+@source "../wwwroot/js/**/*.js";

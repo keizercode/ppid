@@ -15,4 +15,34 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
   </ItemGroup>
 
+  <!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  Tambahkan ke dalam <Project> di file .csproj Anda          ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  Cara pakai:
+    - dotnet build          → kompilasi CSS sekali (minified)
+    - dotnet watch run      → jalankan backend saja (hot-reload .cs/.cshtml)
+    - npm run watch:css      → (terminal terpisah) watch perubahan CSS
+-->
+
+  <!-- ── Pastikan node_modules ada sebelum build ── -->
+  <Target Name="NpmInstall"
+          BeforeTargets="BeforeBuild"
+          Condition="!Exists('$(MSBuildProjectDirectory)\node_modules')">
+    <Message Text="▶ npm install (node_modules belum ada)..." Importance="high" />
+    <Exec Command="npm install"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <!-- ── Kompilasi Tailwind setiap dotnet build ── -->
+  <Target Name="BuildTailwindCss"
+          BeforeTargets="BeforeBuild"
+          DependsOnTargets="NpmInstall">
+    <Message Text="▶ Tailwind CSS v4: building..." Importance="high" />
+    <Exec Command="npm run build:css"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Message Text="✔ Tailwind CSS v4: done → wwwroot/css/app.css" Importance="high" />
+  </Target>
+
 </Project>
