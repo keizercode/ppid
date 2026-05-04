@@ -27,6 +27,17 @@
         SubTaskStatus.Dibatalkan => "#ef4444",
         _                        => "#f59e0b"
     };
+    string GetTaskLabel(SubTaskPPID? st)
+    {
+        if (st == null) return "Pending";
+
+        return st.StatusTask switch {
+            SubTaskStatus.Selesai    => "Selesai",
+            SubTaskStatus.InProgress => "Proses",
+            SubTaskStatus.Dibatalkan => "Batal",
+            _                        => "Pending"
+        };
+    }
 }
 
 <partial name="Partials/_FormStyles" />
@@ -79,7 +90,7 @@
 <!-- ══ TABLE ══ -->
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full text-sm table-fixed">
+    <table class="text-sm" style="width:100%;min-width:860px;">
 <colgroup>
     <col class="w-[15%]" />
     <col class="w-[17%]" />
@@ -99,7 +110,7 @@
                     <th class="col-th">PIC / Lokasi</th>
                     <th class="col-th">Status Sub-Tugas</th>
                     <th class="col-th">Batas Waktu</th>
-                    <th class="col-th">Aksi</th>
+                    <th class="col-th col-sticky-right" style="width:110px;">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -132,7 +143,7 @@
                         bool isJadwalDekat = jadwal?.Tanggal >= today && jadwal?.Tanggal <= in3Days;
                         bool isOverdue     = item.IsOverdue;
 
-                        string badgeLbl = st == null ? "Belum Ada Sub-tugas" : SubTaskStatus.GetLabel(st.StatusTask);
+                        string badgeLbl = GetTaskLabel(st);
 
                         string? primerHref = null; string? primerLabel = null; string primerColor = "";
                         if (st == null || st.IsPending)
@@ -198,8 +209,8 @@
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                                        ⏳ Belum dijadwalkan
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                        ⏳ Pending
                                     </span>
                                 }
                             </td>
@@ -245,7 +256,7 @@
                             </td>
 
                             @* {{!-- ── Aksi ── --}} *@
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 col-sticky-right td-sticky-cell">
                                 <div class="action-cell">
                                     @if (primerHref != null)
                                     { <a href="@primerHref" class="btn-action-primary @primerColor">@primerLabel</a> }
@@ -317,4 +328,27 @@
     .active-amber{background:#fef3c7;border-color:#fbbf24;color:#92400e}
     .active-violet{background:#ede9fe;border-color:#7c3aed;color:#5b21b6}
     .active-emerald{background:#d1fae5;border-color:#059669;color:#065f46}
+    /* ── Sticky action column ──────────────────────────────────────────── */
+.col-sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+}
+
+/* Header sticky */
+thead .col-sticky-right {
+    background: #f9fafb;
+    box-shadow: -4px 0 8px -2px rgba(0,0,0,.06);
+}
+
+/* Body cells sticky */
+.td-sticky-cell {
+    background: #ffffff;
+    box-shadow: -4px 0 8px -2px rgba(0,0,0,.06);
+}
+
+/* Sinkron warna hover & state baris */
+
+/* Pastikan dropdown action muncul di atas sticky column */
+.action-dropdown { z-index: 99 !important; }
 </style>

@@ -59,6 +59,7 @@ Controllers/
  HomeController.cs
  KasubkelKdiController.cs
  KasubkelKepegawaianController.cs
+ LaporanController.cs
  LoketBaseController.cs
  LoketUmumController.cs
  PetugasLoketController.cs
@@ -101,6 +102,7 @@ Migrations/
  AppDbContextModelSnapshot.cs
 Models/
  AppUser.cs
+ LaporanPpidItem.cs
  Models.cs
  ViewModels/ViewModels.cs
 obj/Debug/net8.0/
@@ -480,6 +482,7 @@ Views/Home/
  Detail.cshtml
  FeedbackTask.cshtml
  Index.cshtml
+ LaporanPpid.cshtml
  UploadTugas.cshtml
 Views/KasubkelKdi/
  BatalSubTask.cshtml
@@ -535,8 +538,10 @@ Views/
   Empty.cshtml
   EmptyTable.cshtml
   _ActionMenu.cshtml
+  _ConfirmModal.cshtml
   _FormStyles.cshtml
   _ParallelTaskStatus.cshtml
+  _PublicNavBar.cshtml
   _WorkflowTimeline.cshtml
  Shared/
   _Layout.cshtml
@@ -552,6 +557,7 @@ Views/Home/
  Detail.cshtml
  FeedbackTask.cshtml
  Index.cshtml
+ LaporanPpid.cshtml
  UploadTugas.cshtml
 Views/KasubkelKdi/
  BatalSubTask.cshtml
@@ -607,8 +613,10 @@ Views/
   Empty.cshtml
   EmptyTable.cshtml
   _ActionMenu.cshtml
+  _ConfirmModal.cshtml
   _FormStyles.cshtml
   _ParallelTaskStatus.cshtml
+  _PublicNavBar.cshtml
   _WorkflowTimeline.cshtml
  Shared/
   _Layout.cshtml

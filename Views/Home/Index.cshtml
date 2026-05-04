@@ -8,63 +8,7 @@
 }
 
 <!-- ══ TICKER ══ -->
-<div class="ticker-bar">
-    <div style="max-width:1200px;margin:0 auto;padding:0 1.5rem;overflow:hidden;white-space:nowrap">
-        <div class="ticker-inner">
-            <span>📞 Telepon: (021) 8591-2230</span>
-            <span>✉ Email: ppid.dlh@jakarta.go.id</span>
-            <span>🕐 Jam Layanan: Senin – Jumat, 08.00 – 16.00 WIB</span>
-            <span>📍 Grha Intirub Business Park, Jl. Cililitan Besar No. 454, Jakarta Timur</span>
-            <span>📞 Telepon: (021) 8591-2230</span>
-            <span>✉ Email: ppid.dlh@jakarta.go.id</span>
-            <span>🕐 Jam Layanan: Senin – Jumat, 08.00 – 16.00 WIB</span>
-            <span>📍 Grha Intirub Business Park, Jl. Cililitan Besar No. 454, Jakarta Timur</span>
-        </div>
-    </div>
-</div>
-
-<!-- ══ NAVBAR ══ -->
-<header class="main-nav">
-    <div class="nav-inner">
-        <a href="/" class="nav-brand">
-            <img src="https://res.cloudinary.com/dmcvht1vr/image/upload/v1775802585/ppid-removebg-preview_brah2r.png" alt="Logo PPID Jakarta"/>
-            @* tidak dipakai dulu di bawah ini*@
-            @* <div class="nav-brand-text">
-                <strong>Dinas Lingkungan Hidup</strong>
-                <span>Provinsi DKI Jakarta</span>
-            </div> *@
-        </a>
-        <nav class="nav-links">
-            <a href="/" class="nav-link active">Beranda</a>
-            <a href="#tentang" class="nav-link">Tentang PPID</a>
-            <a href="#alur" class="nav-link">Alur</a>
-            <a href="#syarat" class="nav-link">Persyaratan</a>
-            <a href="#lacak" class="nav-link">Lacak</a>
-        </nav>
-        <a href="#lacak" class="nav-cta">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-            </svg>
-            Lacak Permohonan
-        </a>
-    </div>
-</header>
-
-<!-- ══ MOBILE NAV ══ -->
-<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-<nav class="mobile-nav" id="mobileNav">
-    <a href="/" class="mobile-nav-link active">Beranda</a>
-    <a href="#tentang" class="mobile-nav-link" id="mn-tentang">Tentang PPID</a>
-    <a href="#alur" class="mobile-nav-link" id="mn-alur">Alur</a>
-    <a href="#syarat" class="mobile-nav-link" id="mn-syarat">Persyaratan</a>
-    <a href="#lacak" class="mobile-nav-link" id="mn-lacak">Lacak</a>
-    <a href="#lacak" class="btn-primary mobile-nav-cta" id="mn-cta">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-        </svg>
-        Lacak Permohonan
-    </a>
-</nav>
+<partial name="Partials/_PublicNavBar" />
 
 <!-- ══ HERO ══ -->
 <section class="hero">
@@ -479,24 +423,4 @@
     </div>
 </section>
 
-@section Scripts {
-    <script>
-        const hamburger = document.getElementById('navHamburger');
-        const mobileNav = document.getElementById('mobileNav');
-        const overlay   = document.getElementById('mobileNavOverlay');
 
-        function toggleMenu(open) {
-            hamburger.classList.toggle('open', open);
-            mobileNav.classList.toggle('open', open);
-            overlay.classList.toggle('open', open);
-            document.body.style.overflow = open ? 'hidden' : '';
-        }
-
-        hamburger.addEventListener('click', () => toggleMenu(!mobileNav.classList.contains('open')));
-        overlay.addEventListener('click', () => toggleMenu(false));
-
-        document.querySelectorAll('.mobile-nav-link, .mobile-nav-cta').forEach(el =>
-            el.addEventListener('click', () => toggleMenu(false))
-        );
-    </script>
-}

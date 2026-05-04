@@ -1,0 +1,251 @@
+/* ══════════════════════════════════════════════════════════════════════
+   wwwroot/css/laporan.css
+   Styles khusus halaman Laporan PPID — diimport hanya di Views/Laporan/
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Design tokens (sinkron dengan home.css) ──────────────────────── */
+:root {
+    --navy       : #0D1F3C;
+    --navy-mid   : #002d7a;
+    --navy-light : #1e3a8a;
+    --oren       : #f59e0b;
+    --oren-hover : #d97706;
+    --green      : #059669;
+    --bg         : #f8fafc;
+    --surface    : #ffffff;
+    --muted      : #6b7280;
+    --border     : #e5e7eb;
+    --radius-card: 16px;
+    --shadow-sm  : 0 2px 8px rgba(0,0,0,.06);
+    --shadow-md  : 0 8px 32px rgba(0,0,0,.12);
+    --shadow-hover: 0 16px 48px rgba(0,45,122,.18);
+}
+
+/* ── Page base ──────────────────────────────────────────────────────── */
+body { font-family:'Plus Jakarta Sans', sans-serif; background:var(--bg); }
+
+/* ── Page hero / breadcrumb bar ─────────────────────────────────────── */
+.laporan-hero {
+    background: linear-gradient(135deg, var(--ijo-dark) 0%, var(--ijo-mid) 100%);
+    padding: 52px 0 44px;
+    position: relative;
+    overflow: hidden;
+}
+.laporan-hero::before {
+    content:'';
+    position:absolute; inset:0;
+    background: url("data:image/svg+xml,%3csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3e%3cg fill='none' fill-rule='evenodd'%3e%3cg fill='%23ffffff' fill-opacity='0.03'%3e%3cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3e%3c/g%3e%3c/g%3e%3c/svg%3e") repeat;
+}
+.laporan-hero-inner {
+    max-width:1200px; margin:0 auto; padding:0 1.5rem;
+    position: relative; z-index:1;
+}
+.laporan-breadcrumb {
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:rgba(255,255,255,.5);
+    margin-bottom:16px;
+}
+.laporan-breadcrumb a { color:rgba(255,255,255,.5); text-decoration:none; transition:color .15s; }
+.laporan-breadcrumb a:hover { color:rgba(255,255,255,.85); }
+.laporan-breadcrumb svg { width:12px; height:12px; }
+.laporan-hero h1 {
+    font-size:clamp(1.75rem, 3vw, 2.25rem);
+    font-weight:800; color:white; margin:0 0 8px;
+    letter-spacing:-.02em;
+}
+.laporan-hero p {
+    font-size:14.5px; color:rgba(255,255,255,.6); margin:0;
+    max-width:520px; line-height:1.7;
+}
+
+/* ── Section wrapper ─────────────────────────────────────────────────── */
+.laporan-section {
+    max-width:1200px; margin:0 auto; padding:52px 1.5rem 80px;
+}
+
+/* ── Results bar ────────────────────────────────────────────────────── */
+.laporan-meta {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:32px; flex-wrap:wrap; gap:12px;
+}
+.laporan-count {
+    font-size:13px; font-weight:600; color:var(--muted);
+}
+.laporan-count strong { color:#111827; }
+
+/* ── Grid ───────────────────────────────────────────────────────────── */
+.laporan-grid {
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:28px;
+}
+@media(max-width:1100px) { .laporan-grid { grid-template-columns:repeat(3,1fr); } }
+@media(max-width:768px)  { .laporan-grid { grid-template-columns:repeat(2,1fr); gap:16px; } }
+@media(max-width:480px)  { .laporan-grid { grid-template-columns:1fr; } }
+
+/* ── Card ───────────────────────────────────────────────────────────── */
+.laporan-card {
+    background: #ffffff;
+    border-radius:var(--radius-card);
+    overflow:hidden;
+    box-shadow:var(--shadow-sm);
+    border: 1px solid var(--border);
+    transition:transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease;
+    display:flex; flex-direction:column;
+}
+.laporan-card:hover {
+    transform:translateY(-6px);
+    box-shadow: 0 16px 48px rgba(0,107,60,.18);
+    border-color:transparent;
+}
+
+/* ── Cover area ─────────────────────────────────────────────────────── */
+.laporan-cover {
+    position:relative;
+    aspect-ratio:3/4;
+    overflow:hidden;
+    background:var(--navy);
+}
+.laporan-cover img {
+    width:100%; height:100%; object-fit:cover;
+    transition:transform .4s ease;
+}
+.laporan-card:hover .laporan-cover img { transform:scale(1.03); }
+
+/* ── Placeholder cover (when no image) ─────────────────────────────── */
+.laporan-cover-placeholder {
+    width:100%; height:100%;
+    background: linear-gradient(145deg, var(--ijo-dark) 0%, var(--ijo-mid) 60%, var(--ijo) 100%);
+    display:flex; flex-direction:column;
+    align-items:flex-start; padding:18px;
+    position:relative; overflow:hidden;
+}
+/* Dekorasi lingkaran */
+.laporan-cover-placeholder::before {
+    content:'';
+    position:absolute; top:-40px; right:-40px;
+    width:160px; height:160px;
+    background:rgba(255,255,255,.06); border-radius:50%;
+}
+.laporan-cover-placeholder::after {
+    content:'';
+    position:absolute; bottom:-60px; left:-30px;
+    width:200px; height:200px;
+    background:rgba(255,255,255,.04); border-radius:50%;
+}
+.ph-top {
+    display:flex; align-items:center; gap:8px; z-index:1; position:relative;
+}
+.ph-logo-wrap {
+    width:32px; height:32px; background:white; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.ph-logo-wrap img { width:24px; height:24px; object-fit:contain; }
+.ph-brand { display:flex; flex-direction:column; }
+.ph-brand span:first-child  { font-size:9px; font-weight:900; color:white; letter-spacing:.05em; line-height:1.1; }
+.ph-brand span:last-child   { font-size:7px; color:rgba(255,255,255,.6); line-height:1.2; }
+/* Dinas label */
+.ph-dinas {
+    position:relative; z-index:1;
+    font-size:7.5px; font-weight:700; color:rgba(255,255,255,.6);
+    text-transform:uppercase; letter-spacing:.06em;
+    margin-top:10px;
+}
+/* Title text */
+.ph-title {
+    position:relative; z-index:1;
+    font-size:13px; font-weight:800; color:white; line-height:1.35;
+    margin-top:auto; margin-bottom:4px;
+}
+/* Year badge */
+.ph-year {
+    position:relative; z-index:1;
+    display:inline-block;
+    font-size:22px; font-weight:900; color:var(--oren);
+    letter-spacing:-.02em; line-height:1;
+}
+/* Orange accent bar */
+.ph-bar {
+    position:absolute; bottom:0; left:0; right:0;
+    height:4px; background:var(--oren);
+}
+/* Decorative dots */
+.ph-dots {
+    position:absolute; top:60px; right:14px; z-index:1;
+    display:grid; grid-template-columns:repeat(3,5px); gap:3px;
+}
+.ph-dots span {
+    width:5px; height:5px; border-radius:50%;
+    background:rgba(255,255,255,.2);
+}
+
+/* ── Page count badge ───────────────────────────────────────────────── */
+.laporan-page-badge {
+    position:absolute; top:10px; left:10px; z-index:2;
+    background:rgba(0,0,0,.55); backdrop-filter:blur(4px);
+    color:white; font-size:9px; font-weight:700;
+    padding:3px 8px; border-radius:20px;
+    letter-spacing:.03em;
+}
+
+/* ── Hover overlay ──────────────────────────────────────────────────── */
+.laporan-cover-overlay {
+    position:absolute; inset:0; z-index:3;
+    background: rgba(0,107,60,.75)
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    opacity:0; transition:opacity .22s ease;
+}
+.laporan-card:hover .laporan-cover-overlay { opacity:1; }
+.cover-btn {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:700; padding:8px 14px;
+    border-radius:8px; text-decoration:none; transition:all .15s;
+    white-space:nowrap;
+}
+.cover-btn-view {
+    background:white; color: var(--ijo-dark);
+}
+.cover-btn-view:hover { background:#f1f5f9; }
+.cover-btn-dl {
+    background:var(--oren); color:white;
+}
+.cover-btn-dl:hover { background:var(--oren-hover); }
+.cover-btn svg { width:13px; height:13px; flex-shrink:0; }
+
+/* ── Card body ──────────────────────────────────────────────────────── */
+.laporan-card-body {
+    padding:16px 18px 18px;
+    display:flex; flex-direction:column; gap:6px; flex:1;
+}
+.laporan-card-title {
+    font-size:13.5px; font-weight:700; color:#111827;
+    line-height:1.35; margin:0;
+}
+.laporan-card-sub {
+    font-size:11.5px; color:var(--muted); margin:0; line-height:1.5;
+}
+.laporan-card-footer {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-top:10px; padding-top:10px;
+    border-top:1px solid #f3f4f6;
+}
+.laporan-card-year {
+    font-size:11px; font-weight:800; color: var(--ijo-dark);
+    background: var(--ijo-light); border-radius:6px; padding:3px 8px;
+}
+.laporan-card-dl {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; font-weight:700; color: var(--ijo-dark);
+    text-decoration:none; transition:color .15s;
+}
+.laporan-card-dl svg { width:12px; height:12px; }
+.laporan-card-dl:hover { color:var(--oren); }
+
+/* ── Empty state ────────────────────────────────────────────────────── */
+.laporan-empty {
+    text-align:center; padding:80px 20px;
+    color:var(--muted);
+}
+.laporan-empty svg { width:48px; height:48px; margin:0 auto 16px; color:#d1d5db; }
+.laporan-empty p { font-size:14px; font-weight:600; color:#374151; margin-bottom:4px; }
+.laporan-empty span { font-size:13px; color:var(--muted); }
