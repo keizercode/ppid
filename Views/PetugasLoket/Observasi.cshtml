@@ -264,7 +264,13 @@
                                         <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
                                         <div class="action-dropdown hidden">
                                             <a href="/petugas-loket/subtasks/@item.PermohonanPPIDID" class="action-dd-item">⚙️ Kelola Sub-tugas</a>
-                                            <a href="/petugas-loket/detail/@item.PermohonanPPIDID"   class="action-dd-item">📋 Detail Permohonan</a>
+                                            <a href="/petugas-loket/detail/@item.PermohonanPPIDID" class="action-dd-item">📋 Detail Permohonan</a>
+                                            @if (item.StatusPPIDID == StatusId.DataSiap ||
+                                                item.StatusPPIDID == StatusId.FeedbackPemohon ||
+                                                item.StatusPPIDID == StatusId.Selesai)
+                                            {
+                                                <a href="/petugas-loket/feedback/@item.PermohonanPPIDID" class="action-dd-item">📋 Hasil Feedback</a>
+                                            }
                                             @if (st != null && st.IsInProgress)
                                             {
                                                 <div class="action-dd-divider"></div>

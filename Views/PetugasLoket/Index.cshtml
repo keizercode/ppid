@@ -268,6 +268,13 @@
                                             { <a href="/petugas-loket/upload-ttd/@item.PermohonanPPIDID" class="action-dd-item">✍️ Upload TTD</a> }
                                             @if (item.StatusPPIDID >= StatusId.MenungguSuratIzin)
                                             { <a href="/petugas-loket/cetak-identifikasi/@item.PermohonanPPIDID" class="action-dd-item">📄 Cetak Surat</a> }
+                                            @if (item.StatusPPIDID == StatusId.DataSiap ||
+                                                item.StatusPPIDID == StatusId.FeedbackPemohon ||
+                                                item.StatusPPIDID == StatusId.Selesai)
+                                            {
+                                                <div class="action-dd-divider"></div>
+                                                <a href="/petugas-loket/feedback/@item.PermohonanPPIDID" class="action-dd-item">📋 Hasil Feedback</a>
+                                            }
                                             @if (canBatal)
                                             {
                                                 <div class="action-dd-divider"></div>
