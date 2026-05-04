@@ -18,7 +18,7 @@
 
 body {
     background-color: #f7f9fc;
-    color: #1a1a2e;
+    color: var(--text);
 }
 
 /* Global alert animations */
