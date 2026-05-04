@@ -201,7 +201,7 @@
                                     @if (isJadwalDekat)
                                     {
                                         <span class="inline-block text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full mt-1">
-                                            ⚡ @(hariLagi == 0 ? "Hari ini!" : hariLagi == 1 ? "Besok" : $"{hariLagi} hari lagi")
+                                             @(hariLagi == 0 ? "Hari ini!" : hariLagi == 1 ? "Besok" : $"{hariLagi} hari lagi")
                                         </span>
                                     }
                                     @if (st?.RescheduleCount > 0)
