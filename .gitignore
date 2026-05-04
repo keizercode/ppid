@@ -10,7 +10,15 @@ appsettings.Development.json
 # Build files
 bin/
 obj/
+publish/
+wwwroot/lib/
 
 # User-specific
 *.user
 *.suo
+*.db
+.vscode
+
+node_modules/
+.env
+.env.production
