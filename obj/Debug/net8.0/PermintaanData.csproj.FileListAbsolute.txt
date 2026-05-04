@@ -106,3 +106,5 @@ D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\PermintaanData.genruntimec
 D:\ProjectDotnet\baru\PermintaanData\obj\Debug\net8.0\ref\PermintaanData.dll
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\appsettings.Development.json
 D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\appsettings.Production.json
+D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\package-lock.json
+D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\package.json
