@@ -26,6 +26,17 @@
         SubTaskStatus.Dibatalkan => "#ef4444",
         _                        => "#f59e0b"
     };
+    string GetTaskLabel(SubTaskPPID? st)
+    {
+        if (st == null) return "Pending";
+
+        return st.StatusTask switch {
+            SubTaskStatus.Selesai    => "Selesai",
+            SubTaskStatus.InProgress => "Proses",
+            SubTaskStatus.Dibatalkan => "Batal",
+            _                        => "Pending"
+        };
+    }
 }
 
 <partial name="Partials/_FormStyles" />
@@ -78,7 +89,7 @@
 <!-- ══ TABLE ══ -->
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full text-sm table-fixed">
+        <table class="text-sm" style="width:100%;min-width:860px;">
 <colgroup>
     <col class="w-[15%]" />
     <col class="w-[17%]" />
@@ -98,7 +109,7 @@
                     <th class="col-th">PIC / Lokasi</th>
                     <th class="col-th">Status Sub-Tugas</th>
                     <th class="col-th">Batas Waktu</th>
-                    <th class="col-th">Aksi</th>
+                    <th class="col-th col-sticky-right" style="width:110px;">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -131,7 +142,7 @@
                         bool isJadwalDekat = jadwal?.Tanggal >= today && jadwal?.Tanggal <= in3Days;
                         bool isOverdue     = item.IsOverdue;
 
-                        string badgeLbl = st == null ? "Belum Ada Sub-tugas" : SubTaskStatus.GetLabel(st.StatusTask);
+                        string badgeLbl = GetTaskLabel(st);
 
                         string? primerHref = null; string? primerLabel = null; string primerColor = "";
                         if (st == null || st.IsPending)
@@ -150,7 +161,9 @@
                                 <div class="flex items-center gap-1.5">
                                     @if (isJadwalDekat) { <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse flex-shrink-0"></span> }
                                     else if (isOverdue)  { <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span> }
-                                    <span class="no-perm">@item.NoPermohonan</span>
+                                    <div>
+                                        <span class="no-perm">@item.NoPermohonan</span>
+                                    </div>
                                 </div>
                             </td>
 
@@ -195,8 +208,8 @@
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                                        ⏳ Belum dijadwalkan
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                        ⏳ Pending
                                     </span>
                                 }
                             </td>
@@ -242,7 +255,7 @@
                             </td>
 
                             @* {{!-- ── Aksi ── --}} *@
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 col-sticky-right td-sticky-cell">
                                 <div class="action-cell">
                                     @if (primerHref != null)
                                     { <a href="@primerHref" class="btn-action-primary @primerColor">@primerLabel</a> }
@@ -314,4 +327,84 @@
     .active-amber{background:#fef3c7;border-color:#fbbf24;color:#92400e}
     .active-orange{background:#fff7ed;border-color:#f97316;color:#7c2d12}
     .active-emerald{background:#d1fae5;border-color:#059669;color:#065f46}
+    /* ── Sticky action column ──────────────────────────────────────────── */
+    .col-sticky-right {
+        position: sticky;
+        right: 0;
+        z-index: 3;
+    }
+    /* Header sticky */
+    thead .col-sticky-right {
+        background: #f9fafb;
+        box-shadow: -4px 0 8px -2px rgba(0,0,0,.06);
+    }
+    /* Body cells sticky */
+    .td-sticky-cell {
+        background: #ffffff;
+        box-shadow: -4px 0 8px -2px rgba(0,0,0,.06);
+    }
+    /* Dropdown diposisikan via JS (fixed) — position:absolute default di-override */
+    .action-dropdown { z-index: 9999 !important; }
 </style>
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    // ── Tutup semua dropdown & bersihkan style fixed ──────────────────
+    function closeAll() {
+        document.querySelectorAll('.action-dropdown').forEach(function (d) {
+            d.classList.add('hidden');
+            d.style.position  = '';
+            d.style.top       = '';
+            d.style.left      = '';
+            d.style.right     = '';
+            d.style.minWidth  = '';
+        });
+    }
+
+    // ── Override global toggleActionMenu dari _ActionMenu.cshtml ─────
+    // Masalah: overflow-x:auto pada wrapper tabel memotong (clip) dropdown
+    // yang pakai position:absolute. Solusi: posisikan dropdown dengan
+    // position:fixed berdasarkan koordinat layar tombol ⋯.
+    window.toggleActionMenu = function (btn) {
+        var wrap = btn.closest('.action-more-wrap');
+        var menu = wrap.querySelector('.action-dropdown');
+        var isOpen = !menu.classList.contains('hidden');
+
+        closeAll();
+
+        if (!isOpen) {
+            var rect = btn.getBoundingClientRect();
+
+            menu.style.position = 'fixed';
+            menu.style.top      = (rect.bottom + 4) + 'px';
+            menu.style.left     = 'auto';
+            menu.style.right    = (window.innerWidth - rect.right) + 'px';
+            menu.style.minWidth = '160px';
+
+            menu.classList.remove('hidden');
+
+            // Koreksi jika dropdown terpotong di bawah viewport
+            requestAnimationFrame(function () {
+                var menuRect = menu.getBoundingClientRect();
+                if (menuRect.bottom > window.innerHeight - 8) {
+                    menu.style.top  = 'auto';
+                    menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+                }
+            });
+        }
+    };
+
+    // Klik di luar → tutup semua
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.action-more-wrap')) closeAll();
+    });
+
+    // Scroll atau resize → tutup semua (posisi fixed bisa stale)
+    window.addEventListener('scroll', closeAll, true);
+    window.addEventListener('resize', closeAll);
+})();
+</script>
+}
