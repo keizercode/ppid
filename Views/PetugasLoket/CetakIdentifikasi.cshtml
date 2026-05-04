@@ -207,7 +207,7 @@
         .ln-det { display: block; border-bottom: 1px solid #000; min-height: 36px; padding-bottom: 2px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
 
         .sign-row { display: flex; margin-top: 18px; }
-        .sign-col { flex: 1; text-align: center; padding: 0 6px; font-size: 10pt; }
+        .sign-col { flex: 1; text-align: right; padding: 0 6px; font-size: 10pt; }
         .sign-space { height: 56px; }
         .sign-name { display: inline-block; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; min-width: 145px; }
         .sign-sub { font-size: 8.5pt; margin-top: 2px; }
@@ -374,13 +374,14 @@
 
     @* ── Tanda tangan ── *@
     <div class="sign-row">
-        <div class="sign-col">
+        @* di bawah ini belum dipakai *@
+        @* <div class="sign-col">
             <div>Mengetahui,</div>
             <div><strong>Ketua Subkelompok Kepegawaian</strong></div>
             <div class="sign-space"></div>
             <div><span class="sign-name">Mathew Musa H</span></div>
             <div class="sign-sub">NIP 198411182010011019</div>
-        </div>
+        </div> *@
         <div class="sign-col">
             <div>Jakarta, @tanggalCetak</div>
             <div>@(isMahasiswa ? "Pemohon," : "Perwakilan,")</div>

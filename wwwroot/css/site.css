@@ -1,3 +1,17 @@
+:root {
+    --oren: #f49827;
+    --oren-dark: #d97706;
+    --oren-light: #fff7ed;
+    --ijo: #009d66;
+    --ijo-dark: #006b3c;
+    --ijo-mid: #00874c;
+    --ijo-light: #e8f5ee;
+    --bg: #f5f7fa;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e4e9f2;
+    --white: #ffffff;
+}
 * {
     font-family: 'Plus Jakarta Sans', sans-serif;
 }

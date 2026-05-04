@@ -1,34 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
-:root {
-    --oren: #f49827;
-    --oren-dark: #d97706;
-    --oren-light: #fff7ed;
-    --ijo: #009d66;
-    --ijo-dark: #006b3c;
-    --ijo-mid: #00874c;
-    --ijo-light: #e8f5ee;
-    --bg: #f5f7fa;
-    --text: #111827;
-    --muted: #6b7280;
-    --border: #e4e9f2;
-    --white: #ffffff;
-}
 
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
 
-body {
-    font-family: 'Inter Tight', sans-serif;
-    background: var(--white);
-    color: var(--text);
-    -webkit-font-smoothing: antialiased;
-}
+
+
+
 
 
 
