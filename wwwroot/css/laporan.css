@@ -5,6 +5,10 @@
 
 /* ── Design tokens (sinkron dengan home.css) ──────────────────────── */
 :root {
+    --ijo        : #009d66;
+    --ijo-dark   : #006b3c;
+    --ijo-mid    : #00874c;
+    --ijo-light  : #e8f5ee;
     --navy       : #0D1F3C;
     --navy-mid   : #002d7a;
     --navy-light : #1e3a8a;
@@ -191,7 +195,7 @@ body { font-family:'Plus Jakarta Sans', sans-serif; background:var(--bg); }
 /* ── Hover overlay ──────────────────────────────────────────────────── */
 .laporan-cover-overlay {
     position:absolute; inset:0; z-index:3;
-    background: rgba(0,107,60,.75)
+    background: rgba(0,107,60,.75);
     display:flex; align-items:center; justify-content:center; gap:10px;
     opacity:0; transition:opacity .22s ease;
 }
