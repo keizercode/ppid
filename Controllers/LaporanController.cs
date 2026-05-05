@@ -35,15 +35,15 @@ namespace PermintaanData.Controllers
                 TotalHalaman = 35,
                 Deskripsi    = "Laporan tahunan pengelolaan informasi dan dokumentasi PPID DLH Jakarta tahun 2023."
             },
-            new LaporanPpidItem
-            {
-                Tahun        = 2022,
-                Judul        = "Laporan Layanan Informasi Publik Pemerintah Provinsi DKI Jakarta",
-                CoverImageUrl = null,
-                FileUrl      = "#",
-                TotalHalaman = 31,
-                Deskripsi    = "Laporan tahunan pengelolaan informasi dan dokumentasi PPID DLH Jakarta tahun 2022."
-            },
+            // new LaporanPpidItem
+            // {
+            //     Tahun        = 2022,
+            //     Judul        = "Laporan Layanan Informasi Publik Pemerintah Provinsi DKI Jakarta",
+            //     CoverImageUrl = null,
+            //     FileUrl      = "#",
+            //     TotalHalaman = 31,
+            //     Deskripsi    = "Laporan tahunan pengelolaan informasi dan dokumentasi PPID DLH Jakarta tahun 2022."
+            // },
         };
 
         // GET /Laporan
