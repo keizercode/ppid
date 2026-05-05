@@ -186,14 +186,12 @@ public class DaftarPemohonVm
     [Display(Name = "Tanggal Permohonan")]
     public DateOnly TanggalPermohonan { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
-    [Required(ErrorMessage = "Nama Pengampu / PIC wajib diisi")]
     [Display(Name = "Pengampu / PIC")]
-    public string Pengampu { get; set; } = string.Empty;
+    public string? Pengampu { get; set; }
 
-    [Required(ErrorMessage = "No. Telepon Pengampu / PIC wajib diisi")]
     [Display(Name = "No. Telepon Pengampu / PIC")]
     [Phone(ErrorMessage = "Format nomor telepon tidak valid")]
-    public string TeleponPengampu { get; set; } = string.Empty;
+    public string? TeleponPengampu { get; set; }
 
     [Required(ErrorMessage = "Judul penelitian wajib diisi")]
     [Display(Name = "Judul Penelitian")]

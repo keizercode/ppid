@@ -534,16 +534,17 @@ Views/
   SuratIzin.cshtml
   UploadTTD.cshtml
   Wawancara.cshtml
- Shared/Partials/
-  Empty.cshtml
-  EmptyTable.cshtml
-  _ActionMenu.cshtml
-  _ConfirmModal.cshtml
-  _FormStyles.cshtml
-  _ParallelTaskStatus.cshtml
-  _PublicNavBar.cshtml
-  _WorkflowTimeline.cshtml
  Shared/
+  Notifikasi.cshtml
+  Partials/
+   Empty.cshtml
+   EmptyTable.cshtml
+   _ActionMenu.cshtml
+   _ConfirmModal.cshtml
+   _FormStyles.cshtml
+   _ParallelTaskStatus.cshtml
+   _PublicNavBar.cshtml
+   _WorkflowTimeline.cshtml
   _Layout.cshtml
   _LayoutAdmin.cshtml
  _ViewImports.cshtml
@@ -609,16 +610,17 @@ Views/
   SuratIzin.cshtml
   UploadTTD.cshtml
   Wawancara.cshtml
- Shared/Partials/
-  Empty.cshtml
-  EmptyTable.cshtml
-  _ActionMenu.cshtml
-  _ConfirmModal.cshtml
-  _FormStyles.cshtml
-  _ParallelTaskStatus.cshtml
-  _PublicNavBar.cshtml
-  _WorkflowTimeline.cshtml
  Shared/
+  Notifikasi.cshtml
+  Partials/
+   Empty.cshtml
+   EmptyTable.cshtml
+   _ActionMenu.cshtml
+   _ConfirmModal.cshtml
+   _FormStyles.cshtml
+   _ParallelTaskStatus.cshtml
+   _PublicNavBar.cshtml
+   _WorkflowTimeline.cshtml
   _Layout.cshtml
   _LayoutAdmin.cshtml
  _ViewImports.cshtml

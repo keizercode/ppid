@@ -1,0 +1,831 @@
+@* ─── Views/Shared/Notifikasi.cshtml ──────────────────────────────────── *@
+@{
+    Layout = "_LayoutAdmin";
+    var notifApiUrl = (ViewData["NotifApiUrl"] as string)
+                      ?? throw new InvalidOperationException("NotifApiUrl wajib diset oleh controller.");
+}
+@* ══════════════════════════════════════════════════════════════════
+   TOAST CONTAINER — muncul saat notifikasi dihapus
+   ══════════════════════════════════════════════════════════════════ *@
+<div id="toast-container"
+     style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;">
+</div>
+
+<div class="notif-page-wrap">
+
+    @* ── Ambient background ── *@
+    <div class="notif-ambient" aria-hidden="true">
+        <div class="ambient-blob blob-1"></div>
+        <div class="ambient-blob blob-2"></div>
+    </div>
+
+    <div class="notif-inner">
+
+        @* ── Header ── *@
+        <div class="notif-header">
+            <div class="notif-header-left">
+                <div class="notif-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <span class="notif-header-pulse" id="header-pulse"></span>
+                </div>
+                <div>
+                    <h1 class="notif-page-title">Notifikasi</h1>
+                    <p class="notif-page-sub" id="notif-count-label">Memuat data…</p>
+                </div>
+            </div>
+            <div class="notif-header-actions">
+                <button onclick="markAllRead()" class="btn-action btn-primary">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Tandai Semua Dibaca
+                </button>
+                <button onclick="clearAllDismissed()" class="btn-action btn-ghost" title="Tampilkan kembali notifikasi yang sudah dihapus">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        @* ── Stats strip ── *@
+        <div class="stats-strip" id="stats-strip">
+            <div class="stat-chip stat-total">
+                <span class="stat-num" id="stat-total">—</span>
+                <span class="stat-label">Total</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-chip stat-unread">
+                <span class="stat-num" id="stat-unread">—</span>
+                <span class="stat-label">Belum Dibaca</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-chip stat-danger">
+                <span class="stat-num" id="stat-danger">—</span>
+                <span class="stat-label">Terlewat</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-chip stat-warning">
+                <span class="stat-num" id="stat-warning">—</span>
+                <span class="stat-label">Jadwal</span>
+            </div>
+        </div>
+
+        @* ── Filter tabs ── *@
+        <div class="filter-bar" id="filter-tabs" role="tablist">
+            <button onclick="setFilter('all')"    class="filter-tab active" data-filter="all"    role="tab">Semua</button>
+            <button onclick="setFilter('unread')" class="filter-tab"        data-filter="unread" role="tab">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block mr-1"></span>Belum Dibaca
+            </button>
+            <button onclick="setFilter('danger')" class="filter-tab"        data-filter="danger" role="tab">
+                <span class="tab-dot tab-dot-danger"></span>Terlewat
+            </button>
+            <button onclick="setFilter('warning')"class="filter-tab"        data-filter="warning" role="tab">
+                <span class="tab-dot tab-dot-warning"></span>Jadwal
+            </button>
+            <div class="filter-slider" id="filter-slider"></div>
+        </div>
+
+        @* ── List container ── *@
+        <div id="notif-list" class="notif-list">
+            <div id="notif-skeleton" class="skeleton-wrap">
+                @for (int i = 0; i < 5; i++)
+                {
+                    <div class="skeleton-card" style="animation-delay: @(i * 80)ms">
+                        <div class="skeleton-icon"></div>
+                        <div class="skeleton-body">
+                            <div class="skeleton-line w-28"></div>
+                            <div class="skeleton-line w-48 mt-1.5"></div>
+                            <div class="skeleton-line w-36 mt-1" style="height:9px;opacity:.6"></div>
+                        </div>
+                        <div class="skeleton-badge"></div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ── Empty state ── *@
+        <div id="notif-empty" class="empty-state hidden">
+            <p class="empty-sub">Tidak ada notifikasi saat ini.</p>
+        </div>
+
+    </div>
+</div>
+
+<style>
+/* ── Page wrap ─────────────────────────────────────────────── */
+.notif-page-wrap {
+    position: relative;
+    min-height: 100%;
+    padding-bottom: 40px;
+}
+.notif-ambient {
+    position: fixed;
+    inset: 0; pointer-events: none; z-index: 0;
+    overflow: hidden;
+}
+.ambient-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: .045;
+}
+.blob-1 {
+    width: 600px; height: 600px;
+    background: #3B82F6;
+    top: -200px; right: -100px;
+}
+.blob-2 {
+    width: 400px; height: 400px;
+    background: #6366F1;
+    bottom: -100px; left: -80px;
+}
+.notif-inner {
+    position: relative; z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.notif-header-left { display: flex; align-items: center; gap: 14px; }
+.notif-header-icon {
+    position: relative;
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1B3B6F 0%, #2563EB 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    box-shadow: 0 4px 14px rgba(37,99,235,.35);
+    flex-shrink: 0;
+}
+.notif-header-icon svg { width: 22px; height: 22px; }
+.notif-header-pulse {
+    position: absolute;
+    top: -3px; right: -3px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: #22C55E;
+    border: 2px solid var(--bg-body, #F0F2F5);
+    display: none;
+}
+.notif-header-pulse.has-unread { display: block; animation: pulseRing 2s infinite; }
+@@keyframes pulseRing {
+    0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
+    50%      { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+}
+
+.notif-page-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--topbar-title, #1F2937);
+    letter-spacing: -.4px;
+    line-height: 1.2;
+}
+.notif-page-sub {
+    font-size: 12px;
+    color: var(--topbar-sub, #9CA3AF);
+    margin-top: 2px;
+}
+.notif-header-actions { display: flex; align-items: center; gap: 8px; }
+
+.btn-action {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    border-radius: 10px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+    border: none;
+}
+.btn-primary {
+    background: #EFF6FF; color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+}
+.btn-primary:hover { background: #DBEAFE; border-color: #93C5FD; }
+.btn-ghost {
+    background: white; color: #6B7280;
+    border: 1px solid #E5E7EB;
+}
+.btn-ghost:hover { background: #F9FAFB; color: #374151; border-color: #D1D5DB; }
+[data-theme="dark"] .btn-primary { background: rgba(59,130,246,.15); color: #93c5fd; border-color: rgba(59,130,246,.3); }
+[data-theme="dark"] .btn-ghost { background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); border-color: rgba(255,255,255,.1); }
+
+/* ── Stats strip ─────────────────────────────────────────────── */
+.stats-strip {
+    display: flex; align-items: center; gap: 0;
+    background: white;
+    border: 1px solid #F0F0F0;
+    border-radius: 14px;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    animation: fadeUp .3s ease both;
+}
+[data-theme="dark"] .stats-strip { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.07); }
+.stat-chip { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.stat-num {
+    font-size: 22px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.5px;
+    color: #111827;
+    transition: all .3s;
+}
+[data-theme="dark"] .stat-num { color: rgba(255,255,255,.85); }
+.stat-label { font-size: 10px; font-weight: 600; color: #9CA3AF; margin-top: 3px; text-transform: uppercase; letter-spacing: .06em; }
+.stat-unread .stat-num { color: #2563EB; }
+.stat-danger .stat-num  { color: #DC2626; }
+.stat-warning .stat-num { color: #D97706; }
+.stat-divider { width: 1px; height: 32px; background: #F0F0F0; flex-shrink: 0; }
+[data-theme="dark"] .stat-divider { background: rgba(255,255,255,.07); }
+
+/* ── Filter tabs ─────────────────────────────────────────────── */
+.filter-bar {
+    position: relative;
+    display: flex; gap: 4px;
+    background: white;
+    border: 1px solid #F0F0F0;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+[data-theme="dark"] .filter-bar { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.07); }
+.filter-tab {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 5px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    color: #6B7280;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color .15s;
+    white-space: nowrap;
+}
+.filter-tab:hover { color: #374151; }
+.filter-tab.active { color: #1D4ED8; }
+[data-theme="dark"] .filter-tab { color: rgba(255,255,255,.35); }
+[data-theme="dark"] .filter-tab.active { color: #93c5fd; }
+.tab-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.tab-dot-danger  { background: #EF4444; }
+.tab-dot-warning { background: #F59E0B; }
+/* Animated slider */
+.filter-slider {
+    position: absolute;
+    top: 4px; left: 4px;
+    height: calc(100% - 8px);
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    transition: left .2s cubic-bezier(.4,0,.2,1), width .2s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    z-index: 0;
+}
+[data-theme="dark"] .filter-slider { background: rgba(59,130,246,.18); border-color: rgba(59,130,246,.35); }
+
+/* ── Notification list ───────────────────────────────────────── */
+.notif-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Notification card ───────────────────────────────────────── */
+.notif-card {
+    position: relative;
+    display: flex; align-items: flex-start; gap: 14px;
+    background: white;
+    border: 1px solid #F0F0F0;
+    border-radius: 14px;
+    padding: 16px;
+    transition: box-shadow .15s, border-color .15s, transform .15s;
+    animation: fadeUp .25s ease both;
+    overflow: hidden;
+}
+[data-theme="dark"] .notif-card { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.07); }
+.notif-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,.07);
+    border-color: #E5E7EB;
+    transform: translateY(-1px);
+}
+[data-theme="dark"] .notif-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.3); border-color: rgba(255,255,255,.12); }
+
+/* Left accent strip — FIX: border-radius harus 0 pada sisi kiri */
+.notif-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 12px; bottom: 12px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    opacity: 0;
+    transition: opacity .15s;
+}
+.notif-card.unread::before { opacity: 1; }
+.notif-card.unread.danger::before  { background: #EF4444; }
+.notif-card.unread.warning::before { background: #F59E0B; }
+.notif-card.unread:not(.danger):not(.warning)::before { background: #3B82F6; }
+
+.notif-card.read { opacity: .7; }
+.notif-card.dismissed { pointer-events: none; }
+
+/* ── Card icon ── */
+.card-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+}
+.card-icon.danger  { background: linear-gradient(135deg, #FEF2F2, #FEE2E2); }
+.card-icon.warning { background: linear-gradient(135deg, #FFFBEB, #FEF3C7); }
+.card-icon.info    { background: linear-gradient(135deg, #EFF6FF, #DBEAFE); }
+
+/* ── Card body ── */
+.card-body { flex: 1; min-width: 0; }
+.card-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.card-title {
+    font-size: 13px; font-weight: 700;
+    line-height: 1.3;
+    display: flex; align-items: center; gap: 5px;
+}
+.card-title.danger  { color: #B91C1C; }
+.card-title.warning { color: #B45309; }
+.card-title.info    { color: #1D4ED8; }
+[data-theme="dark"] .card-title.danger  { color: #FCA5A5; }
+[data-theme="dark"] .card-title.warning { color: #FCD34D; }
+[data-theme="dark"] .card-title.info    { color: #93C5FD; }
+
+.unread-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #3B82F6; flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(59,130,246,.2);
+}
+
+.card-date {
+    font-size: 10.5px;
+    color: #9CA3AF;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.card-message {
+    font-size: 12.5px; font-weight: 500;
+    color: #374151; margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+[data-theme="dark"] .card-message { color: rgba(255,255,255,.60); }
+
+.card-detail {
+    font-size: 11px; color: #9CA3AF; margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.card-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.card-btn-view {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11.5px; font-weight: 700;
+    color: #2563EB;
+    text-decoration: none;
+    padding: 5px 12px;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    transition: all .12s;
+}
+.card-btn-view:hover { background: #DBEAFE; }
+[data-theme="dark"] .card-btn-view { background: rgba(59,130,246,.15); border-color: rgba(59,130,246,.3); color: #93c5fd; }
+
+.card-btn-read {
+    font-size: 11px; font-weight: 600;
+    color: #9CA3AF; background: none; border: none;
+    cursor: pointer; padding: 5px 8px;
+    border-radius: 7px; transition: all .12s;
+}
+.card-btn-read:hover { color: #374151; background: #F3F4F6; }
+[data-theme="dark"] .card-btn-read:hover { color: rgba(255,255,255,.7); background: rgba(255,255,255,.07); }
+
+/* ── FIX: Tombol hapus — diganti icon trash, ditambah border agar discoverable ── */
+.card-delete {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    color: #9CA3AF;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.card-delete:hover {
+    background: #FEF2F2;
+    color: #B91C1C;
+    border-color: #FECACA;
+}
+[data-theme="dark"] .card-delete {
+    background: rgba(255,255,255,.06);
+    border-color: rgba(255,255,255,.10);
+    color: rgba(255,255,255,.35);
+}
+[data-theme="dark"] .card-delete:hover {
+    background: rgba(239,68,68,.15);
+    color: #FCA5A5;
+    border-color: rgba(239,68,68,.3);
+}
+
+/* ── Skeleton ── */
+.skeleton-wrap { display: flex; flex-direction: column; gap: 8px; }
+.skeleton-card {
+    display: flex; align-items: center; gap: 14px;
+    background: white;
+    border: 1px solid #F0F0F0;
+    border-radius: 14px;
+    padding: 16px;
+    animation: skeletonPulse 1.6s ease infinite;
+}
+[data-theme="dark"] .skeleton-card { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.07); }
+@@keyframes skeletonPulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: .55; }
+}
+.skeleton-icon  { width: 44px; height: 44px; border-radius: 12px; background: #F3F4F6; flex-shrink: 0; }
+.skeleton-body  { flex: 1; }
+.skeleton-line  { height: 11px; background: #F3F4F6; border-radius: 6px; }
+.skeleton-badge { width: 36px; height: 20px; border-radius: 6px; background: #F3F4F6; }
+[data-theme="dark"] .skeleton-icon, [data-theme="dark"] .skeleton-line,
+[data-theme="dark"] .skeleton-badge { background: rgba(255,255,255,.08); }
+.w-28 { width: 112px; }
+.w-48 { width: 192px; }
+.w-36 { width: 144px; }
+.mt-1 { margin-top: 4px; }
+.mt-1\.5 { margin-top: 6px; }
+
+/* ── Empty state ── */
+.empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 64px 24px;
+    animation: fadeUp .3s ease both;
+}
+.empty-icon {
+    width: 72px; height: 72px;
+    border-radius: 20px;
+    background: white;
+    border: 1px solid #F0F0F0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+.empty-title { font-size: 15px; font-weight: 700; color: #374151; }
+[data-theme="dark"] .empty-title { color: rgba(255,255,255,.70); }
+.empty-sub { font-size: 12px; color: #9CA3AF; margin-top: 4px; text-align: center; }
+
+/* ── Toast ── */
+.toast {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    background: #1F2937;
+    color: white;
+    border-radius: 12px;
+    font-size: 12.5px; font-weight: 500;
+    box-shadow: 0 8px 30px rgba(0,0,0,.25);
+    pointer-events: all;
+    animation: toastIn .25s cubic-bezier(.34,1.56,.64,1) both;
+    min-width: 260px; max-width: 400px;
+    cursor: default;
+}
+.toast-undo {
+    margin-left: auto;
+    font-size: 11.5px; font-weight: 700;
+    color: #60A5FA;
+    background: none; border: none;
+    cursor: pointer; padding: 0 4px;
+    transition: color .12s;
+}
+.toast-undo:hover { color: #93C5FD; }
+.toast.leaving { animation: toastOut .2s ease forwards; }
+@@keyframes toastIn {
+    from { opacity:0; transform:translateY(16px) scale(.96); }
+    to   { opacity:1; transform:translateY(0)    scale(1);   }
+}
+@@keyframes toastOut {
+    from { opacity:1; transform:translateY(0)   scale(1);    }
+    to   { opacity:0; transform:translateY(8px) scale(.96);  }
+}
+
+/* ── Page animations ── */
+@@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.stats-strip  { animation-delay: .05s; }
+.filter-bar   { animation-delay: .1s;  }
+</style>
+
+@section Scripts {
+
+<script>
+(function () {
+
+// ── Storage ───────────────────────────────────────────────────────────────
+const KEY_READ      = 'ppid_notif_read';
+const KEY_DISMISSED = 'ppid_notif_dismissed';
+
+function getRead()      { try { return new Set(JSON.parse(localStorage.getItem(KEY_READ)      || '[]')); } catch { return new Set(); } }
+function getDismissed() { try { return new Set(JSON.parse(localStorage.getItem(KEY_DISMISSED) || '[]')); } catch { return new Set(); } }
+function saveRead(s)      { localStorage.setItem(KEY_READ,      JSON.stringify([...s])); }
+function saveDismissed(s) { localStorage.setItem(KEY_DISMISSED, JSON.stringify([...s])); }
+
+// ── State ─────────────────────────────────────────────────────────────────
+let _all    = [];
+let _filter = 'all';
+
+const ENDPOINT = '@notifApiUrl';
+// ── Fetch ─────────────────────────────────────────────────────────────────
+async function loadNotifs() {
+    try {
+        const res = await fetch(ENDPOINT);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        _all = Array.isArray(data) ? data : [];
+        renderStats();
+        renderList();
+    } catch (e) {
+        console.error('[Notifikasi]', e);
+        const target = document.getElementById('notif-skeleton') ?? document.getElementById('notif-list');
+        if (target) {
+            target.innerHTML = `
+            <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:14px;padding:24px;text-align:center">
+                <p style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px">Gagal memuat notifikasi</p>
+                <p style="font-size:11.5px;color:#EF4444;margin-bottom:12px">Periksa koneksi atau coba kembali.</p>
+                <button onclick="loadNotifs()"
+                        style="font-size:11.5px;font-weight:700;color:#DC2626;background:white;border:1px solid #FECACA;border-radius:8px;padding:6px 16px;cursor:pointer">
+                    ↻ Coba Lagi
+                </button>
+            </div>`;
+        }
+    }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+function renderStats() {
+    const dismissed = getDismissed();
+    const read      = getRead();
+    const active    = _all.filter(n => !dismissed.has(n.id));
+    const unread    = active.filter(n => !read.has(n.id));
+    const danger    = active.filter(n => n.severity === 'danger');
+    const warning   = active.filter(n => n.severity === 'warning');
+
+    setText('stat-total',   active.length);
+    setText('stat-unread',  unread.length);
+    setText('stat-danger',  danger.length);
+    setText('stat-warning', warning.length);
+
+    const pulse = document.getElementById('header-pulse');
+    if (pulse) pulse.classList.toggle('has-unread', unread.length > 0);
+
+    const label = document.getElementById('notif-count-label');
+    if (label) {
+        label.textContent = active.length === 0
+            ? 'Tidak ada notifikasi aktif'
+            : `${active.length} notifikasi · ${unread.length > 0 ? `${unread.length} belum dibaca` : 'semua sudah dibaca'}`;
+    }
+
+    window.dispatchEvent(new CustomEvent('notifUpdated', { detail: { unreadCount: unread.length } }));
+}
+
+function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+// ── Render list ───────────────────────────────────────────────────────────
+function renderList() {
+    const read      = getRead();
+    const dismissed = getDismissed();
+    const list      = document.getElementById('notif-list');
+    const skeleton  = document.getElementById('notif-skeleton');
+    const empty     = document.getElementById('notif-empty');
+    if (!list) return;
+    if (skeleton) skeleton.remove();
+
+    let visible = _all.filter(n => !dismissed.has(n.id));
+    if (_filter === 'unread')  visible = visible.filter(n => !read.has(n.id));
+    if (_filter === 'danger')  visible = visible.filter(n => n.severity === 'danger');
+    if (_filter === 'warning') visible = visible.filter(n => n.severity === 'warning');
+
+    if (visible.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        renderStats();
+        return;
+    }
+    empty.classList.add('hidden');
+
+    list.innerHTML = visible.map((n, i) => buildCard(n, read, i)).join('');
+    renderStats();
+}
+
+// ── Build card HTML ───────────────────────────────────────────────────────
+function buildCard(n, read, i) {
+    const isRead  = read.has(n.id);
+    const safeId  = n.id.replace(/[^a-z0-9]/gi, '_');
+    const delay   = Math.min(i * 40, 300);
+    const classes = ['notif-card', isRead ? 'read' : 'unread', n.severity].filter(Boolean).join(' ');
+    const titleColor = n.severity === 'danger' ? 'danger' : n.severity === 'warning' ? 'warning' : 'info';
+
+    // FIX: Gunakan icon trash (Filament) — semantik lebih jelas dari icon X
+    const trashIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+    </svg>`;
+
+    return `
+    <div class="${classes}" id="nc-${safeId}" data-id="${n.id}" style="animation-delay:${delay}ms">
+        <div class="card-icon ${n.severity || 'info'}">${n.icon}</div>
+        <div class="card-body">
+            <div class="card-meta">
+                <p class="card-title ${titleColor}">
+                    ${n.title}
+                    ${!isRead ? '<span class="unread-dot"></span>' : ''}
+                </p>
+                <span class="card-date">${n.dateLabel || '—'}</span>
+            </div>
+            <p class="card-message" title="${n.message}">${n.message}</p>
+            <p class="card-detail">${n.detail || ''}</p>
+            <div class="card-actions">
+                <a href="${n.href}" onclick="markOneRead('${n.id}')" class="card-btn-view">
+                    Lihat Detail
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+                ${!isRead ? `<button onclick="markOneRead('${n.id}')" class="card-btn-read">Tandai dibaca</button>` : ''}
+            </div>
+        </div>
+        <button class="card-delete" onclick="dismissNotif('${n.id}', '${escHtml(n.title)}')" title="Hapus notifikasi">
+            ${trashIcon}
+        </button>
+    </div>`;
+}
+
+function escHtml(s) { return String(s).replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
+
+// ── FIX: Filter slider — sync posisi dengan ResizeObserver ────────────────
+function updateSlider(activeBtn) {
+    const bar    = document.getElementById('filter-tabs');
+    const slider = document.getElementById('filter-slider');
+    if (!bar || !slider || !activeBtn) return;
+    const barRect = bar.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    slider.style.left  = (btnRect.left - barRect.left + 4) + 'px';
+    slider.style.width = (btnRect.width - 8) + 'px';
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+function markOneRead(id) {
+    const read = getRead(); read.add(id); saveRead(read); renderList();
+}
+
+function markAllRead() {
+    const dismissed = getDismissed();
+    const read      = getRead();
+    _all.filter(n => !dismissed.has(n.id)).forEach(n => read.add(n.id));
+    saveRead(read); renderList();
+    showToast('✅', 'Semua notifikasi ditandai dibaca', null, null);
+}
+
+function dismissNotif(id, title) {
+    const safeId = id.replace(/[^a-z0-9]/gi, '_');
+    const el     = document.getElementById('nc-' + safeId);
+    if (!el) return;
+
+    el.style.transition  = 'all .22s cubic-bezier(.4,0,1,1)';
+    el.style.opacity     = '0';
+    el.style.transform   = 'translateX(18px) scale(.98)';
+    el.style.maxHeight   = el.offsetHeight + 'px';
+
+    setTimeout(() => {
+        el.style.maxHeight  = '0';
+        el.style.padding    = '0';
+        el.style.margin     = '0';
+        el.style.border     = 'none';
+        el.style.overflow   = 'hidden';
+    }, 180);
+
+    setTimeout(() => {
+        const dismissed = getDismissed();
+        dismissed.add(id);
+        saveDismissed(dismissed);
+        renderList();
+        renderStats();
+    }, 380);
+
+    showToast('🗑️', `"${title}" dihapus`, 'Batalkan', () => undoDismiss(id));
+}
+
+function undoDismiss(id) {
+    const dismissed = getDismissed();
+    dismissed.delete(id);
+    saveDismissed(dismissed);
+    renderList();
+    renderStats();
+}
+
+function clearAllDismissed() {
+    localStorage.removeItem(KEY_DISMISSED);
+    renderList();
+    renderStats();
+    showToast('🔄', 'Semua notifikasi yang dihapus ditampilkan kembali', null, null);
+}
+
+function setFilter(f) {
+    _filter = f;
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+        const active = btn.dataset.filter === f;
+        btn.classList.toggle('active', active);
+        if (active) updateSlider(btn);
+    });
+    renderList();
+}
+
+// ── Toast system ──────────────────────────────────────────────────────────
+let _toastTimer = null;
+let _currentToastUndo = null;
+
+function showToast(icon, message, undoLabel, undoCb) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (_toastTimer) clearTimeout(_toastTimer);
+
+    _currentToastUndo = undoCb;
+
+    const undoBtn = undoLabel && undoCb
+        ? `<button class="toast-undo" onclick="_currentToastUndo && _currentToastUndo(); dismissToast()">${undoLabel}</button>`
+        : '';
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `
+        <span style="font-size:15px">${icon}</span>
+        <span>${message}</span>
+        ${undoBtn}
+    `;
+    container.appendChild(toast);
+
+    _toastTimer = setTimeout(() => dismissToast(), undoLabel ? 5000 : 2500);
+}
+
+function dismissToast() {
+    const container = document.getElementById('toast-container');
+    const toast = container?.querySelector('.toast');
+    if (!toast) return;
+    toast.classList.add('leaving');
+    setTimeout(() => { if (container) container.innerHTML = ''; }, 220);
+    if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+}
+
+// ── Expose globals ────────────────────────────────────────────────────────
+window.markOneRead       = markOneRead;
+window.markAllRead       = markAllRead;
+window.dismissNotif      = dismissNotif;
+window.clearAllDismissed = clearAllDismissed;
+window.setFilter         = setFilter;
+window.loadNotifs        = loadNotifs;
+window.dismissToast      = dismissToast;
+window._currentToastUndo = null;
+
+// ── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    // Posisi awal slider
+    const activeTab = document.querySelector('.filter-tab.active');
+    if (activeTab) {
+        setTimeout(() => updateSlider(activeTab), 50);
+    }
+
+    // FIX: ResizeObserver — slider tetap akurat saat layout berubah
+    // (mis. sidebar collapse, window resize, font load selesai)
+    const filterBar = document.getElementById('filter-tabs');
+    if (filterBar && typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => {
+            const current = document.querySelector('.filter-tab.active');
+            if (current) updateSlider(current);
+        });
+        ro.observe(filterBar);
+    }
+});
+
+loadNotifs();
+
+})();
+</script>
+}

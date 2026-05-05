@@ -36,6 +36,115 @@ public class KasubkelKepegawaianController(
         p.LoketJenis == LoketJenis.Umum        ||
         p.KategoriPemohon == "Mahasiswa";
 
+    public override void OnActionExecuting(
+        Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+    {
+        base.OnActionExecuting(context);
+        ViewData["NotifApiUrl"]  = "/kasubkel-kepegawaian/notifikasi-json";
+        ViewData["NotifPageUrl"] = "/kasubkel-kepegawaian/notifikasi";
+    }
+
+    [HttpGet("notifikasi")]
+    public IActionResult Notifikasi()
+    {
+        ViewData["Title"] = "Semua Notifikasi";
+        return View("~/Views/Shared/Notifikasi.cshtml");
+    }
+
+    [HttpGet("notifikasi-json")]
+    public async Task<IActionResult> NotifikasiJson()
+{
+    var today = DateOnly.FromDateTime(DateTime.Today);
+
+    // ── 1. Permohonan menunggu verifikasi (aksi utama Kasubkel) ──────────
+    var menungguVerif = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Where(p =>
+            (p.LoketJenis == LoketJenis.Kepegawaian ||
+             p.LoketJenis == LoketJenis.Umum        ||
+             p.KategoriPemohon == "Mahasiswa")       &&
+            (p.StatusPPIDID == StatusId.MenungguVerifikasi ||
+             p.StatusPPIDID == StatusId.IdentifikasiAwal))
+        .OrderBy(p => p.CratedAt)
+        .Take(30)
+        .ToListAsync();
+
+    // ── 2. Permohonan melewati batas waktu ───────────────────────────────
+    var overdueList = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Where(p =>
+            (p.LoketJenis == LoketJenis.Kepegawaian ||
+             p.LoketJenis == LoketJenis.Umum        ||
+             p.KategoriPemohon == "Mahasiswa")       &&
+            p.BatasWaktu.HasValue                    &&
+            p.BatasWaktu < today                     &&
+            p.StatusPPIDID < StatusId.Selesai        &&
+            p.StatusPPIDID != StatusId.Dibatalkan)
+        .OrderBy(p => p.BatasWaktu)
+        .Take(20)
+        .ToListAsync();
+
+    // ── Pakai value tuple agar sorting aman (tidak ada dynamic) ─────────
+    var sortable = new List<(int Priority, string DateKey, object Payload)>();
+
+    foreach (var p in menungguVerif)
+    {
+        bool isUploadBaru = p.StatusPPIDID == StatusId.MenungguVerifikasi;
+        sortable.Add((
+            Priority: 0,
+            DateKey:  p.UpdatedAt?.ToString("yyyy-MM-dd") ?? "0000-00-00",
+            Payload: new
+            {
+                id        = $"verif_{p.PermohonanPPIDID}",
+                type      = "verifikasi",
+                icon      = isUploadBaru ? "📋" : "🔁",
+                title     = isUploadBaru ? "Menunggu Verifikasi" : "Identifikasi Awal",
+                message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+                detail    = isUploadBaru
+                    ? "TTD diupload oleh Loket, siap diverifikasi"
+                    : "Perlu ditinjau ulang oleh Kasubkel Kepegawaian",
+                href      = $"/kasubkel-kepegawaian/verifikasi/{p.PermohonanPPIDID}",
+                dateIso   = p.UpdatedAt?.ToString("yyyy-MM-dd"),
+                dateLabel = p.UpdatedAt?.ToString("dd MMM yyyy"),
+                severity  = isUploadBaru ? "warning" : "info",
+                createdAt = p.UpdatedAt?.ToString("yyyy-MM-dd")
+            }
+        ));
+    }
+
+    foreach (var p in overdueList)
+    {
+        var hariLewat = (today.ToDateTime(TimeOnly.MinValue)
+                       - p.BatasWaktu!.Value.ToDateTime(TimeOnly.MinValue)).Days;
+        sortable.Add((
+            Priority: 1,
+            DateKey:  p.BatasWaktu?.ToString("yyyy-MM-dd") ?? "0000-00-00",
+            Payload: new
+            {
+                id        = $"overdue_{p.PermohonanPPIDID}",
+                type      = "overdue",
+                icon      = "⏰",
+                title     = "Batas Waktu Terlewat",
+                message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+                detail    = $"Lewat {hariLewat} hari (batas: {p.BatasWaktu?.ToString("dd MMM yyyy")})",
+                href      = $"/kasubkel-kepegawaian/detail/{p.PermohonanPPIDID}",
+                dateIso   = p.BatasWaktu?.ToString("yyyy-MM-dd"),
+                dateLabel = p.BatasWaktu?.ToString("dd MMM yyyy"),
+                severity  = "danger",
+                createdAt = p.BatasWaktu?.ToString("yyyy-MM-dd")
+            }
+        ));
+    }
+
+    var ordered = sortable
+        .OrderBy(x => x.Priority)
+        .ThenBy(x => x.DateKey)
+        .Select(x => x.Payload)
+        .ToList();
+
+    return Json(ordered);
+}
+
     // ── Dashboard ─────────────────────────────────────────────────────────
 
     [HttpGet("")]

@@ -48,7 +48,7 @@ public class PetugasLoketController(AppDbContext db, IWebHostEnvironment env)
         public IActionResult Notifikasi()
         {
             ViewData["Title"] = "Semua Notifikasi";
-            return View();
+            return View("~/Views/Shared/Notifikasi.cshtml");
         }
 
 
