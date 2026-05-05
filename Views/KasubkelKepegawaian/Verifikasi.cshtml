@@ -64,34 +64,63 @@
                     </div>
                 </div>
 
-                <!-- Disposisi Unit -->
+                <!-- ── Disposisi Multi-Unit ─────────────────────────────────── -->
                 <div id="div-setujui" class="mb-4">
-                    <label class="lbl">Disposisi ke Unit Kerja <span class="text-red-400">*</span></label>
-                    <div class="space-y-2.5">
-                        <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
-                            <input asp-for="DisposisiUnit" type="radio" value="PSMDI" class="accent-blue-600" id="rdPsmdi"/>
-                            <span class="text-sm font-semibold text-gray-700">PSMDI</span>
-                            <span class="text-xs text-gray-400 ml-1">Peran Serta Masyarakat, Data dan Informasi</span>
-                        </label>
-                        <label class="flex items-start gap-2 p-3 rounded-xl border-2 border-gray-200 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition-all">
-                            <input asp-for="DisposisiUnit" type="radio" value="BidangTerkait" id="rdBidang" class="accent-emerald-600 mt-0.5 flex-shrink-0"/>
-                            <div class="flex-1">
-                                <span class="text-sm font-semibold text-gray-700 block">Bidang / Unit Terkait</span>
-                                <div id="bidang-select-wrap" class="mt-2 hidden">
-                                    <select id="sel-disposisi-bidang"
-                                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                                            onchange="onDisposisiBidangChange()" disabled>
-                                        <option value="">⏳ Memuat daftar bidang...</option>
-                                    </select>
-                                    <input type="hidden" asp-for="NamaBidangDisposisi" id="f-disposisi-bidang-name"/>
-                                </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="lbl mb-0">Disposisi ke Unit / Bidang <span class="text-red-400">*</span></label>
+                        <span id="disposisi-counter" class="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full hidden">0 dipilih</span>
+                    </div>
+
+                    <!-- Hidden inputs untuk binding List<string> DisposisiUnits -->
+                    <div id="disposisi-hidden-container"></div>
+
+                    <!-- PSMDI — selalu tersedia -->
+                    <div class="mb-2">
+                        <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                            <input type="checkbox" value="PSMDI" data-label="PSMDI"
+                                   class="disposisi-cb accent-blue-600 w-4 h-4 flex-shrink-0"
+                                   onchange="onDisposisiChange()" />
+                            <div>
+                                <span class="text-sm font-semibold text-gray-700">PSMDI</span>
+                                <span class="text-xs text-gray-400 ml-1">Peran Serta Masyarakat, Data dan Informasi</span>
                             </div>
                         </label>
                     </div>
-                    <div id="bidang-loading-indicator" class="hidden text-xs text-blue-500 font-medium mt-2 flex items-center gap-1.5">
-                        <span class="inline-block w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></span>
-                        Memuat daftar unit bidang...
+
+                    <!-- Bidang / Unit Terkait — hierarkis -->
+                    <div class="border-2 border-gray-200 rounded-xl overflow-hidden">
+                        <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+                            <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Bidang / Unit Terkait</span>
+                            <div class="flex items-center gap-2">
+                                <div id="bidang-loading" class="hidden flex items-center gap-1.5 text-[10px] text-blue-500 font-medium">
+                                    <span class="inline-block w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></span>
+                                    Memuat...
+                                </div>
+                                @* button di bawah ini tidak berfungsi jadinya saya comment *@
+                                @* <button type="button" onclick="collapseAll()"
+                                        class="text-[10px] text-gray-400 hover:text-gray-600 font-semibold px-2 py-1 rounded hover:bg-gray-100 transition-all">
+                                    Tutup Semua
+                                </button> *@
+                            </div>
+                        </div>
+
+                        <div id="bidang-tree" class="divide-y divide-gray-100" style="max-height:320px;overflow-y:auto">
+                            <!-- populated by JS -->
+                            <div id="bidang-skeleton" class="p-4 space-y-2">
+                                @for (int i = 0; i < 4; i++)
+                                {
+                                    <div class="flex gap-2 animate-pulse">
+                                        <div class="w-4 h-4 rounded bg-gray-100 flex-shrink-0 mt-0.5"></div>
+                                        <div class="flex-1 h-4 bg-gray-100 rounded"></div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
+
+                    <p id="disposisi-error" class="hidden text-xs text-red-500 font-medium mt-1.5">
+                        ⚠ Pilih minimal satu unit disposisi.
+                    </p>
                 </div>
 
                 <!-- Alasan tolak -->
@@ -118,100 +147,183 @@
     </div>
 </div>
 
-@* {{!-- ══ Shared confirm modal (overlay, CSS, JS utilities) ══ --}} *@
 <partial name="Partials/_ConfirmModal" />
 
 <style>
-    /* ── Form helpers ── */
     .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px }
     .fld { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:9px 14px; font-size:13.5px; background:#fafafa; outline:none; transition:all .15s }
     .fld:focus { box-shadow:0 0 0 2.5px #3b82f6; border-color:transparent; background:white }
+
+    /* Tree */
+    .tree-parent { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; user-select:none; transition:background .1s; }
+    .tree-parent:hover { background:#f9fafb; }
+    .tree-parent.has-children .tree-chevron { transition:transform .18s; }
+    .tree-parent.open .tree-chevron { transform: rotate(90deg); }
+    .tree-children { border-top:1px solid #f3f4f6; background:#fafafa; }
+    .tree-child-item { display:flex; align-items:center; gap:8px; padding:8px 12px 8px 32px; transition:background .1s; }
+    .tree-child-item:hover { background:#f3f4f6; }
+    .tree-child-item:last-child { border-bottom:none; }
 </style>
 
 <script>
-/* ══════════════════════════════════════════════════════════════════════
-   Verifikasi — page-specific logic
-   Bergantung pada utilities dari _ConfirmModal.cshtml:
-     openModal / closeModal / showToast / shakeButton / showResultPhase
-══════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   Verifikasi — multi-unit disposisi + hierarkis bidang
+═══════════════════════════════════════════════════════════════════ */
 
-/* ── Bidang / disposisi ── */
-let _bidangCache = null;
-async function loadBidangOptions() {
-    if (_bidangCache) return _bidangCache;
-    document.getElementById('bidang-loading-indicator').classList.remove('hidden');
+let _hierarkiCache = null;
+
+// ── Fetch & render hierarki bidang ────────────────────────────────
+async function loadBidangHierarki() {
+    if (_hierarkiCache) return;
+
+    document.getElementById('bidang-loading').classList.remove('hidden');
     try {
-        const res = await fetch('/api/bidang');
-        _bidangCache = await res.json();
-    } catch(e) { _bidangCache = []; }
-    finally { document.getElementById('bidang-loading-indicator').classList.add('hidden'); }
-    const sel = document.getElementById('sel-disposisi-bidang');
-    sel.innerHTML = '<option value="">— Pilih Unit Kerja / Bidang —</option>';
-    _bidangCache.forEach(b => {
-        const o = document.createElement('option');
-        o.value = b.id; o.text = b.namaBidang; o.dataset.name = b.namaBidang;
-        sel.appendChild(o);
-    });
-    sel.disabled = false;
-    return _bidangCache;
+        const res = await fetch('/api/bidang-hierarki');
+        _hierarkiCache = await res.json();
+    } catch(e) {
+        _hierarkiCache = [];
+    } finally {
+        document.getElementById('bidang-loading').classList.add('hidden');
+    }
+
+    renderBidangTree(_hierarkiCache);
 }
-function onDisposisiBidangChange() {
-    const sel = document.getElementById('sel-disposisi-bidang');
-    document.getElementById('f-disposisi-bidang-name').value = sel.options[sel.selectedIndex]?.dataset.name || '';
-}
-document.querySelectorAll('[name="DisposisiUnit"]').forEach(r => {
-    r.addEventListener('change', async function() {
-        const isBidang = this.value === 'BidangTerkait';
-        document.getElementById('bidang-select-wrap').classList.toggle('hidden', !isBidang);
-        if (isBidang) await loadBidangOptions();
+
+function renderBidangTree(items) {
+    const tree = document.getElementById('bidang-tree');
+    const skel = document.getElementById('bidang-skeleton');
+    if (skel) skel.remove();
+    tree.innerHTML = '';
+
+    items.forEach(item => {
+        const hasChildren = item.children && item.children.length > 0;
+
+        // ── Parent row ───────────────────────────────────────────
+        const parentDiv = document.createElement('div');
+
+        const chevron = hasChildren
+            ? `<svg class="tree-chevron w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+               </svg>`
+            : `<span class="w-3 h-3 flex-shrink-0"></span>`;
+
+        parentDiv.innerHTML = `
+            <div class="tree-parent ${hasChildren ? 'has-children' : ''}" onclick="${hasChildren ? 'toggleChildren(this)' : ''}">
+                ${chevron}
+                <input type="checkbox"
+                       value="${escHtml(item.namaBidang)}"
+                       data-label="${escHtml(item.namaBidang)}"
+                       class="disposisi-cb accent-blue-600 w-4 h-4 flex-shrink-0"
+                       onclick="event.stopPropagation()"
+                       onchange="onDisposisiChange()" />
+                <span class="text-[13px] font-semibold text-gray-700 leading-tight">${escHtml(item.namaBidang)}</span>
+            </div>`;
+
+        // ── Children ─────────────────────────────────────────────
+        if (hasChildren) {
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'tree-children hidden';
+
+            item.children.forEach(child => {
+                const childRow = document.createElement('div');
+                childRow.className = 'tree-child-item';
+                const childLabel = `${item.namaBidang} — ${child}`;
+                childRow.innerHTML = `
+                    <input type="checkbox"
+                           value="${escHtml(childLabel)}"
+                           data-label="${escHtml(childLabel)}"
+                           class="disposisi-cb accent-emerald-600 w-3.5 h-3.5 flex-shrink-0"
+                           onchange="onDisposisiChange()" />
+                    <span class="text-[12px] text-gray-600 leading-tight">${escHtml(child)}</span>`;
+                childrenDiv.appendChild(childRow);
+            });
+
+            parentDiv.appendChild(childrenDiv);
+        }
+
+        tree.appendChild(parentDiv);
     });
-});
+}
+
+function toggleChildren(parentEl) {
+    const wrap = parentEl.closest('.tree-parent').parentElement;
+    const childrenDiv = wrap.querySelector('.tree-children');
+    const isOpen = !childrenDiv.classList.contains('hidden');
+    childrenDiv.classList.toggle('hidden', isOpen);
+    parentEl.classList.toggle('open', !isOpen);
+}
+
+function collapseAll() {
+    document.querySelectorAll('.tree-children').forEach(d => d.classList.add('hidden'));
+    document.querySelectorAll('.tree-parent.open').forEach(p => p.classList.remove('open'));
+}
+
+// ── Sync hidden inputs → DisposisiUnits[] ────────────────────────
+function onDisposisiChange() {
+    const checked = [...document.querySelectorAll('.disposisi-cb:checked')]
+        .map(cb => cb.value);
+
+    // Rebuild hidden inputs
+    const container = document.getElementById('disposisi-hidden-container');
+    container.innerHTML = checked
+        .map(v => `<input type="hidden" name="DisposisiUnits" value="${escHtml(v)}" />`)
+        .join('');
+
+    // Counter badge
+    const counter = document.getElementById('disposisi-counter');
+    counter.textContent = `${checked.length} dipilih`;
+    counter.classList.toggle('hidden', checked.length === 0);
+
+    // Clear error
+    document.getElementById('disposisi-error').classList.add('hidden');
+}
+
+// ── Show/hide panel keputusan ─────────────────────────────────────
 document.querySelectorAll('[name="Disetujui"]').forEach(r => {
     r.addEventListener('change', function() {
         const ok = this.value === 'true';
         document.getElementById('div-setujui').style.display = ok ? 'block' : 'none';
         document.getElementById('div-tolak').style.display   = ok ? 'none'  : 'block';
+        if (ok && !_hierarkiCache) loadBidangHierarki();
     });
 });
 
-/* ── Collect values ─────────────────────────────────────────────────── */
+// ── Collect form state ────────────────────────────────────────────
 function collectValues() {
     return {
         isSetujui    : document.querySelector('[name="Disetujui"]:checked')?.value,
-        disposisi    : document.querySelector('[name="DisposisiUnit"]:checked')?.value,
-        bidangName   : document.getElementById('f-disposisi-bidang-name')?.value,
+        disposisiList: [...document.querySelectorAll('.disposisi-cb:checked')].map(cb => cb.value),
         alasan       : document.querySelector('[name="AlasanDitolak"]')?.value?.trim(),
         noPermohonan : document.querySelector('[name="NoPermohonan"]')?.value,
         namaPemohon  : document.querySelector('[name="NamaPemohon"]')?.value,
     };
 }
 
-/* ── Validate ────────────────────────────────────────────────────────── */
+// ── Validate ──────────────────────────────────────────────────────
 function validate(v) {
     if (!v.isSetujui) { showToast('Pilih keputusan verifikasi terlebih dahulu.'); return false; }
-    if (v.isSetujui === 'true' && !v.disposisi) { showToast('Pilih unit disposisi sebelum mengonfirmasi.'); return false; }
-    if (v.isSetujui === 'true' && v.disposisi === 'BidangTerkait' && !v.bidangName) { showToast('Pilih bidang dari dropdown terlebih dahulu.'); return false; }
+    if (v.isSetujui === 'true' && v.disposisiList.length === 0) {
+        document.getElementById('disposisi-error').classList.remove('hidden');
+        showToast('Pilih minimal satu unit disposisi.');
+        return false;
+    }
     return true;
 }
 
-/* ══ FASE 1 — Tampilkan modal konfirmasi ══ */
+// ── Modal FASE 1 ──────────────────────────────────────────────────
 function showConfirmPopup() {
     const v = collectValues();
     if (!validate(v)) { shakeButton('btn-konfirmasi'); return; }
 
-    const ap  = v.isSetujui === 'true';
+    const ap = v.isSetujui === 'true';
     const cls = ap ? 'ap' : 'rj';
 
-    const extraRow = ap
-        ? `<div class="m-row">
-               <span class="m-row-lbl">Disposisi ke</span>
-               <span class="m-row-val">${v.disposisi === 'PSMDI' ? 'PSMDI' : (v.bidangName || v.disposisi)}</span>
-           </div>`
+    const disposisiRows = ap
+        ? v.disposisiList.map(u =>
+            `<div class="m-row"><span class="m-row-lbl">→ Disposisi</span><span class="m-row-val">${u}</span></div>`
+          ).join('')
         : (v.alasan
-            ? `<div class="m-row">
-                   <span class="m-row-lbl">Alasan Tolak</span>
-                   <span class="m-row-val" style="color:#dc2626">${v.alasan}</span>
-               </div>`
+            ? `<div class="m-row"><span class="m-row-lbl">Alasan Tolak</span><span class="m-row-val" style="color:#dc2626">${v.alasan}</span></div>`
             : '');
 
     document.getElementById('modal-content').innerHTML = `
@@ -229,7 +341,7 @@ function showConfirmPopup() {
                 <span class="m-row-lbl">Pemohon</span>
                 <span class="m-row-val">${v.namaPemohon}</span>
             </div>
-            ${extraRow}
+            ${disposisiRows}
         </div>
         <div class="m-actions">
             <button class="btn-back" onclick="closeModal()">Periksa Lagi</button>
@@ -239,7 +351,7 @@ function showConfirmPopup() {
     openModal();
 }
 
-/* ══ FASE 2 — Animasi hasil lalu submit ══ */
+// ── Modal FASE 2 — animasi lalu submit ────────────────────────────
 function runResult() {
     const v  = collectValues();
     const ap = v.isSetujui === 'true';
@@ -247,10 +359,21 @@ function runResult() {
         isSuccess : ap,
         title     : ap ? 'Verifikasi Disetujui!' : 'Permohonan Ditolak',
         sub       : ap
-            ? 'Permohonan telah diverifikasi dan akan diteruskan ke unit terkait.'
+            ? `Diteruskan ke ${v.disposisiList.length} unit terkait.`
             : 'Permohonan dikembalikan kepada pemohon sesuai keputusan.',
-        chip      : ap ? 'Diteruskan ke Unit Disposisi' : 'Dikembalikan ke Pemohon',
+        chip      : ap ? `${v.disposisiList.length} Unit Disposisi` : 'Dikembalikan ke Pemohon',
         onDone    : () => document.getElementById('verifikasi-form').submit()
     });
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    // Preload jika radio Setujui sudah terpilih (page reload / error)
+    const checked = document.querySelector('[name="Disetujui"]:checked');
+    if (checked?.value === 'true') loadBidangHierarki();
+});
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>

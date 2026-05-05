@@ -257,48 +257,53 @@ public class KasubkelKepegawaianController(
     }
 
     [HttpPost("verifikasi"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> VerifikasiPost(VerifikasiVm vm)
+public async Task<IActionResult> VerifikasiPost(VerifikasiVm vm)
+{
+    if (!ModelState.IsValid) return View("Verifikasi", vm);
+
+    var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (p is null) return NotFound();
+
+    var statusLama = p.StatusPPIDID;
+    var now        = DateTime.UtcNow;
+
+    if (vm.Disetujui)
     {
-        if (!ModelState.IsValid) return View("Verifikasi", vm);
-
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p is null) return NotFound();
-
-        var statusLama = p.StatusPPIDID;
-        var now        = DateTime.UtcNow;
-
-        if (vm.Disetujui)
+        if (vm.DisposisiUnits.Count == 0)
         {
-            p.StatusPPIDID = StatusId.MenungguSuratIzin;
-            p.UpdatedAt    = now;
+            ModelState.AddModelError("DisposisiUnits", "Pilih minimal satu unit disposisi.");
+            return View("Verifikasi", vm);
+        }
 
-            // Simpan unit disposisi — termasuk PSMDI
-            p.NamaBidang = vm.DisposisiUnit == "BidangTerkait" && !string.IsNullOrEmpty(vm.NamaBidangDisposisi)
-                ? vm.NamaBidangDisposisi
-                : vm.DisposisiUnit;
+        p.StatusPPIDID = StatusId.MenungguSuratIzin;
+        p.UpdatedAt    = now;
 
-            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguSuratIzin,
+        // Simpan seluruh disposisi sebagai pipe-separated string
+        p.NamaBidang = vm.DisposisiNamaGabung;
+
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.MenungguSuratIzin,
             $"Verifikasi disetujui. Disposisi: {p.NamaBidang}. Catatan: {vm.CatatanVerifikasi}",
             CurrentUser);
 
-            TempData["Success"] =
-                $"Permohonan <strong>{vm.NoPermohonan}</strong> diverifikasi — siap surat izin.";
-        }
-        else
-        {
-            p.StatusPPIDID = StatusId.IdentifikasiAwal;
-            p.UpdatedAt    = now;
-
-            db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.IdentifikasiAwal,
-                $"Verifikasi DITOLAK. Alasan: {vm.AlasanDitolak}", CurrentUser);
-
-            TempData["Error"] =
-                $"Permohonan <strong>{vm.NoPermohonan}</strong> dikembalikan. Alasan: {vm.AlasanDitolak}";
-        }
-
-        await db.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
+        TempData["Success"] =
+            $"Permohonan <strong>{vm.NoPermohonan}</strong> diverifikasi — siap surat izin. " +
+            $"Disposisi ke: {p.NamaBidang}.";
     }
+    else
+    {
+        p.StatusPPIDID = StatusId.IdentifikasiAwal;
+        p.UpdatedAt    = now;
+
+        db.AddAuditLog(vm.PermohonanPPIDID, statusLama, StatusId.IdentifikasiAwal,
+            $"Verifikasi DITOLAK. Alasan: {vm.AlasanDitolak}", CurrentUser);
+
+        TempData["Error"] =
+            $"Permohonan <strong>{vm.NoPermohonan}</strong> dikembalikan. Alasan: {vm.AlasanDitolak}";
+    }
+
+    await db.SaveChangesAsync();
+    return RedirectToAction(nameof(Index));
+}
 
     // ── Surat Izin ────────────────────────────────────────────────────────
 // ── Surat Izin — DIKELOLA OLEH LOKET KEPEGAWAIAN ─────────────────────
@@ -371,5 +376,6 @@ public IActionResult SuratIzin(Guid id)
         IsPermintaanData = p.IsPermintaanData,
         IsWawancara      = p.IsWawancara,
         NamaBidang       = p.NamaBidang      ?? string.Empty,
+        // DisposisiUnits dibiarkan kosong — diisi user lewat form
     };
 }

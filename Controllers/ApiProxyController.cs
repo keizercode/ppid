@@ -236,4 +236,132 @@ public class ApiProxyController(
             return p.GetString();
         return null;
     }
+
+    // ── GET /api/bidang-hierarki ──────────────────────────────────────────
+// Mengembalikan daftar bidang beserta sub-unit (Ketua Subkelompok/Satpel)
+// yang belum tersedia di API eksternal.
+[HttpGet("bidang-hierarki")]
+public async Task<IActionResult> BidangHierarki()
+{
+    // Ambil data induk dari logika yang sama dengan /api/bidang
+    List<(string Id, string Nama)> parents = [];
+
+    if (!string.IsNullOrEmpty(BidangUrl))
+    {
+        try
+        {
+            var raw = await Http().GetStringAsync(BidangUrl);
+            using var doc = JsonDocument.Parse(raw);
+            var arr = doc.RootElement;
+            if (arr.ValueKind == JsonValueKind.Array)
+                foreach (var el in arr.EnumerateArray())
+                {
+                    var id   = Str(el, "id")        ?? string.Empty;
+                    var nama = Str(el, "namaBidang") ?? string.Empty;
+                    if (!string.IsNullOrEmpty(id)) parents.Add((id, nama));
+                }
+        }
+        catch { /* lanjut fallback */ }
+    }
+
+    if (parents.Count == 0)
+        parents.AddRange(_HardcodedBidang);
+
+    // Gabungkan dengan children statis
+    var result = parents.Select(p => new
+    {
+        id         = p.Id,
+        namaBidang = p.Nama,
+        children   = _BidangChildren.TryGetValue(p.Id, out var ch) ? ch : []
+    });
+
+    return Json(result);
+}
+
+// ── Hardcoded fallback (sama dengan sebelumnya) ───────────────────────
+private static readonly (string Id, string Nama)[] _HardcodedBidang =
+[
+    ("d0601901-7f57-455f-b9ac-f4b794396030", "Laboratorium Lingkungan Hidup Daerah"),
+    ("c89321db-b4e5-4638-ba59-f4280030f9fe", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Barat"),
+    ("77136212-8ad7-48de-8270-69ae949ed895", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Pusat"),
+    ("d47b8252-a7ac-46a1-8d9f-b0e5a8e4ba67", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Timur"),
+    ("fcc59e08-cf7f-40e0-b6e3-2ef748b8c218", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Utara"),
+    ("0b6d56df-895c-47b5-8883-f373f513dc83", "Sekretariat Dinas Lingkungan Hidup"),
+    ("529d9d7a-b365-47d5-9f4f-3f2b67326c79", "Suku Dinas Lingkungan Hidup Kab. Adm. Kepulauan Seribu"),
+    ("1c74a891-afe4-40c8-aff6-7ca8afa2af95", "Unit Penanganan Sampah Badan Air"),
+    ("d81e1bb5-61b9-44a1-aa97-a7f9450bd046", "Bidang Pengelolaan Sampah dan Limbah B3"),
+    ("08dacde9-9e35-4f34-825a-a6201ea6ff9f", "Bidang Peran Serta Masyarakat, Data dan Informasi"),
+    ("08dacde9-6fb2-4da9-8de6-4207712ffa3f", "Bidang Pengurangan dan Penanganan Sampah"),
+    ("08dacde9-3932-4c5d-8808-5fe4db495eae", "Bidang Tata Lingkungan"),
+    ("08dacde9-eb49-4127-852b-566d7540c603", "Bidang Pengawasan dan Penaatan Hukum"),
+    ("08dacde9-c0e9-4594-84bd-015a21616a8b", "Bidang Pengendalian, Pencemaran dan Kerusakan Lingkungan"),
+    ("2d9b3feb-8690-4198-9a9a-c65e78538a36", "Unit Pengelola Sampah Terpadu"),
+    ("b4b04c3b-3f6f-4005-a79b-2b4daba5de1a", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Selatan"),
+];
+
+// ── Sub-unit per Bidang (dari struktur organisasi resmi) ──────────────
+private static readonly Dictionary<string, string[]> _BidangChildren = new()
+{
+    ["08dacde9-3932-4c5d-8808-5fe4db495eae"] =
+    [
+        "Ketua Subkelompok Perencanaan Lingkungan",
+        "Ketua Subkelompok Kajian Dampak Lingkungan",
+        "Ketua Subkelompok Pemeliharaan Lingkungan",
+    ],
+    ["d81e1bb5-61b9-44a1-aa97-a7f9450bd046"] =
+    [
+        "Ketua Subkelompok Pengelolaan Sampah",
+        "Ketua Subkelompok Pengelolaan Limbah B3",
+        "Ketua Subkelompok Pengembangan Fasilitas Teknis",
+    ],
+    ["08dacde9-c0e9-4594-84bd-015a21616a8b"] =
+    [
+        "Ketua Subkelompok Pemantauan Lingkungan",
+        "Ketua Subkelompok Pencegahan Pencemaran Lingkungan",
+        "Ketua Subkelompok Kerusakan Lingkungan",
+    ],
+    ["08dacde9-eb49-4127-852b-566d7540c603"] =
+    [
+        "Ketua Subkelompok Pengaduan dan Penyelesaian Sengketa Lingkungan",
+        "Ketua Subkelompok Pengawasan Lingkungan",
+        "Ketua Subkelompok Penegakan Hukum Lingkungan",
+    ],
+    ["08dacde9-9e35-4f34-825a-a6201ea6ff9f"] =
+    [
+        "Ketua Subkelompok Penyuluhan dan Hubungan Masyarakat",
+        "Ketua Subkelompok Pemberdayaan Masyarakat",
+        "Ketua Subkelompok Kemitraan, Data, dan Informasi",
+    ],
+    ["08dacde9-6fb2-4da9-8de6-4207712ffa3f"] =
+    [
+        "Kepala Seksi Pengurangan Sampah",
+        "Kepala Seksi Pemilahan dan Pengumpulan Sampah",
+        "Kepala Seksi Pengangkutan Sampah",
+    ],
+    ["d0601901-7f57-455f-b9ac-f4b794396030"] =
+    [
+        "Kepala Subbagian Tata Usaha",
+        "Ketua Satuan Pelaksana Prasarana dan Sarana",
+        "Ketua Satuan Pelaksana Pengendali Mutu",
+        "Ketua Satuan Pelaksana Pengujian Air dan Padatan",
+        "Ketua Satuan Pelaksana Pengujian Udara dan Kebisingan",
+        "Sub Kelompok Jabatan Fungsional",
+    ],
+    ["1c74a891-afe4-40c8-aff6-7ca8afa2af95"] =
+    [
+        "Kepala Subbagian Tata Usaha",
+        "Ketua Satuan Pelaksana Prasarana dan Sarana",
+        "Ketua Satuan Pelaksana Penanganan Sampah Badan Air Kota Administrasi",
+        "Sub Kelompok Jabatan Fungsional",
+    ],
+    ["2d9b3feb-8690-4198-9a9a-c65e78538a36"] =
+    [
+        "Kepala Subbagian Tata Usaha",
+        "Ketua Satuan Pelaksana Prasarana dan Sarana",
+        "Ketua Satuan Pelaksana Pengembangan Bisnis",
+        "Ketua Satuan Pelaksana Pemrosesan Akhir Sampah",
+        "Ketua Satuan Pelaksana Pengolahan Sampah",
+        "Sub Kelompok Jabatan Fungsional",
+    ],
+};
 }

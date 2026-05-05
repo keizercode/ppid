@@ -245,6 +245,10 @@ public class UploadTTDVm
 // KASUBKEL — VERIFIKASI
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+// KASUBKEL — VERIFIKASI
+// ═══════════════════════════════════════════════════════════════════════════
+
 public class VerifikasiVm
 {
     public Guid   PermohonanPPIDID { get; set; }
@@ -261,12 +265,18 @@ public class VerifikasiVm
     [Display(Name = "Catatan Verifikasi")]
     public string? CatatanVerifikasi { get; set; }
 
-    [Required(ErrorMessage = "Disposisi unit wajib diisi")]
-    [Display(Name = "Disposisi ke Unit")]
-    public string DisposisiUnit { get; set; } = "PSMDI";
+    /// <summary>
+    /// Nama-nama unit disposisi yang dipilih.
+    /// Contoh: ["PSMDI", "Ketua Subkelompok Pemantauan Lingkungan"]
+    /// Dikirim sebagai array dari checkbox/hidden input dengan name="DisposisiUnits".
+    /// </summary>
+    public List<string> DisposisiUnits { get; set; } = [];
 
-    [Display(Name = "Nama Bidang (jika bukan PSMDI)")]
-    public string? NamaBidangDisposisi { get; set; }
+    /// <summary>Computed: gabungan semua unit disposisi, dipisah " | ".</summary>
+    public string DisposisiNamaGabung =>
+        DisposisiUnits.Count > 0
+            ? string.Join(" | ", DisposisiUnits.Where(s => !string.IsNullOrWhiteSpace(s)))
+            : string.Empty;
 
     public bool    Disetujui     { get; set; } = true;
     public string? AlasanDitolak { get; set; }
