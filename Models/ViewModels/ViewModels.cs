@@ -740,6 +740,32 @@ public class UploadTugasVm
     public string? Catatan { get; set; }
 }
 
+// ── PATCH: Upload Dokumentasi Hasil Obs/Waw oleh Pemohon ─────────────────
+/// <summary>
+/// Digunakan pemohon untuk mengunggah dokumentasi/laporan
+/// saat observasi atau wawancara sedang berlangsung (InProgress).
+/// Upload otomatis menandai sub-tugas sebagai Selesai.
+/// </summary>
+public class UploadHasilTaskVm
+{
+    public Guid      PermohonanPPIDID { get; set; }
+    public string    NoPermohonan     { get; set; } = string.Empty;
+    public string    NamaPemohon      { get; set; } = string.Empty;
+    public string    JudulPenelitian  { get; set; } = string.Empty;
+    public string    JenisTask        { get; set; } = string.Empty;
+    public DateOnly? TanggalJadwal    { get; set; }
+    public TimeOnly? WaktuJadwal      { get; set; }
+    public string?   LokasiDetail     { get; set; }
+    public string?   NamaPIC          { get; set; }
+
+    [Required(ErrorMessage = "File dokumentasi wajib dipilih")]
+    [Display(Name = "File Dokumentasi / Laporan")]
+    public IFormFile? FileDokumentasi { get; set; }
+
+    [Display(Name = "Catatan (opsional)")]
+    public string? Catatan { get; set; }
+}
+
 /// <summary>
 /// Feedback pemohon untuk satu jenis tugas (Observasi / PermintaanData / Wawancara).
 /// Diisi dari portal publik (Home/FeedbackTask) dan diterima Kasubkel Kepegawaian.
