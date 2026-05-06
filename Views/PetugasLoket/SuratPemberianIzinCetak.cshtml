@@ -208,23 +208,32 @@
 
     <!-- ── Toolbar (sembunyikan saat print) ── -->
     <div class="toolbar">
-        <div class="toolbar-left">
-            <a class="btn-back"
-               href="/petugas-loket/surat-pemberian-izin/@Model.PermohonanPPIDID">
-                ← Edit Kembali
-            </a>
-            <span class="toolbar-info">
-                📋 @Model.NoPermohonan
-                @if (!string.IsNullOrEmpty(Model.NomorSurat))
-                {
-                    <span> · No. Surat: @Model.NomorSurat</span>
-                }
-            </span>
-        </div>
+    <div class="toolbar-left">
+        <a class="btn-back"
+           href="/petugas-loket/surat-pemberian-izin/@Model.PermohonanPPIDID">
+            ← Edit Kembali
+        </a>
+        <span class="toolbar-info">
+            📋 @Model.NoPermohonan
+            @if (!string.IsNullOrEmpty(Model.NomorSurat))
+            {
+                <span> · No. Surat: @Model.NomorSurat</span>
+            }
+        </span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
         <button class="btn-print" onclick="window.print()">
             🖨 Cetak Surat
         </button>
+        <a class="btn-print"
+           href="/petugas-loket/surat-izin/@Model.PermohonanPPIDID?fromCetak=true"
+           style="background:#059669;text-decoration:none;">
+            ☁️ Upload Surat Izin →
+        </a>
     </div>
+</div>
+
+
 
     <!-- ══ LETTER BODY ══ -->
     <div class="letter">

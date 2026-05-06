@@ -178,7 +178,7 @@
                         else if (item.StatusPPIDID == StatusId.IdentifikasiAwal)
                         { primerHref = $"/petugas-loket/upload-ttd/{item.PermohonanPPIDID}"; primerLabel = "Upload TTD"; primerColor = "amber"; }
                         else if (item.StatusPPIDID == StatusId.MenungguSuratIzin)
-                        { primerHref = $"/petugas-loket/surat-izin/{item.PermohonanPPIDID}"; primerLabel = "Upload Surat Izin"; primerColor = "blue"; }
+                        { primerHref = $"/petugas-loket/surat-pemberian-izin/{item.PermohonanPPIDID}"; primerLabel = "Buat Surat Pemberian Izin"; primerColor = "emerald"; }
                         else if (item.StatusPPIDID == StatusId.WawancaraDijadwalkan
                               || item.StatusPPIDID == StatusId.ObservasiDijadwalkan
                               || item.StatusPPIDID == StatusId.DiProses)
@@ -267,7 +267,7 @@
                                             @if (item.StatusPPIDID == StatusId.IdentifikasiAwal)
                                             { <a href="/petugas-loket/upload-ttd/@item.PermohonanPPIDID" class="action-dd-item">✍️ Upload TTD</a> }
                                             @if (item.StatusPPIDID >= StatusId.MenungguSuratIzin)
-                                            { <a href="/petugas-loket/cetak-identifikasi/@item.PermohonanPPIDID" class="action-dd-item">📄 Cetak Surat</a> }
+                                            { <a href="/petugas-loket/surat-pemberian-izin/@item.PermohonanPPIDID" class="action-dd-item">📄 Surat Pemberian Izin</a> }
                                             @if (item.StatusPPIDID == StatusId.DataSiap ||
                                                 item.StatusPPIDID == StatusId.FeedbackPemohon ||
                                                 item.StatusPPIDID == StatusId.Selesai)

@@ -670,7 +670,7 @@ public async Task<IActionResult> NotifikasiJson()
     // Logic routing identik dengan versi Kasubkel — aktornya saja yang berubah.
 
     [HttpGet("surat-izin/{id:guid}")]
-    public async Task<IActionResult> SuratIzin(Guid id)
+    public async Task<IActionResult> SuratIzin(Guid id, bool fromCetak = false)
     {
         var p = await db.PermohonanPPID
             .Include(x => x.Pribadi)
@@ -683,6 +683,14 @@ public async Task<IActionResult> NotifikasiJson()
         {
             TempData["Error"] = "Surat izin hanya dapat diterbitkan pada status Menunggu Surat Izin.";
             return RedirectToAction(nameof(Index));
+        }
+
+        // Peringatan jika diakses langsung tanpa melalui cetak surat pemberian izin
+        if (!fromCetak)
+        {
+            TempData["Warning"] =
+                "Pastikan <strong>Surat Pemberian Izin</strong> sudah dicetak dan diserahkan ke pemohon " +
+                "sebelum mengunggah surat izin resmi.";
         }
 
         return View(new SuratIzinVm
