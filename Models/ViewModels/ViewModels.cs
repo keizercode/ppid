@@ -938,13 +938,19 @@ public class SuratPemberianIzinVm
     /// <summary>Kalimat aksi: "Melakukan Permintaan Data" / "Melakukan Permintaan Data dan Wawancara".</summary>
     public string KalimatAksi => $"Melakukan {JenisKegiatan}";
 
-    /// <summary>Kalimat bidang tujuan untuk isi surat.</summary>
+    /// <summary>Kalimat bidang tujuan untuk isi surat (hanya nama induk, tanpa sub-unit).</summary>
     public string KalimatBidang
     {
         get
         {
             if (BidangTujuan.Count == 0) return string.Empty;
-            var parts = BidangTujuan.Select(b => $"Bidang {b} Dinas Lingkungan Hidup Provinsi DKI Jakarta").ToList();
+            var parentNames = BidangTujuan
+                .Select(b => b.Contains(" — ") ? b.Split(new[] { " — " }, 2, StringSplitOptions.None)[0].Trim() : b)
+                .Distinct()
+                .ToList();
+            var parts = parentNames
+                .Select(b => $"Bidang {b} Dinas Lingkungan Hidup Provinsi DKI Jakarta")
+                .ToList();
             if (parts.Count == 1) return parts[0];
             return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
         }
