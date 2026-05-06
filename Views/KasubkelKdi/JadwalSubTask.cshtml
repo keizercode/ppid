@@ -359,15 +359,16 @@
                     </div>
 
                     <!-- Reminder kewajiban petugas -->
-                    <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex gap-2.5 items-start">
-                        <span class="text-yellow-500 flex-shrink-0 mt-0.5 text-base">📣</span>
-                        <p class="text-xs text-yellow-800 leading-relaxed">
-                            <strong>Kewajiban Petugas:</strong> Setelah jadwal tersimpan, petugas
-                            <strong class="text-yellow-900">wajib mengingatkan
-                            @(isWaw ? "narasumber" : "produsen data / koordinator lapangan")</strong>
-                            melalui telepon, WhatsApp, atau tatap muka langsung.
-                        </p>
-                    </div>
+                   <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex gap-2.5 items-start">
+                       <span class="text-yellow-500 flex-shrink-0 mt-0.5 text-base">📣</span>
+                       <div class="text-xs text-yellow-800 leading-relaxed space-y-1">
+                           <p class="font-bold text-yellow-900">Kewajiban Petugas Loket Kepegawaian:</p>
+                           <ol class="list-decimal list-inside space-y-0.5 pl-0.5">
+                               <li>Wajib mengingatkan pemohon dan bidang terkait <strong>H-1 sebelum pelaksanaan</strong> @(isWaw ? "wawancara" : "observasi") melalui telepon, WhatsApp, atau tatap muka langsung.</li>
+                               <li>Apabila terdapat perubahan jadwal (<em>reschedule</em>), pemberitahuan kepada pemohon dan bidang terkait wajib dilakukan <strong>H-1 sebelum jadwal baru</strong> berlaku.</li>
+                           </ol>
+                       </div>
+                   </div>
                 </div>
             </div>
 
