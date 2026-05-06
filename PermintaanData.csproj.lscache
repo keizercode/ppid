@@ -532,6 +532,8 @@ Views/
   PermintaanData.cshtml
   SubTasks.cshtml
   SuratIzin.cshtml
+  SuratPemberianIzin.cshtml
+  SuratPemberianIzinCetak.cshtml
   UploadTTD.cshtml
   Wawancara.cshtml
  Shared/
@@ -608,6 +610,8 @@ Views/
   PermintaanData.cshtml
   SubTasks.cshtml
   SuratIzin.cshtml
+  SuratPemberianIzin.cshtml
+  SuratPemberianIzinCetak.cshtml
   UploadTTD.cshtml
   Wawancara.cshtml
  Shared/

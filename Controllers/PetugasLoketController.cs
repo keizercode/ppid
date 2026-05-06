@@ -1940,4 +1940,120 @@ public async Task<IActionResult> TandaiSelesaiFeedback([FromForm] Guid permohona
 
         return ToCsvFile(sb.ToString(), "data_loket_kepegawaian");
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+// PATCH: tambahkan dua action berikut ke PetugasLoketController.cs
+// Letakkan setelah region "DETAIL + EDIT + BATALKAN" atau di akhir class,
+// sebelum closing brace `}` terakhir.
+// ═══════════════════════════════════════════════════════════════════════════
+
+    // ══════════════════════════════════════════════════════════════════════
+    // SURAT PEMBERIAN IZIN — INPUT & CETAK
+    // ══════════════════════════════════════════════════════════════════════
+
+    [HttpGet("surat-pemberian-izin/{id:guid}")]
+    public async Task<IActionResult> SuratPemberianIzin(Guid id)
+    {
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi).ThenInclude(pr => pr!.PribadiPPID)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+
+        if (p is null) return NotFound();
+
+        if (p.StatusPPIDID < StatusId.SuratIzinTerbit)
+        {
+            TempData["Error"] =
+                "Surat pemberian izin baru dapat dibuat setelah " +
+                "<strong>Surat Izin terbit</strong>.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        // Bidang tujuan dari disposisi Kasubkel (pipe-separated)
+        var bidangList = string.IsNullOrWhiteSpace(p.NamaBidang)
+            ? new List<string>()
+            : p.NamaBidang
+                .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => x.Length > 0)
+                .ToList();
+
+        var jenisKegiatan = (p.IsPermintaanData && p.IsWawancara && p.IsObservasi)
+            ? "Permintaan Data, Wawancara, dan Observasi"
+            : (p.IsPermintaanData && p.IsWawancara)
+            ? "Permintaan Data dan Wawancara"
+            : (p.IsPermintaanData && p.IsObservasi)
+            ? "Permintaan Data dan Observasi"
+            : p.IsObservasi
+            ? "Observasi"
+            : "Permintaan Data";
+
+        var vm = new SuratPemberianIzinVm
+        {
+            PermohonanPPIDID       = id,
+            NoPermohonan           = p.NoPermohonan ?? string.Empty,
+            TanggalSurat           = DateOnly.FromDateTime(DateTime.Today),
+            IsKelompok             = false,
+            JenisKegiatan          = jenisKegiatan,
+            JenisKarya             = "Skripsi",
+            NamaPemohon            = p.Pribadi?.Nama ?? string.Empty,
+            NIMPemohon             = p.Pribadi?.PribadiPPID?.NIM,
+            ProdiPemohon           = p.Pribadi?.PribadiPPID?.Jurusan,
+            NamaPerwakilan         = p.Pribadi?.Nama ?? string.Empty,
+            JudulPenelitian        = p.JudulPenelitian ?? string.Empty,
+            NomorSuratPermohonan   = p.NoSuratPermohonan,
+            TanggalSuratPermohonan = p.TanggalPermohonan,
+            PerihalSuratPermohonan = jenisKegiatan.Contains("Wawancara")
+                ? "Permohonan Izin Riset"
+                : "Permohonan Izin Survey Data Awal",
+            NamaInstansiPengirim   = p.Pribadi?.PribadiPPID?.Lembaga ?? string.Empty,
+            JabatanPengirim        = "Dekan",
+            TembusanInstansi       = p.Pribadi?.PribadiPPID?.Lembaga ?? string.Empty,
+            BidangTujuan           = bidangList,
+            // Satu anggota kosong sebagai placeholder untuk mode kelompok
+            Anggota                = [new AnggotaKelompokVm
+            {
+                Nama  = p.Pribadi?.Nama ?? string.Empty,
+                NIM   = p.Pribadi?.PribadiPPID?.NIM ?? string.Empty,
+                Prodi = p.Pribadi?.PribadiPPID?.Jurusan ?? string.Empty,
+            }],
+        };
+
+        return View(vm);
+    }
+
+    /// <summary>
+    /// POST: render preview cetak surat pemberian izin.
+    /// Tidak menyimpan ke DB — hanya render HTML cetak.
+    /// </summary>
+    [HttpPost("surat-pemberian-izin/cetak"), ValidateAntiForgeryToken]
+    public IActionResult SuratPemberianIzinCetak(SuratPemberianIzinVm vm)
+    {
+        // Bersihkan anggota kosong sebelum validasi
+        vm.Anggota = vm.Anggota
+            .Where(a => !string.IsNullOrWhiteSpace(a.Nama))
+            .ToList();
+
+        // Bersihkan bidang kosong
+        vm.BidangTujuan = vm.BidangTujuan
+            .Where(b => !string.IsNullOrWhiteSpace(b))
+            .ToList();
+
+        // Validasi mode kelompok: minimal 1 anggota dengan nama terisi
+        if (vm.IsKelompok && vm.Anggota.Count == 0)
+            ModelState.AddModelError(string.Empty, "Mode kelompok memerlukan minimal satu anggota.");
+
+        // Validasi mode kelompok: nama perwakilan wajib
+        if (vm.IsKelompok && string.IsNullOrWhiteSpace(vm.NamaPerwakilan))
+            ModelState.AddModelError(nameof(vm.NamaPerwakilan), "Nama perwakilan kelompok wajib diisi.");
+
+        // Validasi mode perorangan: nama pemohon wajib
+        if (!vm.IsKelompok && string.IsNullOrWhiteSpace(vm.NamaPemohon))
+            ModelState.AddModelError(nameof(vm.NamaPemohon), "Nama pemohon wajib diisi.");
+
+        if (!ModelState.IsValid)
+            return View("SuratPemberianIzin", vm);
+
+        return View("SuratPemberianIzinCetak", vm);
+    }
+
 }

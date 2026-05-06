@@ -822,3 +822,132 @@ public class BatalkanPermohonanVm
     [Display(Name = "Konfirmasi Pembatalan")]
     public bool KonfirmasiPembatalan { get; set; }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PATCH: tambahkan class berikut di akhir file Models/ViewModels/ViewModels.cs
+// (sebelum closing brace namespace, atau di baris paling bawah file)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// <summary>Satu anggota dalam permohonan kelompok.</summary>
+public class AnggotaKelompokVm
+{
+    // Tidak pakai [Required] — validasi kelengkapan anggota dilakukan di controller
+    // agar tidak memblokir ModelState saat mode Perorangan (row tetap ada di DOM hidden).
+    public string Nama  { get; set; } = string.Empty;
+    public string? NIM  { get; set; }
+    public string? Prodi { get; set; }
+}
+
+/// <summary>
+/// Data input untuk menerbitkan Surat Pemberian Izin Penelitian.
+/// Mendukung dua mode: Perorangan (IsKelompok=false) dan Kelompok (IsKelompok=true).
+/// </summary>
+public class SuratPemberianIzinVm
+{
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+
+    // ── Identitas surat ───────────────────────────────────────────────────
+    [Display(Name = "Nomor Surat")]
+    public string? NomorSurat { get; set; }
+
+    [Required(ErrorMessage = "Tanggal surat wajib diisi")]
+    [Display(Name = "Tanggal Surat")]
+    public DateOnly TanggalSurat { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+
+    // ── Mode ──────────────────────────────────────────────────────────────
+    /// <summary>false = perorangan; true = kelompok.</summary>
+    public bool IsKelompok { get; set; }
+
+    // ── Jenis kegiatan & karya ────────────────────────────────────────────
+    /// <summary>"Permintaan Data" | "Permintaan Data dan Wawancara" | "Observasi"</summary>
+    [Required]
+    [Display(Name = "Jenis Kegiatan")]
+    public string JenisKegiatan { get; set; } = "Permintaan Data";
+
+    /// <summary>"Skripsi" | "Tugas Akhir" | "Tesis" | "Disertasi" | "Lainnya"</summary>
+    [Required]
+    [Display(Name = "Jenis Karya")]
+    public string JenisKarya { get; set; } = "Skripsi";
+
+    // ── Data pemohon (Perorangan) ─────────────────────────────────────────
+    [Display(Name = "Nama Pemohon")]
+    public string NamaPemohon  { get; set; } = string.Empty;
+
+    [Display(Name = "NIM")]
+    public string? NIMPemohon  { get; set; }
+
+    [Display(Name = "Program Studi")]
+    public string? ProdiPemohon { get; set; }
+
+    // ── Data pemohon (Kelompok) ───────────────────────────────────────────
+    [Display(Name = "Nama Perwakilan Kelompok")]
+    public string NamaPerwakilan { get; set; } = string.Empty;
+
+    /// <summary>Dikirim sebagai Anggota[0].Nama, Anggota[0].NIM, dst.</summary>
+    public List<AnggotaKelompokVm> Anggota { get; set; } = [];
+
+    // ── Judul ─────────────────────────────────────────────────────────────
+    [Required(ErrorMessage = "Judul penelitian wajib diisi")]
+    [Display(Name = "Judul Penelitian")]
+    public string JudulPenelitian { get; set; } = string.Empty;
+
+    // ── Dasar surat (dari surat permohonan pemohon) ───────────────────────
+    [Required(ErrorMessage = "Jabatan pengirim surat wajib diisi")]
+    [Display(Name = "Jabatan Pengirim Surat")]
+    public string JabatanPengirim { get; set; } = "Dekan";
+
+    [Required(ErrorMessage = "Nama instansi pengirim wajib diisi")]
+    [Display(Name = "Nama Instansi / Universitas")]
+    public string NamaInstansiPengirim { get; set; } = string.Empty;
+
+    /// <summary>Nomor surat dari universitas (sudah ada di permohonan).</summary>
+    [Display(Name = "Nomor Surat Permohonan")]
+    public string? NomorSuratPermohonan { get; set; }
+
+    [Display(Name = "Tanggal Surat Permohonan")]
+    public DateOnly? TanggalSuratPermohonan { get; set; }
+
+    [Required(ErrorMessage = "Perihal surat wajib diisi")]
+    [Display(Name = "Perihal Surat Permohonan")]
+    public string PerihalSuratPermohonan { get; set; } = string.Empty;
+
+    // ── Bidang tujuan (dari disposisi Kasubkel) ───────────────────────────
+    /// <summary>
+    /// Dikirim sebagai BidangTujuan[] dari hidden inputs.
+    /// Pre-filled dari NamaBidang permohonan (pipe-separated).
+    /// </summary>
+    public List<string> BidangTujuan { get; set; } = [];
+
+    // ── Tembusan instansi ─────────────────────────────────────────────────
+    /// <summary>Label tembusan untuk pengirim, mis. "Dekan Universitas Muhammadiyah Jakarta".</summary>
+    [Display(Name = "Tembusan — Instansi Pengirim")]
+    public string TembusanInstansi { get; set; } = string.Empty;
+
+    // ── Computed helpers ──────────────────────────────────────────────────
+    /// <summary>Judul surat, mis. "PERMINTAAN DATA DAN WAWANCARA UNTUK PEMBUATAN TUGAS AKHIR".</summary>
+    public string JudulSurat =>
+        $"{JenisKegiatan.ToUpper()} UNTUK PEMBUATAN {JenisKarya.ToUpper()}";
+
+    /// <summary>"ATAS NAMA X DKK" atau "ATAS NAMA X".</summary>
+    public string AtasNama =>
+        IsKelompok
+            ? $"ATAS NAMA {NamaPerwakilan.ToUpper()} DKK"
+            : $"ATAS NAMA {NamaPemohon.ToUpper()}";
+
+    /// <summary>Kalimat aksi: "Melakukan Permintaan Data" / "Melakukan Permintaan Data dan Wawancara".</summary>
+    public string KalimatAksi => $"Melakukan {JenisKegiatan}";
+
+    /// <summary>Kalimat bidang tujuan untuk isi surat.</summary>
+    public string KalimatBidang
+    {
+        get
+        {
+            if (BidangTujuan.Count == 0) return string.Empty;
+            var parts = BidangTujuan.Select(b => $"Bidang {b} Dinas Lingkungan Hidup Provinsi DKI Jakarta").ToList();
+            if (parts.Count == 1) return parts[0];
+            return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
+        }
+    }
+}
+

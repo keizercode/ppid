@@ -1,0 +1,459 @@
+@* ── Views/PetugasLoket/SuratPemberianIzin.cshtml ────────────────────────── *@
+@model SuratPemberianIzinVm
+@{
+    ViewData["Title"] = "Buat Surat Pemberian Izin";
+    ViewData["Role"]  = "Petugas Loket";
+    Layout = "_LayoutAdmin";
+}
+
+<partial name="Partials/_FormStyles" />
+
+<div class="max-w-3xl mx-auto">
+    <a href="/petugas-loket/detail/@Model.PermohonanPPIDID"
+       class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium mb-5">
+        ← Kembali ke Detail
+    </a>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+        <!-- Header -->
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📄</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Buat Surat Pemberian Izin Penelitian</h3>
+                <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan</p>
+            </div>
+        </div>
+
+        <form id="form-surat"
+              asp-action="SuratPemberianIzinCetak"
+              asp-controller="PetugasLoket"
+              method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="PermohonanPPIDID" />
+            <input type="hidden" asp-for="NoPermohonan" />
+
+            <div class="p-6 space-y-8">
+
+                <!-- ══ BAGIAN 1: IDENTITAS SURAT ══ -->
+                <div>
+                    <div class="sec-header">
+                        <div class="sec-num">1</div>
+                        <span class="sec-title">Identitas Surat</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="lbl">Nomor Surat <span class="req">*</span></label>
+                            <input asp-for="NomorSurat" class="fld" placeholder="Cth: 123/DLH.KEP/V/2026" />
+                            <span asp-validation-for="NomorSurat" class="err"></span>
+                        </div>
+                        <div>
+                            <label class="lbl">Tanggal Surat <span class="req">*</span></label>
+                            <input asp-for="TanggalSurat" type="date" class="fld" />
+                            <span asp-validation-for="TanggalSurat" class="err"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ BAGIAN 2: JENIS & MODE ══ -->
+                <div>
+                    <div class="sec-header">
+                        <div class="sec-num">2</div>
+                        <span class="sec-title">Jenis Kegiatan &amp; Mode Pemohon</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="lbl">Jenis Kegiatan <span class="req">*</span></label>
+                            <select asp-for="JenisKegiatan" class="fld">
+                                <option value="Permintaan Data"                           selected="@(Model.JenisKegiatan == "Permintaan Data" ? "selected" : null)">Permintaan Data</option>
+                                <option value="Permintaan Data dan Wawancara"             selected="@(Model.JenisKegiatan == "Permintaan Data dan Wawancara" ? "selected" : null)">Permintaan Data dan Wawancara</option>
+                                <option value="Permintaan Data dan Observasi"             selected="@(Model.JenisKegiatan == "Permintaan Data dan Observasi" ? "selected" : null)">Permintaan Data dan Observasi</option>
+                                <option value="Observasi"                                  selected="@(Model.JenisKegiatan == "Observasi" ? "selected" : null)">Observasi</option>
+                                <option value="Permintaan Data, Wawancara, dan Observasi" selected="@(Model.JenisKegiatan == "Permintaan Data, Wawancara, dan Observasi" ? "selected" : null)">Permintaan Data, Wawancara, dan Observasi</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="lbl">Jenis Karya <span class="req">*</span></label>
+                            <select asp-for="JenisKarya" class="fld">
+                                <option value="Skripsi">Skripsi</option>
+                                <option value="Tugas Akhir">Tugas Akhir</option>
+                                <option value="Tesis">Tesis</option>
+                                <option value="Disertasi">Disertasi</option>
+                                <option value="Laporan Penelitian">Laporan Penelitian</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Perorangan / Kelompok -->
+                    <div>
+                        <label class="lbl mb-2">Mode Pemohon <span class="req">*</span></label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                                <input type="radio" name="IsKelompok" value="false"
+                                       class="accent-blue-600"
+                                       @(Model.IsKelompok ? "" : "checked")
+                                       onchange="toggleMode(false)" />
+                                <div>
+                                    <span class="text-sm font-semibold text-gray-700">👤 Perorangan</span>
+                                    <p class="text-[11px] text-gray-400 mt-0.5">Satu pemohon</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-violet-300 has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 transition-all">
+                                <input type="radio" name="IsKelompok" value="true"
+                                       class="accent-violet-600"
+                                       @(Model.IsKelompok ? "checked" : "")
+                                       onchange="toggleMode(true)" />
+                                <div>
+                                    <span class="text-sm font-semibold text-gray-700">👥 Kelompok</span>
+                                    <p class="text-[11px] text-gray-400 mt-0.5">Beberapa pemohon (tabel)</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ BAGIAN 3A: DATA PEMOHON (PERORANGAN) ══ -->
+                <div id="sec-perorangan">
+                    <div class="sec-header">
+                        <div class="sec-num">3</div>
+                        <span class="sec-title">Data Pemohon — Perorangan</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="lbl">Nama Lengkap <span class="req">*</span></label>
+                            <input asp-for="NamaPemohon" class="fld" placeholder="Nama lengkap pemohon" />
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="lbl">NIM</label>
+                                <input asp-for="NIMPemohon" class="fld" placeholder="NIM pemohon" />
+                            </div>
+                            <div>
+                                <label class="lbl">Program Studi</label>
+                                <input asp-for="ProdiPemohon" class="fld" placeholder="Program Studi" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ BAGIAN 3B: DATA PEMOHON (KELOMPOK) ══ -->
+                <div id="sec-kelompok" class="hidden">
+                    <div class="sec-header">
+                        <div class="sec-num">3</div>
+                        <span class="sec-title">Data Pemohon — Kelompok</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="lbl">Nama Perwakilan (Atas Nama) <span class="req">*</span></label>
+                        <input asp-for="NamaPerwakilan" class="fld" placeholder="Nama perwakilan kelompok (untuk ATAS NAMA ... DKK)" />
+                        <p class="text-[11px] text-gray-400 mt-1">
+                            Nama ini akan muncul sebagai "ATAS NAMA [NAMA] DKK" di header surat.
+                        </p>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="lbl mb-0">Daftar Anggota Kelompok <span class="req">*</span></label>
+                            <button type="button" onclick="addAnggota()"
+                                    class="text-xs font-bold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all">
+                                + Tambah Anggota
+                            </button>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-xl overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="col-th w-8">No</th>
+                                        <th class="col-th">Nama</th>
+                                        <th class="col-th w-36">NIM</th>
+                                        <th class="col-th w-44">Program Studi</th>
+                                        <th class="col-th w-10"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="anggota-tbody">
+                                    @for (int i = 0; i < Model.Anggota.Count; i++)
+                                    {
+                                        <tr class="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50" id="row-@i">
+                                            <td class="px-3 py-2 text-center text-xs text-gray-400 font-bold">@(i+1)</td>
+                                            <td class="px-2 py-1.5">
+                                                <input name="Anggota[@i].Nama" value="@Model.Anggota[i].Nama"
+                                                       class="fld text-xs py-1.5" placeholder="Nama lengkap" />
+                                            </td>
+                                            <td class="px-2 py-1.5">
+                                                <input name="Anggota[@i].NIM" value="@Model.Anggota[i].NIM"
+                                                       class="fld text-xs py-1.5" placeholder="NIM" />
+                                            </td>
+                                            <td class="px-2 py-1.5">
+                                                <input name="Anggota[@i].Prodi" value="@Model.Anggota[i].Prodi"
+                                                       class="fld text-xs py-1.5" placeholder="Prodi" />
+                                            </td>
+                                            <td class="px-2 py-1.5 text-center">
+                                                <button type="button" onclick="removeAnggota(this)"
+                                                        class="text-red-400 hover:text-red-600 hover:bg-red-50 w-6 h-6 rounded transition-all text-base leading-none">×</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-1.5">
+                            Anggota pertama di tabel biasanya menjadi nama perwakilan.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ══ BAGIAN 4: JUDUL PENELITIAN ══ -->
+                <div>
+                    <div class="sec-header">
+                        <div class="sec-num">4</div>
+                        <span class="sec-title">Judul Penelitian</span>
+                    </div>
+                    <div>
+                        <label class="lbl">Judul <span class="req">*</span></label>
+                        <input asp-for="JudulPenelitian" class="fld" placeholder="Judul penelitian lengkap" />
+                        <span asp-validation-for="JudulPenelitian" class="err"></span>
+                    </div>
+                </div>
+
+                <!-- ══ BAGIAN 5: DASAR SURAT PERMOHONAN ══ -->
+                <div>
+                    <div class="sec-header">
+                        <div class="sec-num">5</div>
+                        <span class="sec-title">Dasar — Surat Permohonan dari Instansi</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="lbl">Jabatan Pengirim <span class="req">*</span></label>
+                                <input asp-for="JabatanPengirim" class="fld"
+                                       placeholder="Cth: Dekan / Wakil Rektor II Bidang Non Akademik" />
+                                <span asp-validation-for="JabatanPengirim" class="err"></span>
+                            </div>
+                            <div>
+                                <label class="lbl">Nama Instansi / Universitas <span class="req">*</span></label>
+                                <input asp-for="NamaInstansiPengirim" class="fld"
+                                       placeholder="Cth: Universitas Muhammadiyah Jakarta" />
+                                <span asp-validation-for="NamaInstansiPengirim" class="err"></span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="lbl">Nomor Surat Permohonan</label>
+                                <input asp-for="NomorSuratPermohonan" class="fld" placeholder="Nomor surat dari instansi" />
+                            </div>
+                            <div>
+                                <label class="lbl">Tanggal Surat Permohonan</label>
+                                <input asp-for="TanggalSuratPermohonan" type="date" class="fld" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="lbl">Perihal <span class="req">*</span></label>
+                            <input asp-for="PerihalSuratPermohonan" class="fld"
+                                   placeholder="Cth: Permohonan Izin Riset / Permohonan Izin Survey Data Awal" />
+                            <span asp-validation-for="PerihalSuratPermohonan" class="err"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ BAGIAN 6: BIDANG TUJUAN (dari disposisi) ══ -->
+                <div>
+                    <div class="sec-header">
+                        <div class="sec-num">6</div>
+                        <span class="sec-title">Bidang Tujuan</span>
+                        <span class="ml-auto text-[11px] text-gray-400">Dari disposisi Kasubkel Kepegawaian</span>
+                    </div>
+
+                    <!-- Hidden inputs untuk List<string> BidangTujuan -->
+                    <div id="bidang-hidden-container">
+                        @for (int i = 0; i < Model.BidangTujuan.Count; i++)
+                        {
+                            <input type="hidden" name="BidangTujuan" value="@Model.BidangTujuan[i]" />
+                        }
+                    </div>
+
+                    <div id="bidang-chips" class="flex flex-wrap gap-2 mb-2 min-h-[36px]">
+                        @foreach (var b in Model.BidangTujuan)
+                        {
+                            <div class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full"
+                                 data-value="@b">
+                                🏛 @b
+                                <button type="button" onclick="removeBidang(this)"
+                                        class="text-blue-400 hover:text-blue-700 ml-0.5 font-bold text-sm leading-none">×</button>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input id="bidang-input" type="text" class="fld flex-1 text-sm py-2"
+                               placeholder="Tambah bidang tujuan secara manual..." />
+                        <button type="button" onclick="addBidangManual()"
+                                class="text-sm font-bold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap">
+                            + Tambah
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-1.5">
+                        Bidang ini akan muncul di kalimat "agar menghubungi..." dan di bagian Tembusan surat.
+                    </p>
+                </div>
+
+                <!-- ══ BAGIAN 7: TEMBUSAN INSTANSI ══ -->
+                <div>
+                    <div class="sec-header">
+                        <div class="sec-num">7</div>
+                        <span class="sec-title">Tembusan — Instansi Pengirim</span>
+                    </div>
+                    <div>
+                        <label class="lbl">Label Tembusan Instansi Pengirim <span class="req">*</span></label>
+                        <input asp-for="TembusanInstansi" class="fld"
+                               placeholder="Cth: Dekan Universitas Muhammadiyah Jakarta Fakultas Kesehatan Masyarakat" />
+                        <p class="text-[11px] text-gray-400 mt-1">
+                            Masukkan label lengkap untuk baris tembusan terakhir (jabatan + nama instansi).
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ══ PREVIEW CARD ══ -->
+                <div id="preview-card" class="bg-gray-50 border border-gray-200 rounded-xl p-4 hidden">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Preview Judul Surat</p>
+                    <p class="text-center font-bold text-gray-800 text-sm" id="prev-judul"></p>
+                    <p class="text-center text-gray-600 text-xs mt-1" id="prev-atas-nama"></p>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="flex gap-3 pt-2 border-t border-gray-100">
+                    <a href="/petugas-loket/detail/@Model.PermohonanPPIDID"
+                       class="flex-shrink-0 border border-gray-200 text-gray-600 font-semibold py-2.5 px-5 rounded-xl text-sm hover:bg-gray-50 transition-all">
+                        Batal
+                    </a>
+                    <button type="submit" form="form-surat"
+                            class="btn-submit flex-1 bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-2.5 px-8 rounded-xl text-sm shadow-sm transition-all active:scale-95">
+                        Lanjut → Preview &amp; Cetak
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// ── Toggle perorangan / kelompok ──────────────────────────────────────────
+function toggleMode(isKelompok) {
+    document.getElementById('sec-perorangan').classList.toggle('hidden', isKelompok);
+    document.getElementById('sec-kelompok').classList.toggle('hidden', !isKelompok);
+    updatePreview();
+}
+
+// ── Anggota kelompok (dynamic rows) ──────────────────────────────────────
+let _anggotaCount = @Model.Anggota.Count;
+
+function addAnggota() {
+    const tbody = document.getElementById('anggota-tbody');
+    const idx   = _anggotaCount++;
+    const rowNum= tbody.querySelectorAll('tr').length + 1;
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50';
+    tr.innerHTML = `
+        <td class="px-3 py-2 text-center text-xs text-gray-400 font-bold">${rowNum}</td>
+        <td class="px-2 py-1.5">
+            <input name="Anggota[${idx}].Nama" class="fld text-xs py-1.5" placeholder="Nama lengkap" />
+        </td>
+        <td class="px-2 py-1.5">
+            <input name="Anggota[${idx}].NIM" class="fld text-xs py-1.5" placeholder="NIM" />
+        </td>
+        <td class="px-2 py-1.5">
+            <input name="Anggota[${idx}].Prodi" class="fld text-xs py-1.5" placeholder="Prodi" />
+        </td>
+        <td class="px-2 py-1.5 text-center">
+            <button type="button" onclick="removeAnggota(this)"
+                    class="text-red-400 hover:text-red-600 hover:bg-red-50 w-6 h-6 rounded transition-all text-base leading-none">×</button>
+        </td>`;
+    tbody.appendChild(tr);
+    renumberRows();
+}
+
+function removeAnggota(btn) {
+    const tbody = document.getElementById('anggota-tbody');
+    if (tbody.querySelectorAll('tr').length <= 1) return; // minimal 1
+    btn.closest('tr').remove();
+    renumberRows();
+}
+
+function renumberRows() {
+    document.querySelectorAll('#anggota-tbody tr').forEach((tr, i) => {
+        tr.querySelector('td:first-child').textContent = i + 1;
+    });
+}
+
+// ── Bidang tujuan ─────────────────────────────────────────────────────────
+function addBidangManual() {
+    const input = document.getElementById('bidang-input');
+    const val = input.value.trim();
+    if (!val) return;
+    addBidangChip(val);
+    input.value = '';
+}
+
+document.getElementById('bidang-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addBidangManual(); }
+});
+
+function addBidangChip(val) {
+    const chips = document.getElementById('bidang-chips');
+    const hidden = document.getElementById('bidang-hidden-container');
+
+    const chip = document.createElement('div');
+    chip.className = 'flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full';
+    chip.dataset.value = val;
+    chip.innerHTML = `🏛 ${escH(val)} <button type="button" onclick="removeBidang(this)" class="text-blue-400 hover:text-blue-700 ml-0.5 font-bold text-sm leading-none">×</button>`;
+    chips.appendChild(chip);
+
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'BidangTujuan'; inp.value = val;
+    hidden.appendChild(inp);
+}
+
+function removeBidang(btn) {
+    const chip = btn.closest('[data-value]');
+    const val  = chip.dataset.value;
+    chip.remove();
+    // Remove matching hidden input
+    const hidden = document.getElementById('bidang-hidden-container');
+    [...hidden.querySelectorAll('input')].find(i => i.value === val)?.remove();
+}
+
+// ── Live preview card ─────────────────────────────────────────────────────
+function updatePreview() {
+    const isKelompok = document.querySelector('[name="IsKelompok"]:checked')?.value === 'true';
+    const jenis = document.querySelector('[name="JenisKegiatan"]')?.value || '';
+    const karya = document.querySelector('[name="JenisKarya"]')?.value || '';
+    const nama  = isKelompok
+        ? (document.querySelector('[name="NamaPerwakilan"]')?.value || '').toUpperCase()
+        : (document.querySelector('[name="NamaPemohon"]')?.value || '').toUpperCase();
+    const atasNama = isKelompok ? `ATAS NAMA ${nama} DKK` : `ATAS NAMA ${nama}`;
+
+    document.getElementById('prev-judul').textContent =
+        `${jenis.toUpperCase()} UNTUK PEMBUATAN ${karya.toUpperCase()}`;
+    document.getElementById('prev-atas-nama').textContent = atasNama;
+    document.getElementById('preview-card').classList.toggle('hidden', !nama);
+}
+
+// Attach live listeners
+['JenisKegiatan','JenisKarya','NamaPemohon','NamaPerwakilan'].forEach(name => {
+    document.querySelector(`[name="${name}"]`)?.addEventListener('input', updatePreview);
+});
+document.querySelectorAll('[name="IsKelompok"]').forEach(r =>
+    r.addEventListener('change', updatePreview));
+
+function escH(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    const isKelompok = @(Model.IsKelompok ? "true" : "false");
+    toggleMode(isKelompok);
+    updatePreview();
+});
+</script>

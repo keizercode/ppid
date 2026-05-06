@@ -415,6 +415,15 @@ static (string Icon, string Label, string Group) DocMeta(int? id) => id switch
                         </a>
                     }
 
+                    @* ── Surat Pemberian Izin — tersedia setelah surat izin terbit ── *@
+                    @if (Model.StatusPPIDID >= StatusId.SuratIzinTerbit && Model.StatusPPIDID != StatusId.Dibatalkan)
+                    {
+                        <a href="/@prefix/surat-pemberian-izin/@Model.PermohonanPPIDID"
+                           class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-colors">
+                            📋 Buat Surat Pemberian Izin
+                        </a>
+                    }
+
                     <a href="/@prefix/edit/@Model.PermohonanPPIDID"
                        class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
                         ✏️ Edit
