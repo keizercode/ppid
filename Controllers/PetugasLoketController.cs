@@ -689,8 +689,8 @@ public async Task<IActionResult> NotifikasiJson()
         if (!fromCetak)
         {
             TempData["Warning"] =
-                "Pastikan <strong>Surat Pemberian Izin</strong> sudah dicetak dan diserahkan ke pemohon " +
-                "sebelum mengunggah surat izin resmi.";
+                "Pastikan <strong>Surat Pemberian Izin</strong> sudah dicetak" +
+                "sebelum mengupload surat izin.";
         }
 
         return View(new SuratIzinVm
@@ -1968,14 +1968,14 @@ public async Task<IActionResult> TandaiSelesaiFeedback([FromForm] Guid permohona
 
         if (p is null) return NotFound();
 
-        if (p.StatusPPIDID < StatusId.SuratIzinTerbit)
+        if (p.StatusPPIDID < StatusId.MenungguSuratIzin || p.StatusPPIDID == StatusId.Dibatalkan)
         {
             TempData["Error"] =
-                "Surat pemberian izin baru dapat dibuat setelah " +
-                "<strong>Surat Izin terbit</strong>.";
+                "Surat pemberian izin baru dapat dibuat saat permohonan berstatus " +
+                "<strong>Menunggu Surat Izin</strong>. " +
+                "Pastikan identifikasi awal dan verifikasi Kasubkel sudah selesai.";
             return RedirectToAction(nameof(Detail), new { id });
         }
-
         // Bidang tujuan dari disposisi Kasubkel (pipe-separated)
         var bidangList = string.IsNullOrWhiteSpace(p.NamaBidang)
             ? new List<string>()
