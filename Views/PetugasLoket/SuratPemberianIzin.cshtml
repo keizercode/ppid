@@ -256,45 +256,40 @@
                     </div>
                 </div>
 
-                <!-- ══ BAGIAN 6: BIDANG TUJUAN (dari disposisi) ══ -->
+                <!-- ══ BAGIAN 6: BIDANG TUJUAN (dari disposisi) — READ ONLY ══ -->
                 <div>
                     <div class="sec-header">
                         <div class="sec-num">6</div>
                         <span class="sec-title">Bidang Tujuan</span>
-                        <span class="ml-auto text-[11px] text-gray-400">Dari disposisi Kasubkel Kepegawaian</span>
+                        <span class="ml-auto text-[11px] text-gray-400">Ditetapkan oleh Kasubkel Kepegawaian</span>
                     </div>
 
-                    <!-- Hidden inputs untuk List<string> BidangTujuan -->
-                    <div id="bidang-hidden-container">
-                        @for (int i = 0; i < Model.BidangTujuan.Count; i++)
-                        {
-                            <input type="hidden" name="BidangTujuan" value="@Model.BidangTujuan[i]" />
-                        }
-                    </div>
+                    @* Hidden inputs agar nilai tetap terkirim ke POST *@
+                    @for (int i = 0; i < Model.BidangTujuan.Count; i++)
+                    {
+                        <input type="hidden" name="BidangTujuan" value="@Model.BidangTujuan[i]" />
+                    }
 
-                    <div id="bidang-chips" class="flex flex-wrap gap-2 mb-2 min-h-[36px]">
-                        @foreach (var b in Model.BidangTujuan)
-                        {
-                            <div class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full"
-                                 data-value="@b">
-                                🏛 @b
-                                <button type="button" onclick="removeBidang(this)"
-                                        class="text-blue-400 hover:text-blue-700 ml-0.5 font-bold text-sm leading-none">×</button>
-                            </div>
-                        }
-                    </div>
-
-                    <div class="flex gap-2">
-                        <input id="bidang-input" type="text" class="fld flex-1 text-sm py-2"
-                               placeholder="Tambah bidang tujuan secara manual..." />
-                        <button type="button" onclick="addBidangManual()"
-                                class="text-sm font-bold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap">
-                            + Tambah
-                        </button>
-                    </div>
-                    <p class="text-[11px] text-gray-400 mt-1.5">
-                        Bidang ini akan muncul di kalimat "agar menghubungi..." dan di bagian Tembusan surat.
-                    </p>
+                    @if (Model.BidangTujuan.Count > 0)
+                    {
+                        <div class="flex flex-wrap gap-2">
+                            @foreach (var b in Model.BidangTujuan)
+                            {
+                                <div class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full select-none">
+                                    🏛 @b
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                            <span class="text-base">⚠️</span>
+                            <p class="text-[12px] text-amber-800 font-medium">
+                                Belum ada bidang tujuan. Kasubkel Kepegawaian perlu mengisi disposisi terlebih dahulu.
+                            </p>
+                        </div>
+                    }
                 </div>
 
                 <!-- ══ BAGIAN 7: TEMBUSAN INSTANSI ══ -->
@@ -308,7 +303,7 @@
                         <input asp-for="TembusanInstansi" class="fld"
                                placeholder="Cth: Dekan Universitas Muhammadiyah Jakarta Fakultas Kesehatan Masyarakat" />
                         <p class="text-[11px] text-gray-400 mt-1">
-                            Masukkan label lengkap untuk baris tembusan terakhir (jabatan + nama instansi).
+                            Masukkan label lengkap untuk baris tembusan terakhir (jabatan + nama kampus).
                         </p>
                     </div>
                 </div>
@@ -386,42 +381,6 @@ function renumberRows() {
     });
 }
 
-// ── Bidang tujuan ─────────────────────────────────────────────────────────
-function addBidangManual() {
-    const input = document.getElementById('bidang-input');
-    const val = input.value.trim();
-    if (!val) return;
-    addBidangChip(val);
-    input.value = '';
-}
-
-document.getElementById('bidang-input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); addBidangManual(); }
-});
-
-function addBidangChip(val) {
-    const chips = document.getElementById('bidang-chips');
-    const hidden = document.getElementById('bidang-hidden-container');
-
-    const chip = document.createElement('div');
-    chip.className = 'flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full';
-    chip.dataset.value = val;
-    chip.innerHTML = `🏛 ${escH(val)} <button type="button" onclick="removeBidang(this)" class="text-blue-400 hover:text-blue-700 ml-0.5 font-bold text-sm leading-none">×</button>`;
-    chips.appendChild(chip);
-
-    const inp = document.createElement('input');
-    inp.type = 'hidden'; inp.name = 'BidangTujuan'; inp.value = val;
-    hidden.appendChild(inp);
-}
-
-function removeBidang(btn) {
-    const chip = btn.closest('[data-value]');
-    const val  = chip.dataset.value;
-    chip.remove();
-    // Remove matching hidden input
-    const hidden = document.getElementById('bidang-hidden-container');
-    [...hidden.querySelectorAll('input')].find(i => i.value === val)?.remove();
-}
 
 // ── Live preview card ─────────────────────────────────────────────────────
 function updatePreview() {
