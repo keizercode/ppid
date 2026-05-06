@@ -363,23 +363,54 @@ static (string Icon, string Label, string Group) DocMeta(int? id) => id switch
     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Aksi Tersedia</p>
 
     @{
-        // ── Tentukan aksi utama (satu langkah berikutnya) ─────────────────
-        string? primaryHref  = null;
-        string? primaryLabel = null;
-        string  primaryIcon  = "";
-        string  primaryCls   = "bg-[#002d7a] hover:bg-blue-900";
+    // ── Status "sudah melewati tahap surat izin" — whitelist eksplisit ────
+    // JANGAN gunakan >= SuratIzinTerbit (= 5) karena status yang ditambahkan
+    // belakangan (MenungguVerifikasi=14, WawancaraDijadwalkan=12, dst.)
+    // mempunyai ID lebih besar meski secara workflow belum sampai tahap ini.
+    bool isSuratIzinOrLater = Model.StatusPPIDID is
+        StatusId.SuratIzinTerbit      or StatusId.Didisposisi     or
+        StatusId.DiProses             or StatusId.ObservasiDijadwalkan or
+        StatusId.ObservasiSelesai     or StatusId.WawancaraDijadwalkan or
+        StatusId.WawancaraSelesai     or StatusId.DataSiap         or
+        StatusId.FeedbackPemohon      or StatusId.Selesai;
 
-        if (Model.StatusPPIDID == StatusId.TerdaftarSistem)
-        { primaryHref = $"/{prefix}/input-identifikasi/{Model.PermohonanPPIDID}"; primaryLabel = "Input Identifikasi Awal"; primaryIcon = "📝"; }
-        else if (Model.StatusPPIDID == StatusId.IdentifikasiAwal && !hasIdentifikasiTTD)
-        { primaryHref = $"/{prefix}/upload-ttd/{Model.PermohonanPPIDID}"; primaryLabel = "Upload Dokumen TTD"; primaryIcon = "✍️"; primaryCls = "bg-amber-500 hover:bg-amber-600"; }
-        else if (Model.StatusPPIDID == StatusId.IdentifikasiAwal && hasIdentifikasiTTD)
-        { primaryHref = $"/{prefix}/upload-ttd/{Model.PermohonanPPIDID}"; primaryLabel = "Ganti Dokumen TTD"; primaryIcon = "✍️"; primaryCls = "bg-amber-500 hover:bg-amber-600"; }
-        else if (Model.StatusPPIDID == StatusId.MenungguSuratIzin && prefix == "petugas-loket")
-        { primaryHref = $"/{prefix}/surat-pemberian-izin/{Model.PermohonanPPIDID}"; primaryLabel = "Buat Surat Pemberian Izin"; primaryIcon = "📋"; primaryCls = "bg-emerald-600 hover:bg-emerald-700"; }
-        else if (Model.StatusPPIDID >= StatusId.SuratIzinTerbit && Model.StatusPPIDID != StatusId.Dibatalkan)
-        { primaryHref = $"/{prefix}/subtasks/{Model.PermohonanPPIDID}"; primaryLabel = "Kelola Sub-tugas"; primaryIcon = "⚙️"; primaryCls = "bg-[#002d7a] hover:bg-blue-900"; }
+    // ── Tentukan aksi utama (satu langkah berikutnya) ─────────────────────
+    string? primaryHref  = null;
+    string? primaryLabel = null;
+    string  primaryIcon  = "";
+    string  primaryCls   = "bg-[#002d7a] hover:bg-blue-900";
+
+    if (Model.StatusPPIDID == StatusId.TerdaftarSistem)
+    {
+        primaryHref  = $"/{prefix}/input-identifikasi/{Model.PermohonanPPIDID}";
+        primaryLabel = "Input Identifikasi Awal";
+        primaryIcon  = "📝";
     }
+    else if (Model.StatusPPIDID == StatusId.IdentifikasiAwal && !hasIdentifikasiTTD)
+    {
+        // TTD belum diupload → tampilkan tombol upload
+        primaryHref  = $"/{prefix}/upload-ttd/{Model.PermohonanPPIDID}";
+        primaryLabel = "Upload Dokumen TTD";
+        primaryIcon  = "✍️";
+        primaryCls   = "bg-amber-500 hover:bg-amber-600";
+    }
+    // ── DIHAPUS: case IdentifikasiAwal + hasIdentifikasiTTD → "Ganti Dokumen TTD"
+    // Saat TTD sudah ada, Loket menunggu verifikasi Kasubkel — tidak ada aksi berikutnya.
+    // Tombol "Lihat Dokumen TTD" tersedia di blok Dokumen & Cetak di bawah.
+    else if (Model.StatusPPIDID == StatusId.MenungguSuratIzin && prefix == "petugas-loket")
+    {
+        primaryHref  = $"/{prefix}/surat-pemberian-izin/{Model.PermohonanPPIDID}";
+        primaryLabel = "Buat Surat Pemberian Izin";
+        primaryIcon  = "📋";
+        primaryCls   = "bg-emerald-600 hover:bg-emerald-700";
+    }
+    else if (isSuratIzinOrLater && Model.StatusPPIDID != StatusId.Dibatalkan)
+    {
+        primaryHref  = $"/{prefix}/subtasks/{Model.PermohonanPPIDID}";
+        primaryLabel = "Kelola Sub-tugas";
+        primaryIcon  = "⚙️";
+    }
+}
 
     @* ── BLOK 1: Aksi Utama ─────────────────────────────────────────────── *@
     @if (primaryHref != null)
@@ -425,56 +456,67 @@ static (string Icon, string Label, string Group) DocMeta(int? id) => id switch
         </div>
     }
 
-    @* ── BLOK 2: Dokumen & Cetak ─────────────────────────────────────────── *@
-    @{
-        bool showDokumenBlok = Model.StatusPPIDID >= StatusId.IdentifikasiAwal
-                            || hasIdentifikasiTTD
-                            || hasSuratIzin
-                            || Model.StatusPPIDID >= StatusId.SuratIzinTerbit;
-    }
-    @if (showDokumenBlok)
-    {
-        <div class="mb-4">
-            <p class="text-[9px] font-bold text-gray-300 uppercase tracking-widest mb-2">Dokumen &amp; Cetak</p>
-            <div class="grid grid-cols-2 gap-2">
+    @* ── BLOK 2: Dokumen & Cetak ─────────────────────────────────────────────── *@
+@{
+    bool showDokumenBlok = Model.StatusPPIDID >= StatusId.IdentifikasiAwal
+                        || hasSuratIzin
+                        || Model.StatusPPIDID >= StatusId.SuratIzinTerbit;
+}
+@if (showDokumenBlok)
+{
+    <div class="mb-4">
+        <p class="text-[9px] font-bold text-gray-300 uppercase tracking-widest mb-2">Dokumen &amp; Cetak</p>
+        <div class="grid grid-cols-2 gap-2">
 
-                @if (Model.StatusPPIDID >= StatusId.IdentifikasiAwal)
-                {
-                    <a href="/@prefix/cetak-identifikasi/@Model.PermohonanPPIDID"
-                       class="flex items-center gap-2 border border-gray-200 text-gray-600 bg-gray-50 hover:bg-gray-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
-                        🖨️ <span>Cetak Formulir Identifikasi</span>
-                    </a>
-                }
+            @* Cetak Formulir Identifikasi — tersedia sejak IdentifikasiAwal *@
+            @if (Model.StatusPPIDID >= StatusId.IdentifikasiAwal)
+            {
+                <a href="/@prefix/cetak-identifikasi/@Model.PermohonanPPIDID"
+                   class="flex items-center gap-2 border border-gray-200 text-gray-600 bg-gray-50 hover:bg-gray-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
+                    🖨️ <span>Cetak Formulir</span>
+                </a>
+            }
 
-                @if (hasIdentifikasiTTD)
-                {
-                    var ttdDoc = Model.Dokumen.First(d => d.JenisDokumenPPIDID == JenisDokumenId.IdentifikasiSigned);
-                    <a href="@ttdDoc.UploadDokumenPPID" target="_blank"
-                       class="flex items-center gap-2 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
-                        ✍️ <span>Lihat Dokumen TTD</span>
-                    </a>
-                }
+            @* Upload TTD — hanya jika masih di tahap IdentifikasiAwal *@
+            @if (Model.StatusPPIDID == StatusId.IdentifikasiAwal)
+            {
+                <a href="/@prefix/upload-ttd/@Model.PermohonanPPIDID"
+                   class="flex items-center gap-2 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
+                    ✍️ <span>@(hasIdentifikasiTTD ? "Ganti Dokumen TTD" : "Upload TTD")</span>
+                </a>
+            }
 
-                @if (Model.StatusPPIDID >= StatusId.SuratIzinTerbit && Model.StatusPPIDID != StatusId.Dibatalkan)
-                {
-                    <a href="/@prefix/surat-pemberian-izin/@Model.PermohonanPPIDID"
-                       class="flex items-center gap-2 border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
-                        📋 <span>Cetak Surat Pemberian Izin</span>
-                    </a>
-                }
+            @* Cetak Surat Pemberian Izin — tersedia setelah SuratIzinTerbit *@
+            @if (isSuratIzinOrLater && Model.StatusPPIDID != StatusId.Dibatalkan)
+            {
+                <a href="/@prefix/surat-pemberian-izin/@Model.PermohonanPPIDID"
+                   class="flex items-center gap-2 border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
+                    📋 <span>Cetak Surat Pemberian Izin</span>
+                </a>
+            }
 
-                @if (hasSuratIzin)
-                {
-                    var siDoc = Model.Dokumen.First(d => d.JenisDokumenPPIDID == JenisDokumenId.SuratIzin);
-                    <a href="@siDoc.UploadDokumenPPID" target="_blank"
-                       class="flex items-center gap-2 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
-                        📄 <span>Lihat Surat Izin</span>
-                    </a>
-                }
+            @* Upload Surat Izin — hanya jika status MenungguSuratIzin *@
+            @if (Model.StatusPPIDID == StatusId.MenungguSuratIzin && prefix == "petugas-loket")
+            {
+                <a href="/@prefix/surat-izin/@Model.PermohonanPPIDID"
+                   class="flex items-center gap-2 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
+                    ☁️ <span>Upload Surat Izin</span>
+                </a>
+            }
 
-            </div>
+            @* Lihat Surat Izin — jika dokumen sudah ada *@
+            @if (hasSuratIzin)
+            {
+                var siDoc = Model.Dokumen.First(d => d.JenisDokumenPPIDID == JenisDokumenId.SuratIzin);
+                <a href="@siDoc.UploadDokumenPPID" target="_blank"
+                   class="flex items-center gap-2 border border-gray-200 text-gray-500 bg-gray-50 hover:bg-gray-100 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors">
+                    📄 <span>Lihat Surat Izin</span>
+                </a>
+            }
+
         </div>
-    }
+    </div>
+}
 
     @* ── BLOK 3: Pengelolaan ─────────────────────────────────────────────── *@
     <div class="mb-2">

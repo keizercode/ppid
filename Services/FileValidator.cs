@@ -37,10 +37,10 @@ public static class FileValidator
     /// Validasi dokumen standar (KTP, surat, proposal).
     /// Hanya PDF dan gambar yang diizinkan, maksimum 10 MB.
     /// </summary>
-    public static ValidationResult ValidateDocument(IFormFile? file)
+    public static FileValidationResult ValidateDocument(IFormFile? file)
     {
         if (file == null || file.Length == 0)
-            return ValidationResult.Ok(); // File opsional
+            return FileValidationResult.Ok(); // File opsional
 
         var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
         return Validate(file, allowedExtensions, MaxDocumentSize);
@@ -50,10 +50,10 @@ public static class FileValidator
     /// Validasi file data hasil (upload KDI/Produsen Data).
     /// Menerima PDF, Excel, CSV, Word, ZIP, maksimum 50 MB.
     /// </summary>
-    public static ValidationResult ValidateDataFile(IFormFile? file)
+    public static FileValidationResult ValidateDataFile(IFormFile? file)
     {
         if (file == null || file.Length == 0)
-            return ValidationResult.Ok(); // File opsional
+            return FileValidationResult.Ok(); // File opsional
 
         var allowedExtensions = new[] { ".pdf", ".xlsx", ".xls", ".csv", ".doc", ".docx", ".zip" };
         return Validate(file, allowedExtensions, MaxDataSize);
@@ -61,31 +61,31 @@ public static class FileValidator
 
     // ── Private helpers ───────────────────────────────────────────────────
 
-    private static ValidationResult Validate(
+    private static FileValidationResult Validate(
         IFormFile file, string[] allowedExtensions, long maxSize)
     {
         // 1. Cek ukuran
         if (file.Length > maxSize)
-            return ValidationResult.Fail(
+            return FileValidationResult.Fail(
                 $"Ukuran file melebihi batas maksimum ({maxSize / 1024 / 1024} MB).");
 
         // 2. Cek extension
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!allowedExtensions.Contains(ext))
-            return ValidationResult.Fail(
+            return FileValidationResult.Fail(
                 $"Tipe file tidak diizinkan. Tipe yang diterima: {string.Join(", ", allowedExtensions)}.");
 
         // 3. Cek magic bytes (file signature) — mencegah extension spoofing
         if (!HasValidSignature(file, ext))
-            return ValidationResult.Fail(
+            return FileValidationResult.Fail(
                 "File tidak valid atau tipe file tidak sesuai dengan isinya.");
 
         // 4. Sanitasi nama file — cegah path traversal
         var fileName = Path.GetFileName(file.FileName);
         if (string.IsNullOrEmpty(fileName) || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            return ValidationResult.Fail("Nama file mengandung karakter yang tidak diizinkan.");
+            return FileValidationResult.Fail("Nama file mengandung karakter yang tidak diizinkan.");
 
-        return ValidationResult.Ok();
+        return FileValidationResult.Ok();
     }
 
     private static bool HasValidSignature(IFormFile file, string ext)
@@ -109,8 +109,8 @@ public static class FileValidator
 }
 
 /// <summary>Hasil validasi file.</summary>
-public record ValidationResult(bool IsValid, string? ErrorMessage)
+public record FileValidationResult(bool IsValid, string? ErrorMessage)
 {
-    public static ValidationResult Ok()             => new(true,  null);
-    public static ValidationResult Fail(string msg) => new(false, msg);
+    public static FileValidationResult Ok()             => new(true,  null);
+    public static FileValidationResult Fail(string msg) => new(false, msg);
 }
