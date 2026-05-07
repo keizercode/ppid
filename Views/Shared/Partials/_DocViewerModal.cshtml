@@ -47,13 +47,19 @@
 
         <!-- ── PDF Toolbar (hidden by default) ── -->
         <div id="dv-toolbar"
-            class="hidden items-center justify-between gap-3 px-4 py-2
+             class="hidden items-center justify-between gap-3 px-4 py-2
                    border-b border-gray-200 bg-[#f3f3f3] flex-shrink-0 flex-wrap">
-            <div class="flex items-center gap-1.5">
-                <button id="dv-prev" type="button" onclick="docViewerChangePage(-1)"
-                        class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-300
-                               bg-white hover:bg-gray-100 text-gray-700 font-bold
-                               disabled:opacity-40 disabled:cursor-not-allowed transition-colors">‹</button>
+            <div class="flex items-center gap-2">
+
+                <!-- Sidebar / TOC -->
+                <button id="dv-outline-toggle"
+                        type="button"
+                        onclick="docViewerToggleOutline()"
+                        title="Daftar isi"
+                        class="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300
+                               bg-white hover:bg-gray-100 text-gray-700 transition-colors">
+                    ☰
+                </button>
                 <div class="flex items-center gap-1 text-xs text-gray-600 select-none">
                     <input id="dv-page-input" type="number" min="1" value="1"
                           class="w-12 text-center text-xs font-semibold border border-gray-300
@@ -63,10 +69,7 @@
                     <span class="text-gray-400">/</span>
                     <span id="dv-total-pages" class="font-semibold text-gray-700 w-5 text-center">—</span>
                 </div>
-                <button id="dv-next" type="button" onclick="docViewerChangePage(1)"
-                        class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-300
-                               bg-white hover:bg-gray-100 text-gray-700 font-bold
-                               disabled:opacity-40 disabled:cursor-not-allowed transition-colors">›</button>
+
             </div>
             <div class="flex items-center gap-1.5">
                 <button type="button" onclick="docViewerZoom(-1)"
@@ -115,14 +118,42 @@
 
             <!-- PDF scroll container + canvas -->
             <div id="dv-pdf-wrap"
-                class="absolute inset-0 hidden overflow-auto bg-[#cfcfcf]"
-                style="display:none">
-               <div class="flex justify-center min-h-full py-6 px-6">
-                    <canvas id="dv-canvas"
-                            class="shadow-[0_1px_8px_rgba(0,0,0,.25)] bg-white"
-                            style="display:block;height:auto"></canvas>
-                </div>
-            </div>
+                 class="absolute inset-0 hidden overflow-hidden bg-[#cfcfcf]"
+                 style="display:none">
+
+                <!-- Sidebar -->
+                <aside id="dv-outline"
+                       class="hidden absolute left-0 top-0 bottom-0 z-20
+                              w-[280px] bg-white border-r border-gray-300
+                              overflow-auto shadow-xl">
+
+                    <div class="sticky top-0 bg-white border-b border-gray-200
+                                px-4 py-3 flex items-center justify-between">
+                        <p class="text-sm font-semibold text-gray-700">
+                            Daftar Isi
+                        </p>
+
+                        <button type="button"
+                                onclick="docViewerToggleOutline(false)"
+                                class="w-7 h-7 rounded-md hover:bg-gray-100 text-gray-500">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div id="dv-outline-list"
+                         class="py-2"></div>
+                </aside>
+
+                <!-- Scroll Area -->
+                <div id="dv-scroll-wrap"
+                     class="absolute inset-0 overflow-auto">
+
+                    <div id="dv-pages"
+                         class="flex flex-col items-center gap-6 py-6 px-6">
+                    </div>
+                 </div>
+             </div>
+
 
             <!-- Image viewer -->
             <div id="dv-img-wrap"
@@ -229,15 +260,17 @@
     const OFFICE_EXT  = /\.(docx?)(\?|$)/i;
 
     /* ── State ──────────────────────────────────────────────────────────── */
-    let _pdf         = null;
-    let _page        = 1;
-    let _total       = 0;
-    let _zoomIdx     = 2;      // index ke ZOOM_LEVELS → 1.0
-    let _fitScale    = 1.0;
-    let _useFit      = true;
-    let _busy        = false;
-    let _url         = '';
-    let _name        = '';
+    let _pdf          = null;
+    let _page         = 1;
+    let _total        = 0;
+    let _zoomIdx      = 2;
+    let _fitScale     = 1.0;
+    let _useFit       = true;
+    let _busy         = false;
+    let _url          = '';
+    let _name         = '';
+    let _renderedAll  = false;
+    let _outlineOpen  = false;
 
     /* ── Helpers DOM ────────────────────────────────────────────────────── */
     const el    = id  => document.getElementById(id);
@@ -263,8 +296,11 @@
         hide('dv-unsupported');
         show('dv-loader');
 
-        const canvas = el('dv-canvas');
-        if (canvas) { canvas.width = 1; canvas.height = 1; }
+        const pages = el('dv-pages');
+        if (pages) pages.innerHTML = '';
+
+        const outline = el('dv-outline-list');
+        if (outline) outline.innerHTML = '';
         const img = el('dv-img');
         if (img) { img.onload = null; img.onerror = null; img.src = ''; }
        const dw = el('dv-docx-wrap');
@@ -422,7 +458,8 @@ async function loadDocx(url) {
             if (tb) { tb.classList.remove('hidden'); tb.style.display = 'flex'; }
 
             _useFit = true;
-            await renderPage(_page);
+            await renderAllPages();
+            await loadPdfOutline();
             docViewerHideLoader();
 
         } catch (err) {
@@ -432,55 +469,72 @@ async function loadDocx(url) {
     }
 
     /* ── PDF.js: render halaman ─────────────────────────────────────────── */
-    async function renderPage(num) {
+    async function renderAllPages() {
         if (!_pdf || _busy) return;
         _busy = true;
+
         try {
-            const page    = await _pdf.getPage(num);
-            const canvas  = el('dv-canvas');
-            const ctx     = canvas.getContext('2d');
-            const wrap    = el('dv-pdf-wrap');
+            const wrap  = el('dv-scroll-wrap');
+            const pages = el('dv-pages');
 
-            // Hitung skala fit-to-width berdasarkan lebar kontainer
-            const baseVP      = page.getViewport({ scale: 1 });
-            const wrapW       = wrap.clientWidth - 80;
-            _fitScale         = wrapW / baseVP.width;
+           pages.innerHTML = '';
 
-            // Snap _zoomIdx ke level terdekat supaya label % masuk akal
+            const firstPage = await _pdf.getPage(1);
+            const firstVP   = firstPage.getViewport({ scale: 1 });
+
+            const wrapW     = wrap.clientWidth - 120;
+            _fitScale       = wrapW / firstVP.width;
+
             if (_useFit) {
                 let closest = 0;
                 ZOOM_LEVELS.forEach((z, i) => {
-                    if (Math.abs(z - _fitScale) < Math.abs(ZOOM_LEVELS[closest] - _fitScale))
+                    if (Math.abs(z - _fitScale) < Math.abs(ZOOM_LEVELS[closest] - _fitScale)) {
                         closest = i;
+                    }
                 });
                 _zoomIdx = closest;
             }
 
-            const scale  = _useFit ? _fitScale : ZOOM_LEVELS[_zoomIdx];
-            const vp     = page.getViewport({ scale });
+            const scale = _useFit ? _fitScale : ZOOM_LEVELS[_zoomIdx];
+            const dpr   = window.devicePixelRatio || 1;
 
-            const dpr = window.devicePixelRatio || 1;
+            for (let i = 1; i <= _total; i++) {
+                const page = await _pdf.getPage(i);
+                const vp   = page.getViewport({ scale });
 
-           canvas.width  = vp.width * dpr;
-            canvas.height = vp.height * dpr;
+                const pageWrap = document.createElement('div');
+                pageWrap.id = 'dv-page-' + i;
+                pageWrap.className = 'relative';
 
-           canvas.style.width  = vp.width + 'px';
-            canvas.style.height = vp.height + 'px';
+                const canvas = document.createElement('canvas');
+                canvas.className = 'bg-white shadow-[0_1px_8px_rgba(0,0,0,.22)]';
 
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                const ctx = canvas.getContext('2d');
 
-             await page.render({ canvasContext: ctx, viewport: vp }).promise;
+                canvas.width  = vp.width * dpr;
+                canvas.height = vp.height * dpr;
+                canvas.style.width  = vp.width + 'px';
+                canvas.style.height = vp.height + 'px';
 
-            // Update UI
-            const pct = Math.round((_useFit ? _fitScale : ZOOM_LEVELS[_zoomIdx]) * 100);
-            el('dv-zoom-label').textContent  = pct + '%';
-            el('dv-page-input').value        = String(num);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-            const prev = el('dv-prev'); if (prev) prev.disabled = (num <= 1);
-            const next = el('dv-next'); if (next) next.disabled = (num >= _total);
+                pageWrap.appendChild(canvas);
+                pages.appendChild(pageWrap);
+
+                await page.render({
+                    canvasContext: ctx,
+                    viewport: vp
+                }).promise;
+            }
+
+            _renderedAll = true;
+
+            const pct = Math.round(scale * 100);
+            el('dv-zoom-label').textContent = pct + '%';
+            el('dv-page-input').value = '1';
 
         } catch (err) {
-            console.error('[DocViewer] Render error halaman', num, err);
+            console.error('[DocViewer] Render PDF error', err);
         } finally {
             _busy = false;
         }
@@ -491,7 +545,7 @@ async function loadDocx(url) {
         const next = _page + delta;
         if (next < 1 || next > _total || _busy) return;
         _page = next;
-        renderPage(_page);
+        scrollToPage(_page);
     };
 
     window.docViewerGoToPage = function (val) {
@@ -501,19 +555,143 @@ async function loadDocx(url) {
             return;
         }
         _page = n;
-        renderPage(_page);
+        scrollToPage(_page);
     };
 
     /* ── Zoom ───────────────────────────────────────────────────────────── */
     window.docViewerZoom = function (dir) {
         _useFit  = false;
         _zoomIdx = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, _zoomIdx + dir));
-        renderPage(_page);
+        renderAllPages();
     };
 
     window.docViewerFitWidth = function () {
         _useFit = true;
-        renderPage(_page);
+        renderAllPages();
+    };
+
+    function scrollToPage(pageNumber) {
+        const target = el('dv-page-' + pageNumber);
+        const wrap   = el('dv-scroll-wrap');
+
+        if (!target || !wrap) return;
+
+        wrap.scrollTo({
+            top: target.offsetTop - 20,
+            behavior: 'smooth'
+        });
+
+        _page = pageNumber;
+
+        const pi = el('dv-page-input');
+        if (pi) pi.value = String(pageNumber);
+    }
+
+    /* ── Detect current visible page ───────────────────────────────────── */
+    function setupScrollSpy() {
+        const wrap = el('dv-scroll-wrap');
+        if (!wrap) return;
+
+        wrap.addEventListener('scroll', () => {
+            if (!_renderedAll) return;
+
+            for (let i = 1; i <= _total; i++) {
+                const page = el('dv-page-' + i);
+                if (!page) continue;
+
+                const top = page.offsetTop - wrap.scrollTop;
+
+                if (top >= -200 && top <= 300) {
+                    _page = i;
+
+                    const pi = el('dv-page-input');
+                    if (pi) pi.value = String(i);
+
+                    break;
+                }
+            }
+        });
+    }
+
+    /* ── PDF Outline / TOC ─────────────────────────────────────────────── */
+    async function loadPdfOutline() {
+        try {
+            const outline = await _pdf.getOutline();
+            const list    = el('dv-outline-list');
+
+            if (!list) return;
+
+            list.innerHTML = '';
+
+            if (!outline || !outline.length) {
+                list.innerHTML = `
+                    <div class="px-4 py-6 text-xs text-gray-400 text-center">
+                        Dokumen tidak memiliki daftar isi.
+                    </div>`;
+                return;
+            }
+
+            const buildItems = async(items, level = 0) => {
+                for (const item of items) {
+                    let pageNumber = null;
+
+                    try {
+                        if (item.dest) {
+                            const dest = await _pdf.getDestination(item.dest);
+                            if (dest) {
+                                const ref = dest[0];
+                                pageNumber = (await _pdf.getPageIndex(ref)) + 1;
+                            }
+                        }
+                    } catch {}
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className =
+                        'w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 transition-colors';
+
+                    btn.style.paddingLeft = (16 + (level * 18)) + 'px';
+
+                    btn.innerHTML = `
+                        <div class="truncate">${item.title || 'Untitled'}</div>
+                    `;
+
+                    if (pageNumber) {
+                        btn.onclick = () => scrollToPage(pageNumber);
+                    }
+
+                    list.appendChild(btn);
+
+                    if (item.items?.length) {
+                        await buildItems(item.items, level + 1);
+                    }
+                }
+            };
+
+            await buildItems(outline);
+
+        } catch (err) {
+            console.warn('[DocViewer] Outline gagal dimuat', err);
+        }
+    }
+
+    window.docViewerToggleOutline = function (force) {
+        const outline = el('dv-outline');
+        const scroll  = el('dv-scroll-wrap');
+
+        if (!outline || !scroll) return;
+
+        _outlineOpen = typeof force === 'boolean'
+            ? force
+            : !_outlineOpen;
+
+        if (_outlineOpen) {
+            outline.classList.remove('hidden');
+            scroll.style.left = '280px';
+        } else {
+            outline.classList.add('hidden');
+            scroll.style.left = '0';
+        }
     };
 
     /* ── Download (fetch → blob, fallback: new tab) ─────────────────────── */
@@ -583,13 +761,13 @@ async function loadDocx(url) {
 
     /* ── Keyboard shortcuts ─────────────────────────────────────────────── */
     document.addEventListener('keydown', e => {
+
         if (!el('doc-viewer-backdrop')?.classList.contains('dv-open')) return;
         switch (e.key) {
             case 'Escape':     docViewerClose();         break;
-            case 'ArrowRight': docViewerChangePage(1);   break;
-            case 'ArrowLeft':  docViewerChangePage(-1);  break;
         }
     });
 
+setupScrollSpy();
 })();
 </script>
