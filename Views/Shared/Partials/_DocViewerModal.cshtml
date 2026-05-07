@@ -7,6 +7,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"
+       crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <!-- ── Backdrop ──────────────────────────────────────────────────────────── -->
 <div id="doc-viewer-backdrop"
@@ -14,91 +16,111 @@
      onclick="docViewerClose()">
 
     <div id="doc-viewer-modal"
-         class="relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden
-                w-[92vw] max-w-4xl"
-         style="height:90vh"
+             class="relative bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden
+                    w-[98vw] max-w-[1800px]"
+             style="height:96vh"
          onclick="event.stopPropagation()">
 
         <!-- ── Header ── -->
-        <div class="flex items-center justify-between gap-3 px-4 py-3
-                    border-b border-gray-100 bg-white flex-shrink-0">
+        <div class="flex items-center justify-between gap-3 px-4 py-2
+                    border-b border-gray-200 bg-[#f7f7f7] flex-shrink-0">
             <div class="flex items-center gap-2.5 min-w-0">
-                <span id="dv-icon" class="text-xl flex-shrink-0">📄</span>
+                <span id="dv-icon" class="text-base flex-shrink-0">📄</span>
                 <p id="dv-filename"
-                   class="text-sm font-semibold text-gray-800 truncate"
-                   style="max-width:55vw">—</p>
+                   class="text-sm font-medium text-gray-800 truncate"
+                   style="max-width:70vw">—</p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
                 <button id="dv-download-btn" type="button"
                         onclick="docViewerDownload()"
-                        class="inline-flex items-center gap-1.5 text-xs font-bold
-                               bg-blue-50 hover:bg-blue-100 border border-blue-200
-                               text-blue-700 px-3 py-1.5 rounded-lg transition-colors">
+                        class="inline-flex items-center gap-1.5 text-xs font-medium
+                               bg-white hover:bg-gray-100 border border-gray-300
+                               text-gray-700 px-3 py-1.5 rounded-md transition-colors">
                     ⬇ Unduh
                 </button>
                 <button type="button" onclick="docViewerClose()"
-                        class="w-8 h-8 flex items-center justify-center rounded-lg
-                               bg-gray-100 hover:bg-red-50 hover:text-red-500
-                               text-gray-500 font-bold transition-colors text-sm">✕</button>
+                        class="w-8 h-8 flex items-center justify-center rounded-md
+                              hover:bg-gray-200 text-gray-500
+                              font-bold transition-colors text-base">✕</button>
             </div>
         </div>
 
         <!-- ── PDF Toolbar (hidden by default) ── -->
         <div id="dv-toolbar"
-             class="hidden items-center justify-between gap-3 px-4 py-2
-                    border-b border-gray-100 bg-gray-50 flex-shrink-0 flex-wrap">
+            class="hidden items-center justify-between gap-3 px-4 py-2
+                   border-b border-gray-200 bg-[#f3f3f3] flex-shrink-0 flex-wrap">
             <div class="flex items-center gap-1.5">
                 <button id="dv-prev" type="button" onclick="docViewerChangePage(-1)"
-                        class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                               bg-white hover:bg-gray-100 text-gray-600 font-bold
+                        class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-300
+                               bg-white hover:bg-gray-100 text-gray-700 font-bold
                                disabled:opacity-40 disabled:cursor-not-allowed transition-colors">‹</button>
                 <div class="flex items-center gap-1 text-xs text-gray-600 select-none">
                     <input id="dv-page-input" type="number" min="1" value="1"
-                           class="w-10 text-center text-xs font-bold border border-gray-200
-                                  rounded-lg py-1 focus:outline-none focus:border-blue-400"
+                          class="w-12 text-center text-xs font-semibold border border-gray-300
+                                 rounded-md py-1 focus:outline-none focus:border-blue-400"
                            onkeydown="if(event.key==='Enter'){docViewerGoToPage(this.value);this.blur();}"
                            onblur="docViewerGoToPage(this.value)" />
                     <span class="text-gray-400">/</span>
                     <span id="dv-total-pages" class="font-semibold text-gray-700 w-5 text-center">—</span>
                 </div>
                 <button id="dv-next" type="button" onclick="docViewerChangePage(1)"
-                        class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                               bg-white hover:bg-gray-100 text-gray-600 font-bold
+                        class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-300
+                               bg-white hover:bg-gray-100 text-gray-700 font-bold
                                disabled:opacity-40 disabled:cursor-not-allowed transition-colors">›</button>
             </div>
             <div class="flex items-center gap-1.5">
                 <button type="button" onclick="docViewerZoom(-1)"
-                        class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                               bg-white hover:bg-gray-100 text-gray-600 font-bold text-base transition-colors">−</button>
+                       class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-300
+                              bg-white hover:bg-gray-100 text-gray-700 font-bold text-base transition-colors">−</button>
                 <span id="dv-zoom-label"
                       class="text-xs font-bold text-gray-600 w-12 text-center select-none">—</span>
                 <button type="button" onclick="docViewerZoom(1)"
-                        class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                               bg-white hover:bg-gray-100 text-gray-600 font-bold text-base transition-colors">+</button>
+                        class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-300
+                               bg-white hover:bg-gray-100 text-gray-700 font-bold text-base transition-colors">+</button>
                 <button type="button" onclick="docViewerFitWidth()" title="Sesuaikan lebar"
-                        class="h-7 px-2.5 flex items-center justify-center rounded-lg border border-gray-200
-                               bg-white hover:bg-gray-100 text-gray-500 text-xs font-bold transition-colors">↔</button>
+                        class="h-7 px-2.5 flex items-center justify-center rounded-md border border-gray-300
+                               bg-white hover:bg-gray-100 text-gray-600 text-xs font-semibold transition-colors">Fit</button>
             </div>
         </div>
 
+        <!-- ── DOCX Toolbar ── -->
+       <div id="dv-docx-toolbar"
+            class="hidden items-center justify-between gap-3 px-4 py-2
+                   border-b border-gray-100 bg-gray-50 flex-shrink-0">
+           <span class="text-xs text-gray-400 font-medium">📝 Dokumen Word</span>
+           <div class="flex items-center gap-1.5">
+               <button type="button" onclick="docxZoom(-1)"
+                       class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
+                              bg-white hover:bg-gray-100 text-gray-600 font-bold text-base transition-colors">−</button>
+               <span id="dv-docx-zoom-label"
+                     class="text-xs font-bold text-gray-600 w-12 text-center select-none">100%</span>
+               <button type="button" onclick="docxZoom(1)"
+                       class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
+                              bg-white hover:bg-gray-100 text-gray-600 font-bold text-base transition-colors">+</button>
+               <button type="button" onclick="docxZoomReset()"
+                       class="h-7 px-2.5 flex items-center justify-center rounded-lg border border-gray-200
+                              bg-white hover:bg-gray-100 text-gray-500 text-xs font-bold transition-colors">↺ Reset</button>
+           </div>
+       </div>
+
         <!-- ── Body ── -->
-        <div class="flex-1 min-h-0 relative bg-[#e8e8e8]">
+         <div class="flex-1 min-h-0 relative overflow-hidden bg-[#cfcfcf]">
 
             <!-- Loader -->
             <div id="dv-loader"
-                 class="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-[#e8e8e8]">
+                 class="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-[#cfcfcf]">
                 <div class="w-9 h-9 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
                 <p class="text-xs text-gray-500 font-medium">Memuat dokumen…</p>
             </div>
 
             <!-- PDF scroll container + canvas -->
             <div id="dv-pdf-wrap"
-                 class="absolute inset-0 hidden overflow-auto"
-                 style="display:none">
-                <div class="flex justify-center min-h-full py-4 px-4">
+                class="absolute inset-0 hidden overflow-auto bg-[#cfcfcf]"
+                style="display:none">
+               <div class="flex justify-center min-h-full py-6 px-6">
                     <canvas id="dv-canvas"
-                            class="shadow-2xl"
-                            style="display:block;max-width:100%;height:auto"></canvas>
+                            class="shadow-[0_1px_8px_rgba(0,0,0,.25)] bg-white"
+                            style="display:block;height:auto"></canvas>
                 </div>
             </div>
 
@@ -110,10 +132,26 @@
                     <img id="dv-img" src="" alt=""
                          class="max-w-full object-contain rounded shadow-xl"
                          style="max-height:78vh"
-                         onload="docViewerHideLoader()"
-                         onerror="docViewerShowUnsupported()" />
+
+                         />
                 </div>
             </div>
+
+<!-- DOCX viewer (mammoth.js → HTML) -->
+ <div id="dv-docx-wrap"
+      class="absolute inset-0 overflow-auto"
+      style="display:none; background:#d0d0d0;">
+     <div style="max-width:960px;margin:1.5rem auto;padding:0 1rem 3rem">
+         <div id="dv-docx-content"
+              style="background:#fff;border-radius:3px;
+                     box-shadow:0 2px 16px rgba(0,0,0,.22);
+                     padding:clamp(1.5rem, 5vw, 4.5rem) clamp(1.5rem, 6vw, 5.5rem);
+                     min-height:80vh;
+                     font-family:'Times New Roman',Times,serif;
+                     font-size:12pt;line-height:1.75;color:#111;">
+         </div>
+     </div>
+ </div>
 
             <!-- Unsupported -->
             <div id="dv-unsupported"
@@ -133,13 +171,6 @@
                 </button>
             </div>
 
-            <!-- Office Online viewer -->
-            <iframe id="dv-office-iframe"
-                    src="about:blank"
-                    class="absolute inset-0 w-full h-full border-0"
-                    style="display:none"
-                    allow="fullscreen"
-                    onload="docViewerOfficeLoaded()"></iframe>
 
         </div>
     </div>
@@ -159,6 +190,32 @@
     #dv-page-input::-webkit-inner-spin-button,
     #dv-page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     #dv-page-input { -moz-appearance: textfield; }
+
+    /* ── DOCX content typography ── */
+ #dv-docx-content h1 { font-size:2rem;font-weight:700;margin:1.5rem 0 .75rem;border-bottom:2px solid #dee2e6;padding-bottom:.4rem }
+ #dv-docx-content h2 { font-size:1.5rem;font-weight:700;margin:1.25rem 0 .6rem }
+ #dv-docx-content h3 { font-size:1.15rem;font-weight:700;margin:1rem 0 .5rem }
+ #dv-docx-content p  { margin:0 0 .85rem }
+ #dv-docx-content strong,
+ #dv-docx-content b   { font-weight:700 }
+ #dv-docx-content em,
+ #dv-docx-content i   { font-style:italic }
+ #dv-docx-content u   { text-decoration:underline }
+ #dv-docx-content table {
+     width:100%;border-collapse:collapse;margin:1rem 0;font-size:11pt }
+ #dv-docx-content th,
+ #dv-docx-content td  {
+     border:1px solid #ced4da;padding:.45rem .7rem;text-align:left;vertical-align:top }
+ #dv-docx-content th  { background:#f1f3f5;font-weight:700 }
+ #dv-docx-content tr:nth-child(even) td { background:#f8f9fa }
+ #dv-docx-content ul,
+ #dv-docx-content ol  { padding-left:1.8rem;margin:0 0 .85rem }
+ #dv-docx-content li  { margin-bottom:.3rem }
+ #dv-docx-content img { max-width:100%;height:auto;margin:.5rem 0;border-radius:4px }
+ #dv-docx-content a   { color:#1971c2;text-decoration:underline }
+ #dv-docx-content blockquote {
+     border-left:4px solid #ced4da;margin:1rem 0;padding:.5rem 1rem;
+     color:#495057;background:#f8f9fa;border-radius:0 4px 4px 0 }
 </style>
 
 <script>
@@ -169,7 +226,7 @@
     const WORKER_SRC  = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
     const IMG_EXT     = /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/i;
-    const OFFICE_EXT  = /\.(docx?|xlsx?|pptx?|odt|ods|odp)(\?|$)/i;
+    const OFFICE_EXT  = /\.(docx?)(\?|$)/i;
 
     /* ── State ──────────────────────────────────────────────────────────── */
     let _pdf         = null;
@@ -209,9 +266,16 @@
         const canvas = el('dv-canvas');
         if (canvas) { canvas.width = 1; canvas.height = 1; }
         const img = el('dv-img');
-        if (img) { img.src = ''; }
-       const oi = el('dv-office-iframe');
-       if (oi) { oi.src = 'about:blank'; oi.style.display = 'none'; }
+        if (img) { img.onload = null; img.onerror = null; img.src = ''; }
+       const dw = el('dv-docx-wrap');
+       if (dw) { dw.style.display = 'none'; }
+       const dc = el('dv-docx-content');
+       if (dc) { dc.innerHTML = ''; }
+
+        const dtb = el('dv-docx-toolbar');
+        if (dtb) { dtb.classList.add('hidden'); dtb.style.display = 'none'; }
+        _docxZoom = 100;
+
 
         const tp = el('dv-total-pages'); if (tp) tp.textContent = '—';
         const pi = el('dv-page-input');  if (pi) { pi.value = '1'; pi.max = '1'; }
@@ -235,36 +299,105 @@
         if (IMG_EXT.test(path)) {
             el('dv-icon').textContent = '🖼️';
             show('dv-img-wrap');
-            el('dv-img').src = url;
+           const imgEl = el('dv-img');
+           imgEl.onload  = () => docViewerHideLoader();
+           imgEl.onerror = () => docViewerShowUnsupported();
+           imgEl.src = url;
 
         } else if (OFFICE_EXT.test(path)) {
             el('dv-icon').textContent = '📝';
-            loadOffice(url);
+            loadDocx(url);
 
         } else {
-            // PDF dan semua URL tanpa ekstensi dikenal → coba PDF.js
-            // Jika PDF.js gagal (bukan PDF) → otomatis tampil unsupported
+            // PDF → PDF.js, fallback unsupported jika gagal
             el('dv-icon').textContent = '📑';
             show('dv-pdf-wrap');
             loadPdf(url);
         }
     };
 
-    /* ── Office Online Viewer ───────────────────────────────────────────── */
-    function loadOffice(url) {
-        const iframe = el('dv-office-iframe');
-        if (!iframe) { docViewerShowUnsupported(); return; }
 
-        const src = 'https://view.officeapps.live.com/op/embed.aspx?src='
-                  + encodeURIComponent(url);
-        iframe.style.display = 'block';
-        iframe.src = src;
-        // onload iframe akan terpicu saat Office Online selesai merespons
-    }
+/* ── DOCX Viewer via mammoth.js ─────────────────────────────────────────── */
+async function loadDocx(url) {
+     const wrap    = el('dv-docx-wrap');
+     const content = el('dv-docx-content');
+     if (!wrap || !content) { docViewerShowUnsupported(); return; }
 
-    window.docViewerOfficeLoaded = function () {
-        docViewerHideLoader();
+     try {
+         if (typeof mammoth === 'undefined') throw new Error('mammoth.js tidak tersedia');
+
+         const res = await fetch(url, { cache: 'no-store' });
+         if (!res.ok) throw new Error('HTTP ' + res.status);
+         const arrayBuffer = await res.arrayBuffer();
+
+         const result = await mammoth.convertToHtml(
+             { arrayBuffer },
+             {
+                 convertImage: mammoth.images.imgElement(img => {
+                     return img.read('base64').then(data => ({
+                         src: `data:${img.contentType};base64,${data}`
+                     }));
+                 }),
+                 styleMap: [
+                     "p[style-name='Heading 1'] => h1:fresh",
+                     "p[style-name='Heading 2'] => h2:fresh",
+                     "p[style-name='Heading 3'] => h3:fresh",
+                     "p[style-name='Heading 4'] => h4:fresh",
+                     "p[style-name='List Paragraph'] => p.list-paragraph:fresh",
+                     "b => strong",
+                     "i => em",
+                     "u => u",
+                     "strike => s",
+                 ]
+             }
+         );
+
+         if (result.messages?.length) {
+             result.messages.forEach(m => console.warn('[DocViewer DOCX]', m.message));
+         }
+
+         content.innerHTML = result.value
+             || '<p style="color:#868e96;text-align:center;padding:3rem 0">Dokumen kosong atau tidak dapat dibaca.</p>';
+
+         // Sembunyikan loader, tampilkan wrap
+         hide('dv-loader');
+         wrap.style.display = 'block';
+         wrap.scrollTop = 0;
+
+                 // Tampilkan toolbar DOCX
+        _docxZoom = 100;
+        _applyDocxZoom();
+        const dtb = el('dv-docx-toolbar');
+        if (dtb) { dtb.classList.remove('hidden'); dtb.style.display = 'flex'; }
+
+     } catch (err) {
+         console.error('[DocViewer] DOCX gagal dimuat:', err);
+         docViewerShowUnsupported();
+     }
+ }
+
+     /* ── DOCX zoom ──────────────────────────────────────────────────────── */
+    let _docxZoom = 100;
+    const DOCX_ZOOM_MIN = 70;
+    const DOCX_ZOOM_MAX = 150;
+    const DOCX_ZOOM_STEP = 10;
+
+    window.docxZoom = function (dir) {
+        _docxZoom = Math.max(DOCX_ZOOM_MIN, Math.min(DOCX_ZOOM_MAX, _docxZoom + dir * DOCX_ZOOM_STEP));
+        _applyDocxZoom();
     };
+
+    window.docxZoomReset = function () {
+        _docxZoom = 100;
+        _applyDocxZoom();
+    };
+
+    function _applyDocxZoom() {
+        const c = el('dv-docx-content');
+        if (c) c.style.fontSize = (_docxZoom / 100 * 12) + 'pt';
+        const lbl = el('dv-docx-zoom-label');
+        if (lbl) lbl.textContent = _docxZoom + '%';
+    }
 
     /* ── PDF.js: load ───────────────────────────────────────────────────── */
     async function loadPdf(url) {
@@ -272,7 +405,11 @@
             if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js tidak tersedia');
             pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_SRC;
 
-            const task = pdfjsLib.getDocument({ url, cMapPacked: true });
+            const task = pdfjsLib.getDocument({
+                url,
+                cMapPacked: true,
+                withCredentials: false
+            });
             _pdf   = await task.promise;
             _total = _pdf.numPages;
             _page  = 1;
@@ -306,7 +443,7 @@
 
             // Hitung skala fit-to-width berdasarkan lebar kontainer
             const baseVP      = page.getViewport({ scale: 1 });
-            const wrapW       = wrap.clientWidth - 32;   // padding kiri+kanan
+            const wrapW       = wrap.clientWidth - 80;
             _fitScale         = wrapW / baseVP.width;
 
             // Snap _zoomIdx ke level terdekat supaya label % masuk akal
@@ -322,9 +459,17 @@
             const scale  = _useFit ? _fitScale : ZOOM_LEVELS[_zoomIdx];
             const vp     = page.getViewport({ scale });
 
-            canvas.width  = vp.width;
-            canvas.height = vp.height;
-            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            const dpr = window.devicePixelRatio || 1;
+
+           canvas.width  = vp.width * dpr;
+            canvas.height = vp.height * dpr;
+
+           canvas.style.width  = vp.width + 'px';
+            canvas.style.height = vp.height + 'px';
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+             await page.render({ canvasContext: ctx, viewport: vp }).promise;
 
             // Update UI
             const pct = Math.round((_useFit ? _fitScale : ZOOM_LEVELS[_zoomIdx]) * 100);
@@ -401,7 +546,22 @@
         hide('dv-loader');
         hide('dv-pdf-wrap');
         hide('dv-img-wrap');
-        const tb = el('dv-toolbar'); if (tb) { tb.classList.add('hidden'); tb.style.display = 'none'; }
+
+        const dw = el('dv-docx-wrap');
+        if (dw) dw.style.display = 'none';
+
+        const dtb = el('dv-docx-toolbar');
+        if (dtb) {
+            dtb.classList.add('hidden');
+            dtb.style.display = 'none';
+        }
+
+        const tb = el('dv-toolbar');
+        if (tb) {
+            tb.classList.add('hidden');
+            tb.style.display = 'none';
+        }
+
         showF('dv-unsupported');
     };
 
