@@ -44,10 +44,4 @@
           WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Message Text="✔ Tailwind CSS v4: done → wwwroot/css/app.css" Importance="high" />
   </Target>
-<Target Name="CopyDocxPreview" BeforeTargets="Build">
-  <Copy
-    SourceFiles="$(MSBuildProjectDirectory)\node_modules\docx-preview\dist\docx-preview.min.js"
-    DestinationFiles="$(MSBuildProjectDirectory)\wwwroot\js\docx-preview.min.js"
-    SkipUnchangedFiles="true" />
-</Target>
 </Project>

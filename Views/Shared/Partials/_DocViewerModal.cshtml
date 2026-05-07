@@ -85,25 +85,6 @@
             </div>
         </div>
 
-        <!-- ── DOCX Toolbar ── -->
-       <div id="dv-docx-toolbar"
-            class="hidden items-center justify-between gap-3 px-4 py-2
-                   border-b border-gray-100 bg-gray-50 flex-shrink-0">
-           <span class="text-xs text-gray-400 font-medium">📝 Dokumen Word</span>
-           <div class="flex items-center gap-1.5">
-               <button type="button" onclick="docxZoom(-1)"
-                       class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                              bg-white hover:bg-gray-100 text-gray-600 font-bold text-base transition-colors">−</button>
-               <span id="dv-docx-zoom-label"
-                     class="text-xs font-bold text-gray-600 w-12 text-center select-none">100%</span>
-               <button type="button" onclick="docxZoom(1)"
-                       class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200
-                              bg-white hover:bg-gray-100 text-gray-600 font-bold text-base transition-colors">+</button>
-               <button type="button" onclick="docxZoomReset()"
-                       class="h-7 px-2.5 flex items-center justify-center rounded-lg border border-gray-200
-                              bg-white hover:bg-gray-100 text-gray-500 text-xs font-bold transition-colors">↺ Reset</button>
-           </div>
-       </div>
 
         <!-- ── Body ── -->
          <div class="flex-1 min-h-0 relative overflow-hidden bg-[#cfcfcf]">
@@ -167,21 +148,18 @@
                 </div>
             </div>
 
-<!-- DOCX viewer (mammoth.js → HTML) -->
- <div id="dv-docx-wrap"
-      class="absolute inset-0 overflow-auto"
-      style="display:none; background:#d0d0d0;">
-     <div style="max-width:960px;margin:1.5rem auto;padding:0 1rem 3rem">
-         <div id="dv-docx-content"
-              style="background:#fff;border-radius:3px;
-                     box-shadow:0 2px 16px rgba(0,0,0,.22);
-                     padding:clamp(1.5rem, 5vw, 4.5rem) clamp(1.5rem, 6vw, 5.5rem);
-                     min-height:80vh;
-                     font-family:'Times New Roman',Times,serif;
-                     font-size:12pt;line-height:1.75;color:#111;">
-         </div>
-     </div>
- </div>
+<!-- ── Office Online Viewer ── -->
+<div id="dv-office-wrap"
+     class="absolute inset-0"
+     style="display:none">
+    <iframe id="dv-office-frame"
+            src=""
+            allowfullscreen
+            style="width:100%;height:100%;border:none;display:block"
+            onload="docViewerHideLoader()"
+            onerror="docViewerShowUnsupported()">
+    </iframe>
+</div>
 
             <!-- Unsupported -->
             <div id="dv-unsupported"
@@ -220,25 +198,6 @@
     #dv-page-input::-webkit-inner-spin-button,
     #dv-page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     #dv-page-input { -moz-appearance: textfield; }
-    /* ── DOCX Preview (docx-preview / docxjs) ── */
-    /* Biarkan docx-preview mengurus typography-nya sendiri.
-    Kita hanya atur zoom via CSS zoom property (layout-aware). */
-    #dv-docx-content {
-        zoom: 1;
-        transform-origin: top center;
-    }
-    /* Pastikan halaman-halaman di-render terpusat */
-    #dv-docx-content .docx-wrapper {
-        background: #d0d0d0 !important;
-        padding: 1.5rem 0 3rem !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 1.5rem !important;
-    }
-    #dv-docx-content section.docx {
-        box-shadow: 0 2px 16px rgba(0,0,0,.28) !important;
-    }
 </style>
 
 <script>
@@ -249,9 +208,8 @@
     const WORKER_SRC  = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
     const IMG_EXT     = /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/i;
-    const OFFICE_EXT  = /\.(docx?)(\?|$)/i;
+    const OFFICE_EXT  = /\.(docx?|pptx?|xlsx?)(\?|$)/i;
 
-    /* ── State ──────────────────────────────────────────────────────────── */
     let _pdf          = null;
     let _page         = 1;
     let _total        = 0;
@@ -263,6 +221,7 @@
     let _name         = '';
     let _renderedAll  = false;
     let _outlineOpen  = false;
+    let _officeUrl    = '';
 
     /* ── Helpers DOM ────────────────────────────────────────────────────── */
     const el    = id  => document.getElementById(id);
@@ -295,14 +254,11 @@
         if (outline) outline.innerHTML = '';
         const img = el('dv-img');
         if (img) { img.onload = null; img.onerror = null; img.src = ''; }
-       const dw = el('dv-docx-wrap');
-       if (dw) { dw.style.display = 'none'; }
-       const dc = el('dv-docx-content');
-       if (dc) { dc.innerHTML = ''; }
-
-        const dtb = el('dv-docx-toolbar');
-        if (dtb) { dtb.classList.add('hidden'); dtb.style.display = 'none'; }
-        _docxZoom = 100;
+        const ow = el('dv-office-wrap');
+        if (ow) ow.style.display = 'none';
+        const of_ = el('dv-office-frame');
+        if (of_) of_.src = '';
+        _officeUrl = '';
 
 
         const tp = el('dv-total-pages'); if (tp) tp.textContent = '—';
@@ -310,7 +266,9 @@
         const zl = el('dv-zoom-label'); if (zl) zl.textContent = '—';
     }
 
-    /* ── Entry point ────────────────────────────────────────────────────── */
+    /* ─────────────────────────────────────────────────────────────────────────
+       Entry point (ganti seluruh fungsi previewFile lama)
+    ───────────────────────────────────────────────────────────────────────── */
     window.previewFile = function (url, nama) {
         if (!url) return;
         _url  = url;
@@ -327,100 +285,114 @@
         if (IMG_EXT.test(path)) {
             el('dv-icon').textContent = '🖼️';
             show('dv-img-wrap');
-           const imgEl = el('dv-img');
-           imgEl.onload  = () => docViewerHideLoader();
-           imgEl.onerror = () => docViewerShowUnsupported();
-           imgEl.src = url;
+            const imgEl = el('dv-img');
+            imgEl.onload  = () => docViewerHideLoader();
+            imgEl.onerror = () => docViewerShowUnsupported();
+            imgEl.src = url;
 
         } else if (OFFICE_EXT.test(path)) {
             el('dv-icon').textContent = '📝';
-            loadDocx(url);
+           loadOfficeOnline(url);
 
         } else {
-            // PDF → PDF.js, fallback unsupported jika gagal
             el('dv-icon').textContent = '📑';
             show('dv-pdf-wrap');
             loadPdf(url);
         }
     };
 
+    /* ─────────────────────────────────────────────────────────────────────────
+       DOCX/DOC: minta server konversi ke PDF, render via PDF.js
+       Jika server tidak punya LibreOffice → fallback ke docx-preview client-side
+    ───────────────────────────────────────────────────────────────────────── */
+    async function loadDocxAsPdf(virtualPath) {
+        const apiUrl = '/api/doc-preview/pdf?virtualPath='
+                       + encodeURIComponent(virtualPath);
 
-/* ── DOCX Viewer via docx-preview (docxjs) ──────────────────────────────── */
-async function loadDocx(url) {
-    const wrap    = el('dv-docx-wrap');
-    const content = el('dv-docx-content');
-    if (!wrap || !content) { docViewerShowUnsupported(); return; }
+        try {
+            // Cek dulu apakah endpoint tersedia & konversi berhasil
+            const probe = await fetch(apiUrl, { method: 'HEAD' });
 
-    try {
-        // docx-preview bisa expose sebagai docxPreview atau window.docxPreview
-        const _docxLib = window.docxPreview ?? window.docx ?? null;
-        if (!_docxLib || typeof _docxLib.renderAsync !== 'function')
-            throw new Error('docx-preview belum siap — CDN mungkin masih loading atau diblokir');
+            if (probe.ok) {
+                // Render sebagai PDF (fidelitas penuh)
+                show('dv-pdf-wrap');
+                await loadPdf(apiUrl);
+                return;
+            }
 
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const arrayBuffer = await res.arrayBuffer();
+            // Server ada tapi konversi gagal (LibreOffice tidak terinstal, dsb.)
+            // → Fallback graceful ke docx-preview (client-side)
+            console.warn('[DocViewer] Server konversi gagal (' + probe.status + '), fallback ke docx-preview');
+            await loadDocxClientSide(_url);
 
-        content.innerHTML = '';
-
-        await _docxLib.renderAsync(arrayBuffer, content, null, {
-            className:           'docx',       // CSS class prefix yang di-generate
-            inWrapper:           true,          // bungkus dalam .docx-wrapper
-            ignoreWidth:         false,         // hormati lebar halaman dari dokumen
-            ignoreHeight:        false,         // hormati tinggi halaman dari dokumen
-            ignoreFonts:         false,         // muat font embed jika ada
-            breakPages:          true,          // pisah per halaman seperti Word
-            useBase64URL:        true,          // embed gambar sebagai base64
-            renderHeaders:       true,
-            renderFooters:       true,
-            renderFootnotes:     true,
-            renderEndnotes:      true,
-            debug:               false
-        });
-
-        hide('dv-loader');
-        wrap.style.display = 'block';
-        wrap.scrollTop     = 0;
-
-        // Tampilkan toolbar DOCX
-        _docxZoom = 100;
-        _applyDocxZoom();
-        const dtb = el('dv-docx-toolbar');
-        if (dtb) { dtb.classList.remove('hidden'); dtb.style.display = 'flex'; }
-
-    } catch (err) {
-        console.error('[DocViewer] DOCX gagal dimuat:', err);
-        docViewerShowUnsupported();
-    }
-}
-
-    /* ── DOCX zoom ──────────────────────────────────────────────────────── */
-    let _docxZoom = 100;
-    const DOCX_ZOOM_MIN = 50;
-    const DOCX_ZOOM_MAX = 200;
-    const DOCX_ZOOM_STEP = 10;
-
-    window.docxZoom = function (dir) {
-        _docxZoom = Math.max(DOCX_ZOOM_MIN, Math.min(DOCX_ZOOM_MAX, _docxZoom + dir * DOCX_ZOOM_STEP));
-        _applyDocxZoom();
-    };
-
-    window.docxZoomReset = function () {
-        _docxZoom = 100;
-        _applyDocxZoom();
-    };
-
-    function _applyDocxZoom() {
-        const c = el('dv-docx-content');
-        if (c) {
-            // CSS zoom property: berbeda dari transform — tidak mempengaruhi posisi
-            // elemen lain, dan scroll container menyesuaikan ukuran secara otomatis.
-            c.style.zoom = (_docxZoom / 100).toString();
+        } catch (networkErr) {
+            // Offline / error jaringan → langsung fallback
+            console.warn('[DocViewer] Tidak bisa menjangkau /api/doc-preview/pdf, fallback', networkErr);
+            await loadDocxClientSide(_url);
         }
-        const lbl = el('dv-docx-zoom-label');
-        if (lbl) lbl.textContent = _docxZoom + '%';
     }
 
+    /* ─────────────────────────────────────────────────────────────────────────
+       Fallback: docx-preview client-side (nama fungsi diganti agar tidak
+       bentrok dengan loadDocx asli — hapus loadDocx lama jika masih ada)
+    ───────────────────────────────────────────────────────────────────────── */
+    async function loadDocxClientSide(url) {
+        const wrap    = el('dv-docx-wrap');
+        const content = el('dv-docx-content');
+        if (!wrap || !content) { docViewerShowUnsupported(); return; }
+
+        try {
+            const _docxLib = window.docxPreview ?? window.docx ?? null;
+            if (!_docxLib || typeof _docxLib.renderAsync !== 'function')
+                throw new Error('docx-preview belum siap');
+
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+
+            content.innerHTML = '';
+
+            await _docxLib.renderAsync(await res.arrayBuffer(), content, null, {
+                className: 'docx', inWrapper: true,
+                ignoreWidth: false, ignoreHeight: false,
+                ignoreFonts: false, breakPages: true,
+                useBase64URL: true,
+                renderHeaders: true, renderFooters: true,
+                renderFootnotes: true, renderEndnotes: true,
+            });
+
+            hide('dv-loader');
+            wrap.style.display = 'block';
+            wrap.scrollTop = 0;
+
+            _docxZoom = 100;
+            _applyDocxZoom();
+            const dtb = el('dv-docx-toolbar');
+            if (dtb) { dtb.classList.remove('hidden'); dtb.style.display = 'flex'; }
+
+        } catch (err) {
+            console.error('[DocViewer] DOCX client-side gagal:', err);
+            docViewerShowUnsupported();
+        }
+    }
+
+/* ── Office Online Viewer ────────────────────────────────────────────────── */
+function loadOfficeOnline(url) {
+    // Bangun URL absolut — Office Online butuh URL yang bisa diakses publik
+    const absoluteUrl = new URL(url, location.href).href;
+    _officeUrl        = absoluteUrl;
+
+    const viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src='
+                      + encodeURIComponent(absoluteUrl);
+
+    const frame = el('dv-office-frame');
+    const wrap  = el('dv-office-wrap');
+
+   if (!frame || !wrap) { docViewerShowUnsupported(); return; }
+
+    // onload di iframe akan panggil docViewerHideLoader()
+    frame.src          = viewerUrl;
+    wrap.style.display = 'block';
+}
 
     /* ── PDF.js: load ───────────────────────────────────────────────────── */
     async function loadPdf(url) {
@@ -712,14 +684,8 @@ async function loadDocx(url) {
         hide('dv-pdf-wrap');
         hide('dv-img-wrap');
 
-        const dw = el('dv-docx-wrap');
-        if (dw) dw.style.display = 'none';
-
-        const dtb = el('dv-docx-toolbar');
-        if (dtb) {
-            dtb.classList.add('hidden');
-            dtb.style.display = 'none';
-        }
+        const ow = el('dv-office-wrap');
+        if (ow) ow.style.display = 'none';
 
         const tb = el('dv-toolbar');
         if (tb) {
