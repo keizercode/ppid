@@ -599,4 +599,127 @@ public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
 
         return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
     }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // UPLOAD DOKUMENTASI OBSERVASI / WAWANCARA OLEH PEMOHON (PUBLIK)
+    // Pemohon mengunggah bukti pelaksanaan obs/waw yang sedang berlangsung.
+    // Subtask berubah ke WaitingKonfirmasi — Loket yang mengkonfirmasi selesai.
+    // ════════════════════════════════════════════════════════════════════════
+
+    [HttpGet("upload-dokumentasi/{id:guid}/{jenisTask}")]
+    public async Task<IActionResult> UploadDokumentasiTask(Guid id, string jenisTask)
+    {
+        if (jenisTask != JenisTask.Observasi && jenisTask != JenisTask.Wawancara)
+            return BadRequest("Hanya Observasi atau Wawancara yang dapat diunggah di sini.");
+
+        var p = await db.PermohonanPPID
+            .Include(x => x.Pribadi)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
+        if (p is null) return NotFound();
+
+        var st = await db.SubTaskPPID
+            .FirstOrDefaultAsync(t => t.PermohonanPPIDID == id && t.JenisTask == jenisTask);
+
+        if (st is null || (!st.IsInProgress && !st.IsWaitingKonfirmasi))
+        {
+            TempData["Error"] = $"Unggahan dokumentasi {JenisTask.GetLabel(jenisTask)} " +
+                                "hanya tersedia saat jadwal aktif.";
+            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+        }
+
+        return View(new UploadHasilTaskVm
+        {
+            PermohonanPPIDID = id,
+            NoPermohonan     = p.NoPermohonan    ?? string.Empty,
+            NamaPemohon      = p.Pribadi?.Nama   ?? string.Empty,
+            JudulPenelitian  = p.JudulPenelitian ?? string.Empty,
+            JenisTask        = jenisTask,
+            TanggalJadwal    = st.TanggalJadwal,
+            WaktuJadwal      = st.WaktuJadwal,
+            LokasiDetail     = st.LokasiDetail,
+            NamaPIC          = st.NamaPIC,
+        });
+    }
+
+    [HttpPost("upload-dokumentasi"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadDokumentasiTaskPost(UploadHasilTaskVm vm)
+    {
+        if (vm.FileDokumentasi == null || vm.FileDokumentasi.Length == 0)
+            ModelState.AddModelError(nameof(vm.FileDokumentasi),
+                "File dokumentasi wajib dipilih.");
+
+        if (!ModelState.IsValid)
+            return View("UploadDokumentasiTask", vm);
+
+        var st = await db.SubTaskPPID
+            .FirstOrDefaultAsync(t => t.PermohonanPPIDID == vm.PermohonanPPIDID
+                                   && t.JenisTask        == vm.JenisTask);
+
+        if (st is null || (!st.IsInProgress && !st.IsWaitingKonfirmasi))
+        {
+            TempData["Error"] = "Unggahan tidak dapat dilakukan pada status saat ini.";
+            return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
+        }
+
+        var now = DateTime.UtcNow;
+
+        var uploadsDir = Path.Combine(
+            string.IsNullOrEmpty(env.WebRootPath)
+                ? Path.Combine(env.ContentRootPath, "wwwroot")
+                : env.WebRootPath,
+            "uploads", vm.PermohonanPPIDID.ToString());
+        Directory.CreateDirectory(uploadsDir);
+
+        var fn = $"{vm.JenisTask.ToLower()}_{now:yyyyMMddHHmmss}_" +
+                 Path.GetFileName(vm.FileDokumentasi!.FileName);
+        await using (var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create))
+            await vm.FileDokumentasi.CopyToAsync(s);
+
+        var fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+
+        int jenisDokId = vm.JenisTask == JenisTask.Observasi
+            ? JenisDokumenId.DataHasilObservasi
+            : JenisDokumenId.DataHasilWawancara;
+
+        db.DokumenPPID.Add(new DokumenPPID
+        {
+            PermohonanPPIDID   = vm.PermohonanPPIDID,
+            NamaDokumenPPID    = $"Dokumentasi {JenisTask.GetLabel(vm.JenisTask)} — diunggah Pemohon",
+            UploadDokumenPPID  = fp,
+            JenisDokumenPPIDID = jenisDokId,
+            CreatedAt          = now
+        });
+
+        // Tandai subtask WaitingKonfirmasi (Loket perlu konfirmasi selesai)
+        st.StatusTask = SubTaskStatus.WaitingKonfirmasi;
+        st.FilePath   = fp;
+        st.NamaFile   = vm.FileDokumentasi.FileName;
+        st.Catatan    = vm.Catatan;
+        st.Operator   = "Pemohon";
+        st.UpdatedAt  = now;
+
+        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (p is not null)
+        {
+            db.AuditLog.Add(new AuditLogPPID
+            {
+                PermohonanPPIDID = vm.PermohonanPPIDID,
+                StatusLama       = p.StatusPPIDID,
+                StatusBaru       = p.StatusPPIDID ?? StatusId.DiProses,
+                Keterangan       = $"Pemohon mengunggah dokumentasi " +
+                                   $"{JenisTask.GetLabel(vm.JenisTask)}: " +
+                                   $"{vm.FileDokumentasi.FileName}. " +
+                                   "Menunggu konfirmasi Loket Kepegawaian.",
+                Operator         = "Pemohon",
+                CreatedAt        = now
+            });
+        }
+
+        await db.SaveChangesAsync();
+
+        TempData["Success"] =
+            $"Dokumentasi <strong>{JenisTask.GetLabel(vm.JenisTask)}</strong> " +
+            "berhasil diunggah! Petugas loket akan mengkonfirmasi dalam waktu dekat.";
+        return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
+    }
 }

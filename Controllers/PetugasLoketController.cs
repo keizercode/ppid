@@ -1029,17 +1029,20 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
         if (sub is not null)
         {
             sub.StatusTask = SubTaskStatus.Selesai;
-            sub.FilePath = fp;
-            sub.NamaFile = nama;
-            sub.Catatan = vm.Catatan;
-            sub.Operator = CurrentUser;
+            // Hanya timpa FilePath/NamaFile jika Loket mengunggah file baru.
+            // Jika tidak ada file baru, pertahankan file yang diunggah pemohon.
+            if (fp is not null) { sub.FilePath = fp; sub.NamaFile = nama; }
+            sub.Catatan   = vm.Catatan ?? sub.Catatan;
+            sub.Operator  = CurrentUser;
             sub.SelesaiAt = now;
             sub.UpdatedAt = now;
         }
 
         p.UpdatedAt = now;
         db.AddAuditLog(vm.PermohonanPPIDID, lama, lama ?? StatusId.DiProses,
-            $"Sub-tugas Observasi selesai (Loket). File: {nama ?? "tidak ada"}. Catatan: {vm.Catatan}",
+            $"Sub-tugas Observasi dikonfirmasi selesai (Loket). " +
+            $"File: {(fp is not null ? nama : sub?.NamaFile ?? "dari pemohon")}. " +
+            $"Catatan: {vm.Catatan ?? sub?.Catatan ?? "(kosong)"}",
             CurrentUser);
 
         await db.SaveChangesAsync();
@@ -1221,17 +1224,20 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
         if (sub is not null)
         {
             sub.StatusTask = SubTaskStatus.Selesai;
-            sub.FilePath = fp;
-            sub.NamaFile = nama;
-            sub.Catatan = vm.Catatan;
-            sub.Operator = CurrentUser;
+            // Hanya timpa FilePath/NamaFile jika Loket mengunggah file baru.
+            // Jika tidak ada file baru, pertahankan file yang diunggah pemohon.
+            if (fp is not null) { sub.FilePath = fp; sub.NamaFile = nama; }
+            sub.Catatan   = vm.Catatan ?? sub.Catatan;
+            sub.Operator  = CurrentUser;
             sub.SelesaiAt = now;
             sub.UpdatedAt = now;
         }
 
         p.UpdatedAt = now;
         db.AddAuditLog(vm.PermohonanPPIDID, lama, lama ?? StatusId.DiProses,
-            $"Sub-tugas Wawancara selesai (Loket). File: {nama ?? "tidak ada"}. Catatan: {vm.Catatan}",
+            $"Sub-tugas Wawancara dikonfirmasi selesai (Loket). " +
+            $"File: {(fp is not null ? nama : sub?.NamaFile ?? "dari pemohon")}. " +
+            $"Catatan: {vm.Catatan ?? sub?.Catatan ?? "(kosong)"}",
             CurrentUser);
 
         await db.SaveChangesAsync();

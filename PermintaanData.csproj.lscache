@@ -483,6 +483,7 @@ Views/Home/
  FeedbackTask.cshtml
  Index.cshtml
  LaporanPpid.cshtml
+ UploadDokumentasiTask.cshtml
  UploadTugas.cshtml
 Views/KasubkelKdi/
  BatalSubTask.cshtml
@@ -561,6 +562,7 @@ Views/Home/
  FeedbackTask.cshtml
  Index.cshtml
  LaporanPpid.cshtml
+ UploadDokumentasiTask.cshtml
  UploadTugas.cshtml
 Views/KasubkelKdi/
  BatalSubTask.cshtml

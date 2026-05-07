@@ -234,28 +234,35 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
                                             bool done    = stObs?.IsSelesai ?? false;
                                             bool canc    = stObs?.IsDibatalkan ?? false;
                                             bool sched   = stObs?.IsInProgress ?? false;
+                                            bool waiting = stObs?.IsWaitingKonfirmasi ?? false;
                                             bool isNew   = Model.IsJadwalBaru("Observasi");
                                             bool overdue = IsOverdueTask(stObs);
                                             bool fbDone  = done && FeedbackDiisi(JenisTask.Observasi);
                                             string rescBadge = BadgeReschedule(stObs);
 
-                                            <div class="bg-white border @(done ? "border-emerald-200" : canc ? "border-red-100" : overdue ? "border-red-200" : sched ? "border-orange-200" : "border-gray-100") rounded-lg px-3 py-2">
+                                            <div class="bg-white border @(done ? "border-emerald-200" : canc ? "border-red-100" : waiting ? "border-blue-200" : overdue ? "border-red-200" : sched ? "border-orange-200" : "border-gray-100") rounded-lg px-3 py-2">
                                                 <div class="flex items-start justify-between gap-2">
                                                     <div class="flex items-center gap-2">
                                                         <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0
-                                                            @(done ? "bg-emerald-100 text-emerald-600" : canc ? "bg-red-100 text-red-500" : overdue ? "bg-amber-100 text-amber-600" : sched ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-400")">
-                                                            @(done ? "✓" : canc ? "✗" : overdue ? "⏰" : sched ? "⏳" : "○")
+                                                            @(done ? "bg-emerald-100 text-emerald-600" : canc ? "bg-red-100 text-red-500" : waiting ? "bg-blue-100 text-blue-600" : overdue ? "bg-amber-100 text-amber-600" : sched ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-400")">
+                                                            @(done ? "✓" : canc ? "✗" : waiting ? "📤" : overdue ? "⏰" : sched ? "⏳" : "○")
                                                         </span>
-                                                        <span class="text-xs font-semibold @(done ? "text-emerald-700" : canc ? "text-red-500" : overdue ? "text-amber-700" : sched ? "text-orange-700" : "text-gray-400")">
+                                                        <span class="text-xs font-semibold @(done ? "text-emerald-700" : canc ? "text-red-500" : waiting ? "text-blue-700" : overdue ? "text-amber-700" : sched ? "text-orange-700" : "text-gray-400")">
                                                             🔍 Observasi
                                                         </span>
                                                     </div>
                                                     <div class="flex flex-wrap items-center gap-1 justify-end">
-                                                        @if (isNew && sched && !overdue)
+                                                        @if (isNew && sched && !overdue && !waiting)
                                                         { <span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold animate-pulse">BARU</span> }
                                                         @if (!string.IsNullOrEmpty(rescBadge))
                                                         { <span class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">🔄 @rescBadge</span> }
-                                                        @if (done && !fbDone && bisaFeedback)
+                                                        @if (waiting)
+                                                        {
+                                                            <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">⏳ Menunggu Konfirmasi Loket</span>
+                                                            <a href="@Url.Action("UploadDokumentasiTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Observasi })"
+                                                               class="text-[10px] text-blue-500 hover:underline px-1">Unggah Ulang</a>
+                                                        }
+                                                        else if (done && !fbDone && bisaFeedback)
                                                         {
                                                             <a href="@Url.Action("FeedbackTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Observasi })"
                                                                class="text-[10px] bg-orange-600 hover:bg-orange-700 text-white px-2 py-0.5 rounded font-bold">
@@ -268,15 +275,31 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
                                                         { <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Selesai</span> }
                                                         else if (canc)
                                                         { <span class="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded font-bold">Dibatalkan</span> }
+                                                        else if (sched)
+                                                        {
+                                                            <a href="@Url.Action("UploadDokumentasiTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Observasi })"
+                                                               class="text-[10px] @(overdue ? "bg-amber-600 hover:bg-amber-700" : "bg-orange-600 hover:bg-orange-700") text-white px-2 py-0.5 rounded font-bold">
+                                                                📤 Unggah Dokumentasi
+                                                            </a>
+                                                        }
                                                     </div>
                                                 </div>
 
                                                 @* Overdue reminder (bukan auto-complete!) *@
-                                                @if (overdue)
+                                               @if (overdue && !waiting)
                                                 {
                                                     <div class="mt-1.5 pl-7">
                                                         <p class="text-[11px] text-amber-700 font-semibold">
                                                             ⏰ Jadwal observasi (@stObs!.TanggalJadwal!.Value.ToString("dd MMM yyyy")) sudah lewat. Segera konfirmasi ke petugas jika observasi telah dilaksanakan.
+                                                        </p>
+                                                    </div>
+                                                }
+
+                                                @if (waiting)
+                                                {
+                                                    <div class="mt-1.5 pl-7">
+                                                        <p class="text-[11px] text-blue-700 font-semibold">
+                                                            📤 Dokumentasi berhasil diunggah. Petugas loket sedang mengkonfirmasi pelaksanaan observasi.
                                                         </p>
                                                     </div>
                                                 }
@@ -319,28 +342,35 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
                                             bool done    = stWaw?.IsSelesai ?? false;
                                             bool canc    = stWaw?.IsDibatalkan ?? false;
                                             bool sched   = stWaw?.IsInProgress ?? false;
+                                            bool waiting = stWaw?.IsWaitingKonfirmasi ?? false;
                                             bool isNew   = Model.IsJadwalBaru("Wawancara");
                                             bool overdue = IsOverdueTask(stWaw);
                                             bool fbDone  = done && FeedbackDiisi(JenisTask.Wawancara);
                                             string rescBadge = BadgeReschedule(stWaw);
 
-                                            <div class="bg-white border @(done ? "border-emerald-200" : canc ? "border-red-100" : overdue ? "border-amber-200" : sched ? "border-violet-200" : "border-gray-100") rounded-lg px-3 py-2">
+                                            <div class="bg-white border @(done ? "border-emerald-200" : canc ? "border-red-100" : waiting ? "border-blue-200" : overdue ? "border-amber-200" : sched ? "border-violet-200" : "border-gray-100") rounded-lg px-3 py-2">
                                                 <div class="flex items-start justify-between gap-2">
                                                     <div class="flex items-center gap-2">
                                                         <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0
-                                                            @(done ? "bg-emerald-100 text-emerald-600" : canc ? "bg-red-100 text-red-500" : overdue ? "bg-amber-100 text-amber-600" : sched ? "bg-violet-100 text-violet-600" : "bg-gray-100 text-gray-400")">
-                                                            @(done ? "✓" : canc ? "✗" : overdue ? "⏰" : sched ? "⏳" : "○")
+                                                            @(done ? "bg-emerald-100 text-emerald-600" : canc ? "bg-red-100 text-red-500" : waiting ? "bg-blue-100 text-blue-600" : overdue ? "bg-amber-100 text-amber-600" : sched ? "bg-violet-100 text-violet-600" : "bg-gray-100 text-gray-400")">
+                                                            @(done ? "✓" : canc ? "✗" : waiting ? "📤" : overdue ? "⏰" : sched ? "⏳" : "○")
                                                         </span>
-                                                        <span class="text-xs font-semibold @(done ? "text-emerald-700" : canc ? "text-red-500" : overdue ? "text-amber-700" : sched ? "text-violet-700" : "text-gray-400")">
+                                                        <span class="text-xs font-semibold @(done ? "text-emerald-700" : canc ? "text-red-500" : waiting ? "text-blue-700" : overdue ? "text-amber-700" : sched ? "text-violet-700" : "text-gray-400")">
                                                             🎤 Wawancara
                                                         </span>
                                                     </div>
                                                     <div class="flex flex-wrap items-center gap-1 justify-end">
-                                                        @if (isNew && sched && !overdue)
+                                                        @if (isNew && sched && !overdue && !waiting)
                                                         { <span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold animate-pulse">BARU</span> }
                                                         @if (!string.IsNullOrEmpty(rescBadge))
                                                         { <span class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">🔄 @rescBadge</span> }
-                                                        @if (done && !fbDone && bisaFeedback)
+                                                        @if (waiting)
+                                                        {
+                                                            <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">⏳ Menunggu Konfirmasi Loket</span>
+                                                            <a href="@Url.Action("UploadDokumentasiTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Wawancara })"
+                                                               class="text-[10px] text-blue-500 hover:underline px-1">Unggah Ulang</a>
+                                                        }
+                                                        else if (done && !fbDone && bisaFeedback)
                                                         {
                                                             <a href="@Url.Action("FeedbackTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Wawancara })"
                                                                class="text-[10px] bg-violet-600 hover:bg-violet-700 text-white px-2 py-0.5 rounded font-bold">
@@ -353,14 +383,30 @@ bool bisaFeedback = p.StatusPPIDID == StatusId.DataSiap
                                                         { <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Selesai</span> }
                                                         else if (canc)
                                                         { <span class="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded font-bold">Dibatalkan</span> }
+                                                        else if (sched)
+                                                        {
+                                                            <a href="@Url.Action("UploadDokumentasiTask", "Home", new { id = p.PermohonanPPIDID, jenisTask = JenisTask.Wawancara })"
+                                                               class="text-[10px] @(overdue ? "bg-amber-600 hover:bg-amber-700" : "bg-violet-600 hover:bg-violet-700") text-white px-2 py-0.5 rounded font-bold">
+                                                                📤 Unggah Dokumentasi
+                                                            </a>
+                                                        }
                                                     </div>
                                                 </div>
 
-                                                @if (overdue)
+                                                @if (overdue && !waiting)
                                                 {
                                                     <div class="mt-1.5 pl-7">
                                                         <p class="text-[11px] text-amber-700 font-semibold">
                                                             ⏰ Jadwal wawancara (@stWaw!.TanggalJadwal!.Value.ToString("dd MMM yyyy")) sudah lewat. Segera konfirmasi ke petugas jika wawancara telah dilaksanakan.
+                                                        </p>
+                                                    </div>
+                                                }
+
+                                                @if (waiting)
+                                                {
+                                                    <div class="mt-1.5 pl-7">
+                                                        <p class="text-[11px] text-blue-700 font-semibold">
+                                                            📤 Dokumentasi berhasil diunggah. Petugas loket sedang mengkonfirmasi pelaksanaan wawancara.
                                                         </p>
                                                     </div>
                                                 }

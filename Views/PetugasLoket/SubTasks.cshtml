@@ -137,16 +137,18 @@
             bool   inProg   = st.IsInProgress;
             bool   baru     = IsRecentlyUpdated(st);
 
-            string cardBorder = st.IsSelesai    ? "border-emerald-200" :
-                                st.IsDibatalkan ? "border-red-200"     :
-                                st.IsInProgress ? "border-amber-200"   : "border-gray-200";
+            string cardBorder = st.IsSelesai           ? "border-emerald-200" :
+                                st.IsDibatalkan        ? "border-red-200"     :
+                                st.IsWaitingKonfirmasi ? "border-blue-300"    :
+                                st.IsInProgress        ? "border-amber-200"   : "border-gray-200";
 
             string badgeBg = st.StatusTask switch
             {
-                SubTaskStatus.Selesai    => "bg-emerald-100 text-emerald-800",
-                SubTaskStatus.InProgress => "bg-amber-100 text-amber-800",
-                SubTaskStatus.Dibatalkan => "bg-red-100 text-red-700",
-                _                        => "bg-gray-100 text-gray-500"
+                SubTaskStatus.Selesai           => "bg-emerald-100 text-emerald-800",
+                SubTaskStatus.InProgress        => "bg-amber-100 text-amber-800",
+                SubTaskStatus.Dibatalkan        => "bg-red-100 text-red-700",
+                SubTaskStatus.WaitingKonfirmasi => "bg-blue-100 text-blue-800",
+                _                               => "bg-gray-100 text-gray-500"
             };
 
             string jadwalUrl = jenis == JenisTask.Observasi
@@ -234,6 +236,43 @@
                        class="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
                         ↩ Buka Kembali
                     </a>
+                }
+                else if (st.IsWaitingKonfirmasi)
+                {
+                    @* Pemohon sudah unggah dokumentasi — Loket perlu konfirmasi selesai *@
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
+                        <div class="flex items-start gap-2">
+                            <span class="text-blue-500 flex-shrink-0">📤</span>
+                            <div>
+                                <p class="text-[11px] font-bold text-blue-800">
+                                    Pemohon sudah mengunggah dokumentasi
+                                </p>
+                                <p class="text-[11px] text-blue-600 mt-0.5 leading-relaxed">
+                                    Konfirmasi bahwa @JenisTask.GetLabel(st.JenisTask) telah
+                                    benar-benar dilaksanakan, lalu klik tombol di bawah.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    @{
+                        string konfirmasiUrl = st.JenisTask == JenisTask.Observasi
+                            ? $"/petugas-loket/selesai-observasi/{p.PermohonanPPIDID}"
+                            : $"/petugas-loket/selesai-wawancara/{p.PermohonanPPIDID}";
+                    }
+                    <div class="flex flex-col gap-1.5">
+                        <a href="@konfirmasiUrl"
+                           class="w-full flex items-center justify-center gap-2
+                                  bg-emerald-600 hover:bg-emerald-700 text-white
+                                  text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                            ✓ Konfirmasi @JenisTask.GetLabel(st.JenisTask) Selesai →
+                        </a>
+                        <a href="/petugas-loket/batal-subtask/@p.PermohonanPPIDID/@st.JenisTask"
+                           class="w-full text-center bg-red-50 hover:bg-red-100 border border-red-100
+                                  text-red-600 text-[11px] font-semibold px-2 py-1.5
+                                  rounded-lg transition-colors">
+                            🚫 Batalkan
+                        </a>
+                    </div>
                 }
                 else if (!st.IsSelesai)
                 {

@@ -297,11 +297,12 @@ public class SubTaskPPID
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 
     // ── Computed helpers ──────────────────────────────────────────────────
-    public bool IsPending    => StatusTask == SubTaskStatus.Pending;
-    public bool IsInProgress => StatusTask == SubTaskStatus.InProgress;
-    public bool IsSelesai    => StatusTask == SubTaskStatus.Selesai;
-    public bool IsDibatalkan => StatusTask == SubTaskStatus.Dibatalkan;
-    public bool IsTerminal   => SubTaskStatus.IsTerminal(StatusTask);
+    public bool IsPending           => StatusTask == SubTaskStatus.Pending;
+    public bool IsInProgress        => StatusTask == SubTaskStatus.InProgress;
+    public bool IsSelesai           => StatusTask == SubTaskStatus.Selesai;
+    public bool IsDibatalkan        => StatusTask == SubTaskStatus.Dibatalkan;
+    public bool IsWaitingKonfirmasi => StatusTask == SubTaskStatus.WaitingKonfirmasi;
+    public bool IsTerminal          => SubTaskStatus.IsTerminal(StatusTask);
     public bool HasFile      => !string.IsNullOrEmpty(FilePath);
     public bool HasJadwal    => TanggalJadwal.HasValue;
     public bool WasRescheduled => RescheduleCount > 0;
@@ -346,31 +347,33 @@ public static class LokasiJenisConst
 
 public static class SubTaskStatus
 {
-    public const int Pending    = 0;
-    public const int InProgress = 1;
-    public const int Selesai    = 2;
-    public const int Dibatalkan = 3;    // EC-2: batal, tidak akan dikerjakan
+    public const int Pending           = 0;
+    public const int InProgress        = 1;
+    public const int Selesai           = 2;
+    public const int Dibatalkan        = 3;   // EC-2: batal, tidak akan dikerjakan
+    public const int WaitingKonfirmasi = 4;   // Pemohon sudah unggah, menunggu konfirmasi Loket
 
     public static string GetLabel(int status) => status switch
     {
-        Pending    => "Menunggu",
-        InProgress => "Sedang Diproses",
-        Selesai    => "Selesai",
-        Dibatalkan => "Dibatalkan",
-        _          => "—"
+        Pending           => "Menunggu",
+        InProgress        => "Sedang Diproses",
+        Selesai           => "Selesai",
+        Dibatalkan        => "Dibatalkan",
+        WaitingKonfirmasi => "Menunggu Konfirmasi Loket",
+        _                 => "—"
     };
 
     public static string GetBadgeClass(int status) => status switch
     {
-        Pending    => "bg-gray-100 text-gray-500",
-        InProgress => "bg-amber-50 text-amber-700",
-        Selesai    => "bg-emerald-50 text-emerald-700",
-        Dibatalkan => "bg-red-50 text-red-600",
-        _          => "bg-gray-50 text-gray-400"
+        Pending           => "bg-gray-100 text-gray-500",
+        InProgress        => "bg-amber-50 text-amber-700",
+        Selesai           => "bg-emerald-50 text-emerald-700",
+        Dibatalkan        => "bg-red-50 text-red-600",
+        WaitingKonfirmasi => "bg-blue-50 text-blue-700",
+        _                 => "bg-gray-50 text-gray-400"
     };
 
     public static bool IsTerminal(int status) => status is Selesai or Dibatalkan;
-}
 
 public static class JenisTask
 {

@@ -1,0 +1,163 @@
+@* ════════════════════════════════════════════════════════════════════════════
+   Views/Home/UploadDokumentasiTask.cshtml  — FILE BARU
+   Pemohon mengunggah dokumentasi saat observasi / wawancara berlangsung.
+════════════════════════════════════════════════════════════════════════════ *@
+@model UploadHasilTaskVm
+@{
+    ViewData["Title"] = "Unggah Dokumentasi " + JenisTask.GetLabel(Model.JenisTask);
+    bool isWaw       = Model.JenisTask == JenisTask.Wawancara;
+    string icon      = isWaw ? "🎤" : "🔍";
+    string colorBg   = isWaw ? "bg-violet-50 border-violet-200"   : "bg-orange-50 border-orange-200";
+    string colorText = isWaw ? "text-violet-800"                   : "text-orange-800";
+    string colorBtn  = isWaw ? "bg-violet-600 hover:bg-violet-700" : "bg-orange-600 hover:bg-orange-700";
+}
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+
+    <a href="/lacak?noPermohonan=@Model.NoPermohonan"
+       class="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm font-medium mb-6 transition-colors">
+        ← Kembali ke Status Permohonan
+    </a>
+
+    <div class="max-w-xl">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+
+            @* Header *@
+            <div class="px-6 py-5 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl
+                        @colorBg border">
+                        @icon
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-gray-800 text-base">
+                            Unggah Dokumentasi @JenisTask.GetLabel(Model.JenisTask)
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5 font-mono">
+                            @Model.NoPermohonan · @Model.NamaPemohon
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6">
+
+                @* Info Jadwal *@
+                @if (Model.TanggalJadwal.HasValue)
+                {
+                    <div class="@colorBg rounded-xl p-4 mb-5">
+                        <p class="text-[10px] @colorText font-bold uppercase tracking-widest mb-1.5">
+                            Info Jadwal @JenisTask.GetLabel(Model.JenisTask)
+                        </p>
+                        <p class="text-sm font-semibold @colorText">
+                            @Model.TanggalJadwal.Value.ToString("dddd, dd MMMM yyyy")
+                            pukul @(Model.WaktuJadwal?.ToString("HH:mm") ?? "—") WIB
+                        </p>
+                        @if (!string.IsNullOrEmpty(Model.LokasiDetail))
+                        {
+                            <p class="text-xs @colorText mt-0.5 opacity-80">📍 @Model.LokasiDetail</p>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.NamaPIC))
+                        {
+                            <p class="text-xs @colorText mt-0.5 opacity-80">
+                                @(isWaw ? "Narasumber" : "PIC"): <strong>@Model.NamaPIC</strong>
+                            </p>
+                        }
+                    </div>
+                }
+
+                @* Validation errors *@
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                        <div asp-validation-summary="All" class="text-red-700 text-sm"></div>
+                    </div>
+                }
+
+                <form asp-action="UploadDokumentasiTaskPost" asp-controller="Home"
+                      method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="PermohonanPPIDID" />
+                    <input type="hidden" asp-for="NoPermohonan" />
+                    <input type="hidden" asp-for="NamaPemohon" />
+                    <input type="hidden" asp-for="JudulPenelitian" />
+                    <input type="hidden" asp-for="JenisTask" />
+
+                    @* Upload file *@
+                    <div class="mb-4">
+                        <label class="lbl">
+                            File Dokumentasi / Laporan <span class="text-red-500">*</span>
+                        </label>
+                        <div class="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center
+                                    hover:border-gray-300 transition-colors">
+                            <input asp-for="FileDokumentasi" type="file"
+                                   accept=".pdf,.docx,.doc,.xlsx,.zip,.jpg,.jpeg,.png"
+                                   class="w-full text-sm text-gray-500
+                                          file:mr-3 file:py-1.5 file:px-4
+                                          file:rounded-lg file:border-0
+                                          file:text-xs file:font-bold
+                                          file:bg-gray-100 file:text-gray-700
+                                          hover:file:bg-gray-200 cursor-pointer" />
+                            <p class="text-[11px] text-gray-400 mt-2">
+                                PDF, Word, Excel, ZIP, Gambar — maks. 50 MB
+                            </p>
+                        </div>
+                        <span asp-validation-for="FileDokumentasi"
+                              class="text-red-500 text-xs mt-1 block"></span>
+                    </div>
+
+                    @* Catatan *@
+                    <div class="mb-5">
+                        <label class="lbl">Catatan (opsional)</label>
+                        <textarea asp-for="Catatan" rows="3" class="fld resize-none"
+                                  placeholder="Ringkasan kegiatan, temuan, atau catatan tambahan...">
+                        </textarea>
+                    </div>
+
+                    @* Info *@
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-5
+                                flex gap-2 items-start">
+                        <span class="text-blue-500 flex-shrink-0 text-sm">ℹ️</span>
+                        <p class="text-xs text-blue-700 leading-relaxed">
+                            Setelah mengunggah, petugas loket akan mengkonfirmasi pelaksanaan
+                            @JenisTask.GetLabel(Model.JenisTask). Pantau status di halaman
+                            pelacakan menggunakan nomor permohonan Anda.
+                        </p>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <a href="/lacak?noPermohonan=@Model.NoPermohonan"
+                           class="flex-1 text-center border border-gray-200 text-gray-600
+                                  font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50
+                                  transition-colors">
+                            ← Batal
+                        </a>
+                        <button type="submit"
+                                class="flex-grow @colorBtn text-white font-bold py-2.5 px-6
+                                       rounded-xl text-sm shadow-sm transition-colors">
+                            @icon Unggah Dokumentasi →
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mt-4">
+            <p class="text-xs text-gray-500 leading-relaxed">
+                Butuh bantuan? Hubungi loket PPID DLH di
+                <strong>(021) 8591-2230</strong>
+                (Senin–Jumat, 08.00–16.00 WIB).
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:700; color:#6b7280;
+           text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+    .fld { display:block; width:100%; border:1px solid #e5e7eb; border-radius:10px;
+           padding:9px 14px; font-size:13.5px; background:#fafafa; outline:none;
+           transition:all .15s; }
+    .fld:focus { box-shadow:0 0 0 2.5px #6366f1; border-color:transparent;
+                 background:white; }
+</style>
