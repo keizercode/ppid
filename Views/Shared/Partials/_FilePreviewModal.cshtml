@@ -1,110 +1,117 @@
-@*
-   Views/Shared/Partials/_FilePreviewModal.cshtml
-   ─────────────────────────────────────────────
-   Pratinjau file (PDF / gambar / fallback) via modal overlay.
-   Sertakan sekali per halaman:  <partial name="Partials/_FilePreviewModal" />
-   Panggil dari tombol           :  onclick="previewFile(url, namaFile)"
-*@
-
-<!-- File Preview Modal -->
-<div id="filePreviewModal"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
-     onclick="closePreviewBackdrop(event)">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-
-    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh]
-                flex flex-col overflow-hidden z-10">
-
-        <!-- Header -->
-        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100
-                    flex-shrink-0 gap-3">
-            <p id="previewFileName"
-               class="text-sm font-bold text-gray-800 truncate min-w-0">—</p>
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <a id="previewDownloadBtn" href="#" target="_blank"
-                   class="text-xs font-bold bg-blue-50 hover:bg-blue-100 border border-blue-200
-                          text-blue-700 px-3 py-1.5 rounded-lg transition-colors">
-                    ⬇ Unduh
-                </a>
-                <button type="button"
-                        onclick="document.getElementById('filePreviewModal').classList.add('hidden')"
-                        class="w-8 h-8 flex items-center justify-center rounded-lg text-lg font-bold
-                               text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                        aria-label="Tutup pratinjau">
-                    ✕
-                </button>
-            </div>
-        </div>
-
-        <!-- Body -->
-        <div id="previewBody"
-             class="flex-1 overflow-auto bg-gray-50 min-h-[400px]
-                    flex items-center justify-center p-4">
-        </div>
-    </div>
-</div>
-
 <script>
 (function () {
-    // Guard: jangan daftarkan ulang jika partial di-render lebih dari sekali
     if (window.__filePreviewReady) return;
     window.__filePreviewReady = true;
 
-    const IMG_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp']);
+    const IMG_EXT = new Set(['jpg','jpeg','png','gif','webp','svg','bmp']);
+
+    // ── Validasi URL: hanya izinkan relative path atau http/https ──────────
+    function isSafeUrl(url) {
+        if (!url) return false;
+        if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) return true;
+        try {
+            const p = new URL(url);
+            return p.protocol === 'https:' || p.protocol === 'http:';
+        } catch {
+            return false;
+        }
+    }
+
+    // ── Buat elemen DOM secara programatik (bukan innerHTML) ───────────────
+    function buildFallback(url, name) {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'text-align:center;padding:2.5rem';
+
+        const icon = document.createElement('div');
+        icon.style.cssText = 'font-size:3.5rem;margin-bottom:.75rem';
+        icon.textContent = '📄';                     // textContent — tidak di-parse sebagai HTML
+
+        const title = document.createElement('p');
+        title.style.cssText = 'font-size:.875rem;font-weight:700;color:#374151;margin:.0 0 .25rem';
+        title.textContent = name;                    // aman: tidak melalui innerHTML
+
+        const hint = document.createElement('p');
+        hint.style.cssText = 'font-size:.75rem;color:#9ca3af;margin-bottom:1.25rem';
+        hint.textContent = 'Format ini tidak dapat dipratinjau langsung di browser.';
+
+        const btn = document.createElement('a');
+        btn.href            = url;                   // URL sudah divalidasi isSafeUrl()
+        btn.target          = '_blank';
+        btn.rel             = 'noopener noreferrer'; // cegah tab-napping
+        btn.download        = name;
+        btn.style.cssText   = [
+            'display:inline-flex', 'align-items:center', 'gap:.5rem',
+            'background:#2563eb', 'color:#fff', 'font-size:.8125rem',
+            'font-weight:700', 'padding:.6rem 1.25rem',
+            'border-radius:.75rem', 'text-decoration:none'
+        ].join(';');
+        btn.textContent = '⬇ Unduh File';
+
+        wrap.append(icon, title, hint, btn);
+        return wrap;
+    }
 
     window.previewFile = function (url, name) {
-        if (!url) return;
+        // ── Guard: tolak URL tidak aman ────────────────────────────────────
+        if (!isSafeUrl(url)) {
+            console.warn('[previewFile] URL ditolak:', url);
+            return;
+        }
 
-        // Isi header
-        document.getElementById('previewFileName').textContent = name || 'File';
-        const dlBtn = document.getElementById('previewDownloadBtn');
-        dlBtn.href     = url;
-        dlBtn.download = name || '';
+        const safeName = name || 'File';
 
-        // Deteksi ekstensi (abaikan query-string)
-        const ext  = url.split('?')[0].split('.').pop().toLowerCase();
+        document.getElementById('previewFileName').textContent = safeName;
+
+        const dlBtn     = document.getElementById('previewDownloadBtn');
+        dlBtn.href      = url;
+        dlBtn.download  = safeName;
+        dlBtn.rel       = 'noopener noreferrer';
+
         const body = document.getElementById('previewBody');
-        body.innerHTML = '';
+        body.innerHTML  = '';                        // bersihkan konten sebelumnya
+        body.classList.remove('items-center', 'justify-center');
+
+        const ext = url.split('?')[0].split('.').pop().toLowerCase();
 
         if (ext === 'pdf') {
-            body.classList.remove('items-center', 'justify-center');
-            const iframe = document.createElement('iframe');
-            iframe.src             = url;
-            iframe.style.cssText   = 'width:100%;height:75vh;border:0;display:block;';
-            iframe.title           = name || 'Pratinjau PDF';
+            const iframe        = document.createElement('iframe');
+            iframe.src          = url;
+            iframe.title        = safeName;
+            iframe.style.cssText = 'width:100%;height:75vh;border:0;display:block;';
             body.appendChild(iframe);
 
         } else if (IMG_EXT.has(ext)) {
             body.classList.add('items-center', 'justify-center');
-            const img          = document.createElement('img');
-            img.src            = url;
-            img.alt            = name || '';
-            img.style.cssText  = 'max-width:100%;max-height:72vh;object-fit:contain;' +
-                                 'border-radius:.75rem;box-shadow:0 4px 20px rgba(0,0,0,.12);';
+            const img           = document.createElement('img');
+            img.src             = url;
+            img.alt             = safeName;
+            img.style.cssText   = [
+                'max-width:100%', 'max-height:72vh', 'object-fit:contain',
+                'border-radius:.75rem',
+                'box-shadow:0 4px 20px rgba(0,0,0,.12)'
+            ].join(';');
             body.appendChild(img);
 
         } else {
             body.classList.add('items-center', 'justify-center');
-            body.innerHTML = `
-                <div style="text-align:center;padding:2.5rem">
-                    <div style="font-size:3.5rem;margin-bottom:.75rem">📄</div>
-                    <p style="font-size:.875rem;font-weight:700;color:#374151;margin-bottom:.25rem">
-                        ${name || 'File'}
-                    </p>
-                    <p style="font-size:.75rem;color:#9ca3af;margin-bottom:1.25rem">
-                        Format ini tidak dapat dipratinjau langsung di browser.
-                    </p>
-                    <a href="${url}" target="_blank" download="${name || ''}"
-                       style="display:inline-flex;align-items:center;gap:.5rem;
-                              background:#2563eb;color:#fff;font-size:.8125rem;font-weight:700;
-                              padding:.6rem 1.25rem;border-radius:.75rem;text-decoration:none;">
-                        ⬇ Unduh File
-                    </a>
-                </div>`;
+            body.appendChild(buildFallback(url, safeName)); // DOM API, bukan innerHTML
         }
 
         document.getElementById('filePreviewModal').classList.remove('hidden');
     };
+
+    function bindPreviewButtons() {
+        document.querySelectorAll('[data-preview-url]').forEach(function (btn) {
+            if (btn.dataset.previewBound) return;
+            btn.dataset.previewBound = '1';
+            btn.addEventListener('click', function () {
+                window.previewFile(
+                    btn.dataset.previewUrl  || '',
+                    btn.dataset.previewName || 'File'
+                );
+            });
+        });
+    }
 
     window.closePreviewBackdrop = function (e) {
         const modal = document.getElementById('filePreviewModal');
@@ -118,5 +125,11 @@
             document.getElementById('filePreviewModal')?.classList.add('hidden');
         }
     });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindPreviewButtons);
+    } else {
+        bindPreviewButtons();
+    }
 }());
 </script>
