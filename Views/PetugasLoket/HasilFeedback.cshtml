@@ -274,10 +274,17 @@
                                     <div class="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
                                         <span class="text-emerald-500 flex-shrink-0">📎</span>
                                         <p class="text-xs font-medium text-emerald-800 flex-1 truncate">@(fb.NamaFile ?? "File laporan")</p>
-                                        <a href="@fb.FileLaporan" target="_blank"
-                                           class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-bold flex-shrink-0 transition-colors">
-                                            Unduh
-                                        </a>
+                                        <div class="flex items-center gap-1 flex-shrink-0">
+                                            <button type="button"
+                                                    onclick="previewFile('@fb.FileLaporan','@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(fb.NamaFile ?? "Laporan"))')"
+                                                    class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
+                                                👁 Lihat
+                                            </button>
+                                            <a href="@fb.FileLaporan" target="_blank"
+                                               class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
+                                                ⬇ Unduh
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             }
@@ -345,10 +352,17 @@
                                 Diunggah: @f.CreatedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm")
                             </p>
                         </div>
-                        <a href="@f.UploadDokumenPPID" target="_blank"
-                           class="flex-shrink-0 text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
-                            Unduh
-                        </a>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <button type="button"
+                                    onclick="previewFile('@f.UploadDokumenPPID','@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(f.NamaDokumenPPID))')"
+                                    class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
+                                👁 Lihat
+                            </button>
+                            <a href="@f.UploadDokumenPPID" target="_blank"
+                               class="text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
+                                ⬇ Unduh
+                            </a>
+                        </div>
                     </div>
                 }
             </div>
@@ -467,6 +481,7 @@
         </a>
     </div>
 </div>
+<partial name="Partials/_FilePreviewModal" />
 
 @section Scripts {
 <script>

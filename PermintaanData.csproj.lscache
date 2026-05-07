@@ -544,6 +544,7 @@ Views/
    EmptyTable.cshtml
    _ActionMenu.cshtml
    _ConfirmModal.cshtml
+   _FilePreviewModal.cshtml
    _FormStyles.cshtml
    _ParallelTaskStatus.cshtml
    _PublicNavBar.cshtml
@@ -623,6 +624,7 @@ Views/
    EmptyTable.cshtml
    _ActionMenu.cshtml
    _ConfirmModal.cshtml
+   _FilePreviewModal.cshtml
    _FormStyles.cshtml
    _ParallelTaskStatus.cshtml
    _PublicNavBar.cshtml
