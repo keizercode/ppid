@@ -153,11 +153,9 @@
      class="absolute inset-0"
      style="display:none">
     <iframe id="dv-office-frame"
-            src=""
-            allowfullscreen
-            style="width:100%;height:100%;border:none;display:block"
-            onload="docViewerHideLoader()"
-            onerror="docViewerShowUnsupported()">
+        src=""
+        allowfullscreen
+        style="width:100%;height:100%;border:none;display:block">
     </iframe>
 </div>
 
@@ -259,6 +257,8 @@
         const of_ = el('dv-office-frame');
         if (of_) of_.src = '';
         _officeUrl = '';
+        const ob = el('dv-office-bar');
+        if (ob) ob.remove();
 
 
         const tp = el('dv-total-pages'); if (tp) tp.textContent = '—';
@@ -301,97 +301,22 @@
         }
     };
 
-    /* ─────────────────────────────────────────────────────────────────────────
-       DOCX/DOC: minta server konversi ke PDF, render via PDF.js
-       Jika server tidak punya LibreOffice → fallback ke docx-preview client-side
-    ───────────────────────────────────────────────────────────────────────── */
-    async function loadDocxAsPdf(virtualPath) {
-        const apiUrl = '/api/doc-preview/pdf?virtualPath='
-                       + encodeURIComponent(virtualPath);
-
-        try {
-            // Cek dulu apakah endpoint tersedia & konversi berhasil
-            const probe = await fetch(apiUrl, { method: 'HEAD' });
-
-            if (probe.ok) {
-                // Render sebagai PDF (fidelitas penuh)
-                show('dv-pdf-wrap');
-                await loadPdf(apiUrl);
-                return;
-            }
-
-            // Server ada tapi konversi gagal (LibreOffice tidak terinstal, dsb.)
-            // → Fallback graceful ke docx-preview (client-side)
-            console.warn('[DocViewer] Server konversi gagal (' + probe.status + '), fallback ke docx-preview');
-            await loadDocxClientSide(_url);
-
-        } catch (networkErr) {
-            // Offline / error jaringan → langsung fallback
-            console.warn('[DocViewer] Tidak bisa menjangkau /api/doc-preview/pdf, fallback', networkErr);
-            await loadDocxClientSide(_url);
-        }
-    }
-
-    /* ─────────────────────────────────────────────────────────────────────────
-       Fallback: docx-preview client-side (nama fungsi diganti agar tidak
-       bentrok dengan loadDocx asli — hapus loadDocx lama jika masih ada)
-    ───────────────────────────────────────────────────────────────────────── */
-    async function loadDocxClientSide(url) {
-        const wrap    = el('dv-docx-wrap');
-        const content = el('dv-docx-content');
-        if (!wrap || !content) { docViewerShowUnsupported(); return; }
-
-        try {
-            const _docxLib = window.docxPreview ?? window.docx ?? null;
-            if (!_docxLib || typeof _docxLib.renderAsync !== 'function')
-                throw new Error('docx-preview belum siap');
-
-            const res = await fetch(url, { cache: 'no-store' });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-
-            content.innerHTML = '';
-
-            await _docxLib.renderAsync(await res.arrayBuffer(), content, null, {
-                className: 'docx', inWrapper: true,
-                ignoreWidth: false, ignoreHeight: false,
-                ignoreFonts: false, breakPages: true,
-                useBase64URL: true,
-                renderHeaders: true, renderFooters: true,
-                renderFootnotes: true, renderEndnotes: true,
-            });
-
-            hide('dv-loader');
-            wrap.style.display = 'block';
-            wrap.scrollTop = 0;
-
-            _docxZoom = 100;
-            _applyDocxZoom();
-            const dtb = el('dv-docx-toolbar');
-            if (dtb) { dtb.classList.remove('hidden'); dtb.style.display = 'flex'; }
-
-        } catch (err) {
-            console.error('[DocViewer] DOCX client-side gagal:', err);
-            docViewerShowUnsupported();
-        }
-    }
 
 /* ── Office Online Viewer ────────────────────────────────────────────────── */
 function loadOfficeOnline(url) {
-    // Bangun URL absolut — Office Online butuh URL yang bisa diakses publik
     const absoluteUrl = new URL(url, location.href).href;
-    _officeUrl        = absoluteUrl;
-
-    const viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src='
-                      + encodeURIComponent(absoluteUrl);
+    const viewerUrl   = 'https://view.officeapps.live.com/op/embed.aspx?src='
+                        + encodeURIComponent(absoluteUrl);
 
     const frame = el('dv-office-frame');
     const wrap  = el('dv-office-wrap');
+    if (!frame || !wrap) { docViewerShowUnsupported(); return; }
 
-   if (!frame || !wrap) { docViewerShowUnsupported(); return; }
-
-    // onload di iframe akan panggil docViewerHideLoader()
     frame.src          = viewerUrl;
     wrap.style.display = 'block';
+
+    frame.onload  = () => docViewerHideLoader();
+    frame.onerror = () => docViewerShowUnsupported();
 }
 
     /* ── PDF.js: load ───────────────────────────────────────────────────── */

@@ -4,7 +4,7 @@
   "description": "ASP.NET Core 8 MVC · PostgreSQL · Tailwind CSS CLI v4",
   "scripts": {
     "build:css": "tailwindcss -i ./Styles/input.css -o ./wwwroot/css/app.css --minify",
-    "watch:css": "tailwindcss -i ./Styles/input.css -o ./wwwroot/css/app.css --watch"
+    "watch:css": "tailwindcss -i ./Styles/input.css -o ./wwwroot/css/app.css --watch --poll"
   },
   "keywords": [],
   "author": "",
