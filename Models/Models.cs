@@ -374,6 +374,7 @@ public static class SubTaskStatus
     };
 
     public static bool IsTerminal(int status) => status is Selesai or Dibatalkan;
+}
 
 public static class JenisTask
 {

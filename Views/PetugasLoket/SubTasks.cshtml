@@ -254,11 +254,11 @@
                             </div>
                         </div>
                     </div>
-                    @{
+
                         string konfirmasiUrl = st.JenisTask == JenisTask.Observasi
                             ? $"/petugas-loket/selesai-observasi/{p.PermohonanPPIDID}"
                             : $"/petugas-loket/selesai-wawancara/{p.PermohonanPPIDID}";
-                    }
+
                     <div class="flex flex-col gap-1.5">
                         <a href="@konfirmasiUrl"
                            class="w-full flex items-center justify-center gap-2
