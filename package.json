@@ -13,6 +13,7 @@
     "tailwindcss": "^4.2.4"
   },
   "dependencies": {
-    "@tailwindcss/cli": "^4.2.4"
+    "@tailwindcss/cli": "^4.2.4",
+    "docx-preview": "^0.3.7"
   }
 }

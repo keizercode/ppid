@@ -7,8 +7,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"
-       crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="/js/docx-preview.min.js"></script>
 
 <!-- ── Backdrop ──────────────────────────────────────────────────────────── -->
 <div id="doc-viewer-backdrop"
@@ -221,32 +220,25 @@
     #dv-page-input::-webkit-inner-spin-button,
     #dv-page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     #dv-page-input { -moz-appearance: textfield; }
-
-    /* ── DOCX content typography ── */
- #dv-docx-content h1 { font-size:2rem;font-weight:700;margin:1.5rem 0 .75rem;border-bottom:2px solid #dee2e6;padding-bottom:.4rem }
- #dv-docx-content h2 { font-size:1.5rem;font-weight:700;margin:1.25rem 0 .6rem }
- #dv-docx-content h3 { font-size:1.15rem;font-weight:700;margin:1rem 0 .5rem }
- #dv-docx-content p  { margin:0 0 .85rem }
- #dv-docx-content strong,
- #dv-docx-content b   { font-weight:700 }
- #dv-docx-content em,
- #dv-docx-content i   { font-style:italic }
- #dv-docx-content u   { text-decoration:underline }
- #dv-docx-content table {
-     width:100%;border-collapse:collapse;margin:1rem 0;font-size:11pt }
- #dv-docx-content th,
- #dv-docx-content td  {
-     border:1px solid #ced4da;padding:.45rem .7rem;text-align:left;vertical-align:top }
- #dv-docx-content th  { background:#f1f3f5;font-weight:700 }
- #dv-docx-content tr:nth-child(even) td { background:#f8f9fa }
- #dv-docx-content ul,
- #dv-docx-content ol  { padding-left:1.8rem;margin:0 0 .85rem }
- #dv-docx-content li  { margin-bottom:.3rem }
- #dv-docx-content img { max-width:100%;height:auto;margin:.5rem 0;border-radius:4px }
- #dv-docx-content a   { color:#1971c2;text-decoration:underline }
- #dv-docx-content blockquote {
-     border-left:4px solid #ced4da;margin:1rem 0;padding:.5rem 1rem;
-     color:#495057;background:#f8f9fa;border-radius:0 4px 4px 0 }
+    /* ── DOCX Preview (docx-preview / docxjs) ── */
+    /* Biarkan docx-preview mengurus typography-nya sendiri.
+    Kita hanya atur zoom via CSS zoom property (layout-aware). */
+    #dv-docx-content {
+        zoom: 1;
+        transform-origin: top center;
+    }
+    /* Pastikan halaman-halaman di-render terpusat */
+    #dv-docx-content .docx-wrapper {
+        background: #d0d0d0 !important;
+        padding: 1.5rem 0 3rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 1.5rem !important;
+    }
+    #dv-docx-content section.docx {
+        box-shadow: 0 2px 16px rgba(0,0,0,.28) !important;
+    }
 </style>
 
 <script>
@@ -353,69 +345,59 @@
     };
 
 
-/* ── DOCX Viewer via mammoth.js ─────────────────────────────────────────── */
+/* ── DOCX Viewer via docx-preview (docxjs) ──────────────────────────────── */
 async function loadDocx(url) {
-     const wrap    = el('dv-docx-wrap');
-     const content = el('dv-docx-content');
-     if (!wrap || !content) { docViewerShowUnsupported(); return; }
+    const wrap    = el('dv-docx-wrap');
+    const content = el('dv-docx-content');
+    if (!wrap || !content) { docViewerShowUnsupported(); return; }
 
-     try {
-         if (typeof mammoth === 'undefined') throw new Error('mammoth.js tidak tersedia');
+    try {
+        // docx-preview bisa expose sebagai docxPreview atau window.docxPreview
+        const _docxLib = window.docxPreview ?? window.docx ?? null;
+        if (!_docxLib || typeof _docxLib.renderAsync !== 'function')
+            throw new Error('docx-preview belum siap — CDN mungkin masih loading atau diblokir');
 
-         const res = await fetch(url, { cache: 'no-store' });
-         if (!res.ok) throw new Error('HTTP ' + res.status);
-         const arrayBuffer = await res.arrayBuffer();
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const arrayBuffer = await res.arrayBuffer();
 
-         const result = await mammoth.convertToHtml(
-             { arrayBuffer },
-             {
-                 convertImage: mammoth.images.imgElement(img => {
-                     return img.read('base64').then(data => ({
-                         src: `data:${img.contentType};base64,${data}`
-                     }));
-                 }),
-                 styleMap: [
-                     "p[style-name='Heading 1'] => h1:fresh",
-                     "p[style-name='Heading 2'] => h2:fresh",
-                     "p[style-name='Heading 3'] => h3:fresh",
-                     "p[style-name='Heading 4'] => h4:fresh",
-                     "p[style-name='List Paragraph'] => p.list-paragraph:fresh",
-                     "b => strong",
-                     "i => em",
-                     "u => u",
-                     "strike => s",
-                 ]
-             }
-         );
+        content.innerHTML = '';
 
-         if (result.messages?.length) {
-             result.messages.forEach(m => console.warn('[DocViewer DOCX]', m.message));
-         }
+        await _docxLib.renderAsync(arrayBuffer, content, null, {
+            className:           'docx',       // CSS class prefix yang di-generate
+            inWrapper:           true,          // bungkus dalam .docx-wrapper
+            ignoreWidth:         false,         // hormati lebar halaman dari dokumen
+            ignoreHeight:        false,         // hormati tinggi halaman dari dokumen
+            ignoreFonts:         false,         // muat font embed jika ada
+            breakPages:          true,          // pisah per halaman seperti Word
+            useBase64URL:        true,          // embed gambar sebagai base64
+            renderHeaders:       true,
+            renderFooters:       true,
+            renderFootnotes:     true,
+            renderEndnotes:      true,
+            debug:               false
+        });
 
-         content.innerHTML = result.value
-             || '<p style="color:#868e96;text-align:center;padding:3rem 0">Dokumen kosong atau tidak dapat dibaca.</p>';
+        hide('dv-loader');
+        wrap.style.display = 'block';
+        wrap.scrollTop     = 0;
 
-         // Sembunyikan loader, tampilkan wrap
-         hide('dv-loader');
-         wrap.style.display = 'block';
-         wrap.scrollTop = 0;
-
-                 // Tampilkan toolbar DOCX
+        // Tampilkan toolbar DOCX
         _docxZoom = 100;
         _applyDocxZoom();
         const dtb = el('dv-docx-toolbar');
         if (dtb) { dtb.classList.remove('hidden'); dtb.style.display = 'flex'; }
 
-     } catch (err) {
-         console.error('[DocViewer] DOCX gagal dimuat:', err);
-         docViewerShowUnsupported();
-     }
- }
+    } catch (err) {
+        console.error('[DocViewer] DOCX gagal dimuat:', err);
+        docViewerShowUnsupported();
+    }
+}
 
-     /* ── DOCX zoom ──────────────────────────────────────────────────────── */
+    /* ── DOCX zoom ──────────────────────────────────────────────────────── */
     let _docxZoom = 100;
-    const DOCX_ZOOM_MIN = 70;
-    const DOCX_ZOOM_MAX = 150;
+    const DOCX_ZOOM_MIN = 50;
+    const DOCX_ZOOM_MAX = 200;
     const DOCX_ZOOM_STEP = 10;
 
     window.docxZoom = function (dir) {
@@ -430,10 +412,15 @@ async function loadDocx(url) {
 
     function _applyDocxZoom() {
         const c = el('dv-docx-content');
-        if (c) c.style.fontSize = (_docxZoom / 100 * 12) + 'pt';
+        if (c) {
+            // CSS zoom property: berbeda dari transform — tidak mempengaruhi posisi
+            // elemen lain, dan scroll container menyesuaikan ukuran secara otomatis.
+            c.style.zoom = (_docxZoom / 100).toString();
+        }
         const lbl = el('dv-docx-zoom-label');
         if (lbl) lbl.textContent = _docxZoom + '%';
     }
+
 
     /* ── PDF.js: load ───────────────────────────────────────────────────── */
     async function loadPdf(url) {
