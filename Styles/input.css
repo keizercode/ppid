@@ -4,8 +4,12 @@
    Jangan import manual utilities; v4 sudah otomatis inject semua.
    ══════════════════════════════════════════════════════════════ */
 
-@import "tailwindcss";
+/* @import "tailwindcss"; */
 
 /* ── Beritahu CLI di mana Tailwind harus scan class ── */
-@source "../Views/**/*.cshtml";
-@source "../wwwroot/js/**/*.js";
+/* @source "../Views*.cshtml"; */
+/* @source "../wwwroot/js*.js"; */
+@import "tailwindcss";
+
+@source "../Views";
+@source "../wwwroot/js";
