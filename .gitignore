@@ -8,8 +8,8 @@ appsettings.Development.json
 *.key
 
 # Build files
-# bin/
-# obj/
+bin/
+obj/
 publish/
 wwwroot/lib/
 wwwroot/css/app.css
