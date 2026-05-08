@@ -13,6 +13,7 @@ obj/
 publish/
 wwwroot/lib/
 wwwroot/css/app.css
+wwwroot/uploads/
 
 # User-specific
 *.user
