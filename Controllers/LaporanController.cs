@@ -21,8 +21,8 @@ namespace PermintaanData.Controllers
             {
                 Tahun        = 2024,
                 Judul        = "Laporan Layanan Informasi Publik Pemerintah Provinsi DKI Jakarta",
-                CoverImageUrl = null,
-                FileUrl      = "#",
+                CoverImageUrl = "https://res.cloudinary.com/dmcvht1vr/image/upload/v1778220152/laporan_ppid_2024_fzfnwq.png",
+                FileUrl      = "/laporan/laporan-ppid-2024.pdf",
                 TotalHalaman = 42,
                 Deskripsi    = "Laporan tahunan pengelolaan informasi dan dokumentasi PPID DLH Jakarta tahun 2024."
             },
@@ -30,8 +30,8 @@ namespace PermintaanData.Controllers
             {
                 Tahun        = 2023,
                 Judul        = "Laporan Layanan Informasi Publik Pemerintah Provinsi DKI Jakarta",
-                CoverImageUrl = null,
-                FileUrl      = "#",
+                CoverImageUrl = "https://res.cloudinary.com/dmcvht1vr/image/upload/v1778220033/laporan_ppid_2023_dfftu0.png",
+                FileUrl      = "/laporan/laporan-ppid-2023.pdf",
                 TotalHalaman = 35,
                 Deskripsi    = "Laporan tahunan pengelolaan informasi dan dokumentasi PPID DLH Jakarta tahun 2023."
             },
