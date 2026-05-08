@@ -19,8 +19,11 @@
             .Distinct()
             .ToList();
         var parts = parentNames
-            .Select(b => $"Bidang {enc.Encode(b)} Dinas Lingkungan Hidup Provinsi DKI Jakarta")
-            .ToList();
+        .Select(b => {
+            var bare = b.StartsWith("Bidang ", StringComparison.OrdinalIgnoreCase) ? b[7..] : b;
+            return $"Bidang {enc.Encode(bare)} Dinas Lingkungan Hidup Provinsi DKI Jakarta";
+        })
+        .ToList();
         if (parts.Count == 1) return parts[0];
         return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
     }
@@ -122,19 +125,30 @@
             position: relative;
         }
 
-        /* ── Header ── */
-        .letter-header {
-            text-align: center;
-            border-bottom: 3px double #000;
-            padding-bottom: 10px;
-            margin-bottom: 16px;
-        }
-        .letter-header .instansi { font-size: 16pt; font-weight: bold; }
-        .letter-header .provinsi { font-size: 16pt; font-weight: bold; }
-        .letter-header .alamat   { font-size: 12pt; margin-top: 4px; }
+ /* ── Header ── */
+ .letter-header {
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     padding-bottom: 10px;
+     margin-bottom: 4px;
+     gap: 8px;
 
+ }
+ .letter-header .logo-wrap {
+     flex-shrink: 0;
+ }
+ .letter-header .logo-wrap img {
+     width: 80px;
+     height: 80px;
+     object-fit: contain;
+ }
+ .letter-header .header-text {
+     text-align: center;
+     font-weight: bold;
+ }
         /* ── Judul surat ── */
-        .surat-title { text-align: center; margin: 16px 0 4px; }
+        .surat-title { text-align: center; margin: 0 0 4px; }
         .surat-title .label     { font-size: 12pt; font-weight: }
         .surat-title .nomor     { font-size: 12pt; min-height: 1.4em; }
         .surat-title .nomor::after { content: attr(data-blank); }
@@ -253,12 +267,17 @@
     <!-- ══ LETTER BODY ══ -->
     <div class="letter">
 
-        <!-- Header instansi -->
-        <div class="letter-header">
-            <div class="instansi">DINAS LINGKUNGAN HIDUP</div>
-            <div class="provinsi">PROVINSI DAERAH KHUSUS IBUKOTA JAKARTA</div>
-            <div class="alamat">Jl. Mandala V No. 67 Cililitan, Jakarta Timur 13640 · Telp. (021) 809-3636</div>
-        </div>
+         <!-- Header instansi -->
+ <div class="letter-header">
+     <div class="logo-wrap">
+         <img src="/images/logo-jayaraya.png" alt="Logo Jaya Raya" />
+     </div>
+     <div class="header-text">
+         <div class="instansi">DINAS LINGKUNGAN HIDUP</div>
+         <div class="provinsi">PROVINSI DAERAH KHUSUS IBUKOTA JAKARTA</div>
+
+     </div>
+ </div>
 
         <!-- Judul surat -->
         <div class="surat-title">
@@ -405,18 +424,36 @@
                 <ol>
                     <li>Kepala Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
                     <li>Sekretaris Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
-                    @foreach (var b in Model.BidangTujuan)
+                    @{
+                        // Group by induk; entry tanpa " — " berarti parent-only (tidak ada child)
+                        var bidangGroups = Model.BidangTujuan
+                            .GroupBy(b => b.Contains(" — ")
+                                ? b.Split(new[] { " — " }, 2, StringSplitOptions.None)[0].Trim()
+                                : b)
+                            .Select(g => new {
+                                // Strip leading "Bidang " agar tidak jadi "Kepala Bidang Bidang X"
+                                Induk    = g.Key.StartsWith("Bidang ", StringComparison.OrdinalIgnoreCase)
+                                               ? g.Key[7..] : g.Key,
+                                Children = g.Where(b => b.Contains(" — "))
+                                            .Select(b => b.Split(new[] { " — " }, 2, StringSplitOptions.None)[1].Trim())
+                                            .ToList()
+                            })
+                            .ToList();
+                    }
+                    @foreach (var grp in bidangGroups)
                     {
-                        @if (b.Contains(" — "))
+                        @if (grp.Children.Count == 0)
                         {
-                            var sep    = b.Split(new[] { " — " }, 2, StringSplitOptions.None);
-                            var induk  = sep[0].Trim();
-                            var child  = sep[1].Trim();
-                            <li>Kepala Bidang @induk Dinas Lingkungan Hidup Provinsi DKI Jakarta c.q. @child;</li>
+                            // Tidak ada child → tampilkan baris induk saja
+                            <li>Kepala Bidang @grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
                         }
                         else
                         {
-                            <li>Kepala Bidang @b Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
+                            // Ada child → skip baris induk, hanya render c.q.
+                            @foreach (var child in grp.Children)
+                            {
+                                <li>Kepala Bidang @grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta c.q. @child;</li>
+                            }
                         }
                     }
                     @if (!string.IsNullOrEmpty(Model.TembusanInstansi))
