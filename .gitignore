@@ -1,5 +1,4 @@
 # Production config
-appsettings.Production.json
 appsettings.Development.json
 
 # Certificates
