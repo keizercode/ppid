@@ -123,7 +123,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 // ── 12. Static Files ──────────────────────────────────────────────────────────
 app.UseStaticFiles();
 
