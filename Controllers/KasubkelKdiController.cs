@@ -370,10 +370,10 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
                 $"Sub-tugas Permintaan Data selesai. File: {nama ?? "(tidak ada)"}.",
                 CurrentUser);
 
-        // await db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
-        // await db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
 
         TempData["Success"] = advanced
