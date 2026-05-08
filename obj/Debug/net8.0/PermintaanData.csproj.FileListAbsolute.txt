@@ -1,7 +1,0 @@
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.exe
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\PermintaanData.dll
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.dll
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Abstractions.dll
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Npgsql.dll
-D:\ProjectDotnet\baru\PermintaanData\bin\Debug\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
