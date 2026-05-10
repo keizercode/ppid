@@ -356,7 +356,8 @@ public class HomeController(
             "uploads", vm.PermohonanPPIDID.ToString());
         Directory.CreateDirectory(uploadsDir);
 
-        var fn = $"tugas_{now:yyyyMMddHHmmss}_{Path.GetFileName(vm.FileTugas!.FileName)}";
+        // UploadTugasPost
+        var fn = $"tugas_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileTugas!.FileName)}";
         await using (var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create))
             await vm.FileTugas.CopyToAsync(s);
 
@@ -481,7 +482,8 @@ public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
                 "uploads", vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(uploadsDir);
 
-            fn = $"feedback_{vm.JenisTask}_{now:yyyyMMddHHmmss}_{Path.GetFileName(vm.FileLaporan.FileName)}";
+            // FeedbackTaskPost
+            fn = $"feedback_{vm.JenisTask}_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileLaporan.FileName)}";
             await using var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create);
             await vm.FileLaporan.CopyToAsync(s);
             fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
@@ -670,8 +672,8 @@ public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
             "uploads", vm.PermohonanPPIDID.ToString());
         Directory.CreateDirectory(uploadsDir);
 
-        var fn = $"{vm.JenisTask.ToLower()}_{now:yyyyMMddHHmmss}_" +
-                 Path.GetFileName(vm.FileDokumentasi!.FileName);
+        // UploadDokumentasiTaskPost
+        var fn = $"{vm.JenisTask.ToLower()}_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileDokumentasi!.FileName)}";
         await using (var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create))
             await vm.FileDokumentasi.CopyToAsync(s);
 

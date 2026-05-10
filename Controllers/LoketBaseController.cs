@@ -13,11 +13,11 @@ namespace PermintaanData.Controllers;
 public abstract class LoketBaseController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
     protected string UploadsRoot =>
-        Path.Combine(
-            string.IsNullOrEmpty(env.WebRootPath)
-                ? Path.Combine(env.ContentRootPath, "wwwroot")
-                : env.WebRootPath,
-            "uploads");
+           Path.Combine(
+       !string.IsNullOrEmpty(env.WebRootPath) && Directory.Exists(env.WebRootPath)
+           ? env.WebRootPath
+           : Path.Combine(env.ContentRootPath, "wwwroot"),
+       "uploads");
 
     // ── Upload helpers ────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ public abstract class LoketBaseController(AppDbContext db, IWebHostEnvironment e
         var uploadDir = Path.Combine(UploadsRoot, permohonanId.ToString());
         Directory.CreateDirectory(uploadDir);
 
-        var fileName = $"{jenisDokId}_{Path.GetFileName(file.FileName)}";
+        var fileName = $"{jenisDokId}_{Services.FileValidator.SanitizeFileName(file.FileName)}";
         await using var stream = new FileStream(Path.Combine(uploadDir, fileName), FileMode.Create);
         await file.CopyToAsync(stream);
 

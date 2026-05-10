@@ -331,7 +331,9 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
         {
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
-            var fn = $"data_{Path.GetFileName(vm.FileData.FileName)}";
+
+            // UploadDataPost
+            var fn = $"data_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileData.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileData.CopyToAsync(s);
             fp   = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
@@ -612,7 +614,8 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
         var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
         Directory.CreateDirectory(dir);
 
-        var fn = $"revisi_{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(vm.FileRevisi.FileName)}";
+        // RevisiFilePost
+        var fn = $"revisi_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileRevisi.FileName)}";
         await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
         await vm.FileRevisi.CopyToAsync(s);
         s.Close();

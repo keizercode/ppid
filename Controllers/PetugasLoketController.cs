@@ -1006,7 +1006,9 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
         {
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
-            var fn = $"observasi_{Path.GetFileName(vm.FileHasil.FileName)}";
+
+            // SelesaiObservasiPost
+            var fn = $"observasi_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileHasil.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileHasil.CopyToAsync(s);
             fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
@@ -1201,7 +1203,9 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
         {
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
-            var fn = $"wawancara_{Path.GetFileName(vm.FileHasil.FileName)}";
+
+            // SelesaiWawancaraPost
+            var fn = $"wawancara_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileHasil.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileHasil.CopyToAsync(s);
             fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";

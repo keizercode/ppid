@@ -88,6 +88,32 @@ public static class FileValidator
         return FileValidationResult.Ok();
     }
 
+    // ── Filename sanitizer ────────────────────────────────────────────────
+
+/// <summary>
+/// Mengembalikan nama file yang aman untuk dipakai sebagai path di Linux.
+///
+/// Browser Windows kadang mengirim IFormFile.FileName sebagai full Windows path
+/// ("C:\Users\budi\proposal.pdf"). Path.GetFileName() di Linux tidak mengenali
+/// '\' sebagai separator sehingga hasilnya adalah string mentah berisi backslash
+/// — nama file ilegal di server Linux.
+/// </summary>
+public static string SanitizeFileName(string? rawFileName)
+{
+    if (string.IsNullOrWhiteSpace(rawFileName))
+        return "upload";
+
+    // Normalisasi backslash Windows → forward slash
+    var normalized = rawFileName.Replace('\\', '/');
+    var name       = Path.GetFileName(normalized);
+
+    // Hapus karakter yang tidak valid di semua OS
+    var invalid = Path.GetInvalidFileNameChars();
+    name = string.Concat(name.Where(c => !invalid.Contains(c)));
+
+    return string.IsNullOrWhiteSpace(name) ? "upload" : name;
+}
+
     private static bool HasValidSignature(IFormFile file, string ext)
     {
         if (!AllowedSignatures.TryGetValue(ext, out var signatures))
