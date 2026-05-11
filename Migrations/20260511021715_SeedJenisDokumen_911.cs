@@ -13,7 +13,6 @@ namespace PermintaanData.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
 {
-    // Gunakan raw SQL IF NOT EXISTS agar aman di production yang kolom sudah ada
     migrationBuilder.Sql(@"
         ALTER TABLE public.""PermohonanPPID""
             ADD COLUMN IF NOT EXISTS ""AlasanBatal""    text,
@@ -21,22 +20,20 @@ namespace PermintaanData.Migrations
             ADD COLUMN IF NOT EXISTS ""DibatalkanOleh"" text;
     ");
 
-    migrationBuilder.InsertData(
-        schema: "public",
-        table: "JenisDokumenPPID",
-        columns: new[] { "JenisDokumenPPIDID", "CreatedAt", "IsActive", "NamaJenisDokumenPPID", "UpdatedAt" },
-        values: new object[,]
-        {
-            { 9,  null, true, "Data Hasil Observasi",       null },
-            { 10, null, true, "Data Hasil Wawancara",       null },
-            { 11, null, true, "Data Hasil Permintaan Data", null }
-        });
+    migrationBuilder.Sql(@"
+        INSERT INTO public.""JenisDokumenPPID"" (""JenisDokumenPPIDID"", ""CreatedAt"", ""IsActive"", ""NamaJenisDokumenPPID"", ""UpdatedAt"")
+        VALUES
+            (9,  NULL, TRUE, 'Data Hasil Observasi',       NULL),
+            (10, NULL, TRUE, 'Data Hasil Wawancara',       NULL),
+            (11, NULL, TRUE, 'Data Hasil Permintaan Data', NULL)
+        ON CONFLICT (""JenisDokumenPPIDID"") DO NOTHING;
+    ");
 
-    migrationBuilder.InsertData(
-        schema: "public",
-        table: "StatusPPID",
-        columns: new[] { "StatusPPIDID", "CreatedAt", "NamaStatusPPID", "UpdatedAt" },
-        values: new object[] { 16, null, "Dibatalkan", null });
+    migrationBuilder.Sql(@"
+        INSERT INTO public.""StatusPPID"" (""StatusPPIDID"", ""CreatedAt"", ""NamaStatusPPID"", ""UpdatedAt"")
+        VALUES (16, NULL, 'Dibatalkan', NULL)
+        ON CONFLICT (""StatusPPIDID"") DO NOTHING;
+    ");
 }
 
         /// <inheritdoc />
