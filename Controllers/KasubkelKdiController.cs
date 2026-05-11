@@ -329,10 +329,16 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
 
         if (vm.FileData?.Length > 0)
         {
+            // Data hasil bisa berupa Excel/ZIP — gunakan ValidateDataFile
+            var valData = Services.FileValidator.ValidateDataFile(vm.FileData);
+            if (!valData.IsValid)
+            {
+                ModelState.AddModelError(nameof(vm.FileData), valData.ErrorMessage!);
+                return View("UploadData", vm);
+            }
+
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
-
-            // UploadDataPost
             var fn = $"data_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileData.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileData.CopyToAsync(s);
@@ -607,6 +613,13 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
         if (vm.FileRevisi == null || vm.FileRevisi.Length == 0)
         {
             ModelState.AddModelError(nameof(vm.FileRevisi), "File revisi wajib diupload.");
+            return View(vm);
+        }
+
+        var valRevisi = Services.FileValidator.ValidateDataFile(vm.FileRevisi);
+        if (!valRevisi.IsValid)
+        {
+            ModelState.AddModelError(nameof(vm.FileRevisi), valRevisi.ErrorMessage!);
             return View(vm);
         }
 

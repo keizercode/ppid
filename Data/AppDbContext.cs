@@ -107,8 +107,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             new JenisDokumenPPID { JenisDokumenPPIDID = 5, NamaJenisDokumenPPID = "Dokumen Identifikasi (TTD)",   IsActive = true },
             new JenisDokumenPPID { JenisDokumenPPIDID = 6, NamaJenisDokumenPPID = "Surat Izin",                   IsActive = true },
             new JenisDokumenPPID { JenisDokumenPPIDID = 7, NamaJenisDokumenPPID = "Data Hasil",                   IsActive = true },
-            new JenisDokumenPPID { JenisDokumenPPIDID = 8, NamaJenisDokumenPPID = "Tugas / Laporan Final Pemohon",IsActive = true }  // ← NEW
-        );
+            new JenisDokumenPPID { JenisDokumenPPIDID = 8,  NamaJenisDokumenPPID = "Tugas / Laporan Final Pemohon",    IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 9,  NamaJenisDokumenPPID = "Data Hasil Observasi",             IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 10, NamaJenisDokumenPPID = "Data Hasil Wawancara",             IsActive = true },
+            new JenisDokumenPPID { JenisDokumenPPIDID = 11, NamaJenisDokumenPPID = "Data Hasil Permintaan Data",       IsActive = true }
+     );
 
     // ════════════════════════════════════════════════════════════════════════
     // NOPERMOHONAN GENERATOR

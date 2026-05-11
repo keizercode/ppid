@@ -1004,10 +1004,15 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
 
         if (vm.FileHasil?.Length > 0)
         {
+            var valHasil = Services.FileValidator.ValidateDocument(vm.FileHasil);
+            if (!valHasil.IsValid)
+            {
+                TempData["Error"] = $"File tidak valid: {valHasil.ErrorMessage}";
+                return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+            }
+
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
-
-            // SelesaiObservasiPost
             var fn = $"observasi_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileHasil.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileHasil.CopyToAsync(s);
@@ -1201,10 +1206,15 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
 
         if (vm.FileHasil?.Length > 0)
         {
+            var valHasil = Services.FileValidator.ValidateDocument(vm.FileHasil);
+            if (!valHasil.IsValid)
+            {
+                TempData["Error"] = $"File tidak valid: {valHasil.ErrorMessage}";
+                return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+            }
+
             var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
             Directory.CreateDirectory(dir);
-
-            // SelesaiWawancaraPost
             var fn = $"wawancara_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileHasil.FileName)}";
             await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
             await vm.FileHasil.CopyToAsync(s);

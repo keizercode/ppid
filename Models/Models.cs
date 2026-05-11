@@ -456,7 +456,19 @@ public static bool IsDibatalkanStatus(int? id) => id == Dibatalkan;
     };
 
     /// <summary>True jika permohonan sedang dalam proses (belum selesai, sudah terdaftar).</summary>
-    public static bool IsProses(int? id)  => id.HasValue && id.Value > TerdaftarSistem && id.Value < Selesai;
+    public static bool IsProses(int? id) => id.HasValue && id.Value is
+    IdentifikasiAwal     or
+    MenungguVerifikasi   or
+    MenungguSuratIzin    or
+    SuratIzinTerbit      or
+    Didisposisi          or
+    DiProses             or
+    ObservasiDijadwalkan or
+    ObservasiSelesai     or
+    WawancaraDijadwalkan or
+    WawancaraSelesai     or
+    DataSiap             or
+    FeedbackPemohon;
 
     /// <summary>True jika permohonan sudah selesai.</summary>
     public static bool IsSelesai(int? id) => id == Selesai;

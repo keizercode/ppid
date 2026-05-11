@@ -326,19 +326,28 @@ public class HomeController(
             ModelState.AddModelError(nameof(vm.FileTugas), "File wajib dipilih.");
         }
 
-        if (!ModelState.IsValid)
-        {
-            var pReload = await db.PermohonanPPID
-                .Include(x => x.Dokumen)
-                .FirstOrDefaultAsync(x => x.PermohonanPPIDID == vm.PermohonanPPIDID);
-            vm.FilesUploaded = pReload?.Dokumen
-                .Where(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
-                .OrderByDescending(d => d.CreatedAt)
-                .ToList() ?? [];
-            return View("UploadTugas", vm);
-        }
+            // Validasi tipe & ukuran file (server-side — tidak bisa di-bypass)
+    if (vm.FileTugas != null && vm.FileTugas.Length > 0)
+    {
+        var valTugas = Services.FileValidator.ValidateDocument(vm.FileTugas);
+        if (!valTugas.IsValid)
+            ModelState.AddModelError(nameof(vm.FileTugas), valTugas.ErrorMessage!);
+    }
 
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (!ModelState.IsValid)
+    {
+        var pReload = await db.PermohonanPPID
+            .Include(x => x.Dokumen)
+            .FirstOrDefaultAsync(x => x.PermohonanPPIDID == vm.PermohonanPPIDID);
+        vm.FilesUploaded = pReload?.Dokumen
+            .Where(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToList() ?? [];
+        return View("UploadTugas", vm);
+    }
+
+    var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+
         if (p is null) return NotFound();
 
         if (p.StatusPPIDID < StatusId.DataSiap)
@@ -463,6 +472,14 @@ public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
         && string.IsNullOrEmpty(vm.FilePathLama))
     {
         ModelState.AddModelError(nameof(vm.FileLaporan), "File laporan/hasil wajib diunggah.");
+    }
+
+    // Validasi tipe & ukuran jika ada file baru yang dikirim
+    if (vm.FileLaporan != null && vm.FileLaporan.Length > 0)
+    {
+        var valLaporan = Services.FileValidator.ValidateDocument(vm.FileLaporan);
+        if (!valLaporan.IsValid)
+            ModelState.AddModelError(nameof(vm.FileLaporan), valLaporan.ErrorMessage!);
     }
 
     if (!ModelState.IsValid)
@@ -647,8 +664,17 @@ public async Task<IActionResult> FeedbackTaskPost(FeedbackTaskVm vm)
     public async Task<IActionResult> UploadDokumentasiTaskPost(UploadHasilTaskVm vm)
     {
         if (vm.FileDokumentasi == null || vm.FileDokumentasi.Length == 0)
+        {
             ModelState.AddModelError(nameof(vm.FileDokumentasi),
                 "File dokumentasi wajib dipilih.");
+        }
+        else
+        {
+            // Validasi tipe & ukuran file
+            var valDok = Services.FileValidator.ValidateDocument(vm.FileDokumentasi);
+            if (!valDok.IsValid)
+                ModelState.AddModelError(nameof(vm.FileDokumentasi), valDok.ErrorMessage!);
+        }
 
         if (!ModelState.IsValid)
             return View("UploadDokumentasiTask", vm);

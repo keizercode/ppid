@@ -99,6 +99,8 @@ Migrations/
  20260409030348_AddFeedbackTaskAndLokasi.Designer.cs
  20260420043058_AddBatalkanPermohonan.cs
  20260420043058_AddBatalkanPermohonan.Designer.cs
+ 20260511021715_SeedJenisDokumen_911.cs
+ 20260511021715_SeedJenisDokumen_911.Designer.cs
  AppDbContextModelSnapshot.cs
 Models/
  AppUser.cs
