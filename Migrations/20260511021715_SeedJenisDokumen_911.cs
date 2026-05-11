@@ -12,45 +12,32 @@ namespace PermintaanData.Migrations
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // Gunakan raw SQL IF NOT EXISTS agar aman di production yang kolom sudah ada
+    migrationBuilder.Sql(@"
+        ALTER TABLE public.""PermohonanPPID""
+            ADD COLUMN IF NOT EXISTS ""AlasanBatal""    text,
+            ADD COLUMN IF NOT EXISTS ""DibatalkanAt""   timestamp with time zone,
+            ADD COLUMN IF NOT EXISTS ""DibatalkanOleh"" text;
+    ");
+
+    migrationBuilder.InsertData(
+        schema: "public",
+        table: "JenisDokumenPPID",
+        columns: new[] { "JenisDokumenPPIDID", "CreatedAt", "IsActive", "NamaJenisDokumenPPID", "UpdatedAt" },
+        values: new object[,]
         {
-            migrationBuilder.AddColumn<string>(
-                name: "AlasanBatal",
-                schema: "public",
-                table: "PermohonanPPID",
-                type: "text",
-                nullable: true);
+            { 9,  null, true, "Data Hasil Observasi",       null },
+            { 10, null, true, "Data Hasil Wawancara",       null },
+            { 11, null, true, "Data Hasil Permintaan Data", null }
+        });
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "DibatalkanAt",
-                schema: "public",
-                table: "PermohonanPPID",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "DibatalkanOleh",
-                schema: "public",
-                table: "PermohonanPPID",
-                type: "text",
-                nullable: true);
-
-            migrationBuilder.InsertData(
-                schema: "public",
-                table: "JenisDokumenPPID",
-                columns: new[] { "JenisDokumenPPIDID", "CreatedAt", "IsActive", "NamaJenisDokumenPPID", "UpdatedAt" },
-                values: new object[,]
-                {
-                    { 9, null, true, "Data Hasil Observasi", null },
-                    { 10, null, true, "Data Hasil Wawancara", null },
-                    { 11, null, true, "Data Hasil Permintaan Data", null }
-                });
-
-            migrationBuilder.InsertData(
-                schema: "public",
-                table: "StatusPPID",
-                columns: new[] { "StatusPPIDID", "CreatedAt", "NamaStatusPPID", "UpdatedAt" },
-                values: new object[] { 16, null, "Dibatalkan", null });
-        }
+    migrationBuilder.InsertData(
+        schema: "public",
+        table: "StatusPPID",
+        columns: new[] { "StatusPPIDID", "CreatedAt", "NamaStatusPPID", "UpdatedAt" },
+        values: new object[] { 16, null, "Dibatalkan", null });
+}
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
