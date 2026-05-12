@@ -1,0 +1,102 @@
+@model FeedbackUnifiedVm
+@{ ViewData["Title"] = "Isi Feedback Layanan"; }
+
+<div class="max-w-md mx-auto px-4 py-10">
+    <a href="@Url.Action("Lacak", "Home", new { noPermohonan = Model.NoPermohonan })"
+       class="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm font-medium mb-5">
+        ← Kembali ke Status
+    </a>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+
+        <div class="bg-gradient-to-br from-[#001e55] to-[#003d99] px-7 py-7 text-center">
+            <div class="w-14 h-14 bg-white/15 border border-white/20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3">📋</div>
+            <h2 class="text-white font-bold text-lg">Feedback Layanan PPID</h2>
+            <p class="text-white/60 text-xs mt-1 font-mono">@Model.NoPermohonan</p>
+            @if (Model.Keperluans.Any())
+            {
+                <div class="flex flex-wrap gap-1.5 justify-center mt-3">
+                    @foreach (var k in Model.Keperluans)
+                    {
+                        <span class="text-[10px] bg-white/20 text-white px-2.5 py-0.5 rounded-full font-semibold">@k</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="p-6">
+
+            @if (Model.SudahDiisi)
+            {
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex gap-2 items-start">
+                    <span class="text-amber-500 flex-shrink-0">ℹ️</span>
+                    <p class="text-xs text-amber-700">
+                        Anda sudah pernah mengisi feedback (nilai: <strong>@Model.NilaiLama/5</strong>).
+                        Isi form di bawah untuk memperbarui.
+                    </p>
+                </div>
+            }
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                    <div asp-validation-summary="All" class="text-red-700 text-sm"></div>
+                </div>
+            }
+
+            <form asp-action="FeedbackPost" asp-controller="Home" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="PermohonanPPIDID" />
+                <input type="hidden" asp-for="NoPermohonan" />
+                <input type="hidden" asp-for="NamaPemohon" />
+                <input type="hidden" asp-for="JudulPenelitian" />
+
+                <div class="mb-6">
+                    <p class="text-sm font-bold text-gray-700 mb-4 text-center">
+                        Bagaimana penilaian Anda terhadap keseluruhan layanan?
+                    </p>
+                    <div class="flex gap-2 justify-center">
+                        @foreach (var (val, emoji, lbl, color) in new[]{
+                            (1,"😞","Buruk",       "hover:bg-red-50 hover:border-red-300 peer-checked:bg-red-50 peer-checked:border-red-400"),
+                            (2,"😕","Kurang",      "hover:bg-orange-50 hover:border-orange-300 peer-checked:bg-orange-50 peer-checked:border-orange-400"),
+                            (3,"😐","Cukup",       "hover:bg-amber-50 hover:border-amber-300 peer-checked:bg-amber-50 peer-checked:border-amber-400"),
+                            (4,"😊","Baik",        "hover:bg-blue-50 hover:border-blue-300 peer-checked:bg-blue-50 peer-checked:border-blue-400"),
+                            (5,"😁","Sangat Baik", "hover:bg-emerald-50 hover:border-emerald-300 peer-checked:bg-emerald-50 peer-checked:border-emerald-400"),
+                        }) {
+                            <label class="cursor-pointer">
+                                <input type="radio" asp-for="NilaiKepuasan" value="@val" class="sr-only peer" />
+                                <div class="w-14 h-16 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-gray-200 transition-all @color">
+                                    <span class="text-2xl">@emoji</span>
+                                    <span class="text-[9px] font-semibold text-gray-500 text-center">@lbl</span>
+                                </div>
+                            </label>
+                        }
+                    </div>
+                    <span asp-validation-for="NilaiKepuasan" class="text-red-500 text-xs mt-2 block text-center"></span>
+                </div>
+
+                <div class="mb-6">
+                    <label asp-for="Catatan" class="block text-sm font-bold text-gray-700 mb-1.5">
+                        Masukan / Saran <span class="text-red-400">*</span>
+                    </label>
+                    <textarea asp-for="Catatan" rows="4"
+                              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none bg-gray-50 focus:bg-white"
+                              placeholder="Tuliskan pengalaman, saran, atau masukan Anda...">@Model.CatatanLama</textarea>
+                    <span asp-validation-for="Catatan" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 flex gap-2 items-start">
+                    <span class="text-blue-500 flex-shrink-0">ℹ️</span>
+                    <p class="text-xs text-blue-700">
+                        Mengirim feedback akan menyelesaikan permohonan Anda secara otomatis.
+                    </p>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 rounded-xl transition-colors text-sm">
+                    Kirim Feedback & Selesaikan Permohonan →
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

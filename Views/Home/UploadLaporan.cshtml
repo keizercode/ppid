@@ -1,0 +1,126 @@
+@model UploadLaporanUnifiedVm
+@{ ViewData["Title"] = "Unggah Laporan Hasil Penelitian"; }
+
+<div class="max-w-xl mx-auto px-4 py-10">
+
+    <a href="@Url.Action("Lacak", "Home", new { noPermohonan = Model.NoPermohonan })"
+       class="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm font-medium mb-6">
+        ← Kembali ke Status
+    </a>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+
+        <div class="bg-gradient-to-br from-[#001e55] to-[#003d99] px-7 py-7">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-11 h-11 bg-white/15 border border-white/25 rounded-xl flex items-center justify-center text-2xl">📤</div>
+                <div>
+                    <p class="text-white font-bold text-sm">Unggah Laporan Hasil Penelitian</p>
+                    <p class="text-white/60 text-xs mt-0.5 font-mono">@Model.NoPermohonan</p>
+                </div>
+            </div>
+            @if (Model.Keperluans.Any())
+            {
+                <div class="flex flex-wrap gap-1.5 mt-3">
+                    @foreach (var k in Model.Keperluans)
+                    {
+                        <span class="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-semibold">@k</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="p-6">
+
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5">
+                <p class="text-xs text-blue-800 leading-relaxed">
+                    <strong>@Model.NamaPemohon</strong> — @Model.JudulPenelitian
+                </p>
+            </div>
+
+            @if (Model.FilesUploaded.Any())
+            {
+                <div class="mb-5">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                        Laporan Sebelumnya
+                    </p>
+                    @foreach (var f in Model.FilesUploaded)
+                    {
+                        <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-1.5">
+                            <span class="text-emerald-500">📎</span>
+                            <p class="text-xs text-emerald-800 font-medium flex-1 truncate">@f.NamaDokumenPPID</p>
+                            <a href="@f.UploadDokumenPPID" target="_blank"
+                               class="text-[11px] text-emerald-600 hover:underline">Lihat</a>
+                        </div>
+                    }
+                    <p class="text-[10px] text-gray-400 mt-1">Unggah file baru untuk mengganti.</p>
+                </div>
+            }
+
+            <div class="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-2 items-start">
+                <span class="text-amber-500 flex-shrink-0">💡</span>
+                <p class="text-xs text-amber-700 leading-relaxed">
+                    Belum punya format laporan?
+                    <a href="@Url.Action("DownloadTemplate", "Home", new { id = Model.PermohonanPPIDID })"
+                       class="font-bold underline">Unduh template laporan</a> terlebih dahulu.
+                </p>
+            </div>
+
+            <form asp-action="UploadLaporanPost" asp-controller="Home"
+                  method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="PermohonanPPIDID" />
+                <input type="hidden" asp-for="NoPermohonan" />
+                <input type="hidden" asp-for="NamaPemohon" />
+                <input type="hidden" asp-for="JudulPenelitian" />
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                        File Laporan <span class="text-red-400">*</span>
+                    </label>
+                    <div id="dropzone"
+                         class="border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-xl p-8 text-center transition-all cursor-pointer bg-gray-50 hover:bg-blue-50 group">
+                        <div class="text-3xl mb-2">📄</div>
+                        <p class="text-sm font-semibold text-gray-600 group-hover:text-blue-700">Klik atau drag file ke sini</p>
+                        <p class="text-xs text-gray-400 mt-1">PDF, Word, ZIP — maks. 50 MB</p>
+                        <input asp-for="FileLaporan" type="file" id="fileLaporan"
+                               accept=".pdf,.docx,.doc,.zip" class="hidden" />
+                        <p id="fileNameEl" class="text-xs text-blue-700 font-bold mt-2 hidden"></p>
+                    </div>
+                    <span asp-validation-for="FileLaporan" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                        Catatan <span class="text-gray-300 font-normal">(opsional)</span>
+                    </label>
+                    <textarea asp-for="Catatan" rows="2"
+                              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none bg-gray-50 focus:bg-white"
+                              placeholder="Misal: laporan skripsi final, sudah melalui sidang..."></textarea>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-[#002d7a] hover:bg-blue-900 text-white font-bold py-3 rounded-xl transition-colors text-sm">
+                    📤 Unggah Laporan & Lanjut ke Feedback →
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileLaporan');
+const fn = document.getElementById('fileNameEl');
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-blue-400','bg-blue-50'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('border-blue-400','bg-blue-50'));
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) {
+        const dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]); fi.files = dt.files;
+        showFile(e.dataTransfer.files[0].name);
+    }
+});
+fi.addEventListener('change', function() { if (this.files[0]) showFile(this.files[0].name); });
+function showFile(name) { fn.textContent = '✓ ' + name; fn.classList.remove('hidden'); dz.classList.add('border-blue-400','bg-blue-50'); }
+</script>

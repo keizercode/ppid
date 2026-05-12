@@ -34,6 +34,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxEZXRhaWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/ProjectDotnet/baru/PermintaanData/Views/Home/Feedback.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxGZWVkYmFjay5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/ProjectDotnet/baru/PermintaanData/Views/Home/FeedbackTask.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxGZWVkYmFja1Rhc2suY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -48,6 +52,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/Home/UploadDokumentasiTask.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxVcGxvYWREb2t1bWVudGFzaVRhc2suY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/ProjectDotnet/baru/PermintaanData/Views/Home/UploadLaporan.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxVcGxvYWRMYXBvcmFuLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/ProjectDotnet/baru/PermintaanData/Views/Home/UploadTugas.cshtml]

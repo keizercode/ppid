@@ -482,10 +482,12 @@ Views/Auth/
  Login.cshtml
 Views/Home/
  Detail.cshtml
+ Feedback.cshtml
  FeedbackTask.cshtml
  Index.cshtml
  LaporanPpid.cshtml
  UploadDokumentasiTask.cshtml
+ UploadLaporan.cshtml
  UploadTugas.cshtml
 Views/KasubkelKdi/
  BatalSubTask.cshtml
@@ -563,10 +565,12 @@ Views/Auth/
  Login.cshtml
 Views/Home/
  Detail.cshtml
+ Feedback.cshtml
  FeedbackTask.cshtml
  Index.cshtml
  LaporanPpid.cshtml
  UploadDokumentasiTask.cshtml
+ UploadLaporan.cshtml
  UploadTugas.cshtml
 Views/KasubkelKdi/
  BatalSubTask.cshtml

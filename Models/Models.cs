@@ -381,6 +381,7 @@ public static class JenisTask
     public const string PermintaanData = "PermintaanData";
     public const string Observasi      = "Observasi";
     public const string Wawancara      = "Wawancara";
+    public const string Semua          = "Semua";
 
     public static string GetLabel(string jenis) => jenis switch
     {

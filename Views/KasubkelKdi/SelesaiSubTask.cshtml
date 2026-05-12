@@ -63,11 +63,21 @@
             <input type="hidden" asp-for="JenisTask" />
 
             <!-- Upload Hasil (opsional) -->
-            <div class="mb-4">
-                <label class="lbl">Upload Dokumen Hasil <span class="text-gray-400 font-normal normal-case">(opsional)</span></label>
-                <input asp-for="FileHasil" type="file" accept=".pdf,.docx,.xlsx,.zip" class="file-fld" />
-                <p class="text-xs text-gray-400 mt-1">PDF, Word, Excel, ZIP — maks 50 MB</p>
-            </div>
+            @* Loket hanya konfirmasi tanpa upload — file datang dari pemohon *@
+            @if (ViewData["Prefix"]?.ToString() != "petugas-loket")
+            {
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                        Dokumen Hasil <span class="text-gray-300 font-normal">(opsional)</span>
+                    </label>
+                    <input asp-for="FileHasil" type="file"
+                        accept=".pdf,.docx,.doc,.xlsx,.zip"
+                        class="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-4
+                                file:rounded-lg file:border-0 file:text-xs file:font-bold
+                                file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer" />
+                    <span asp-validation-for="FileHasil" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+            }
 
             <!-- Catatan -->
             <div class="mb-5">

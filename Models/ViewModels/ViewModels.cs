@@ -981,5 +981,49 @@ public class SuratPemberianIzinVm
             return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
         }
     }
+
+// ═══════════════════════════════════════════════════════════════════════
+// UPLOAD LAPORAN UNIFIED (menggantikan UploadTugas + UploadDokumentasiTask)
+// ═══════════════════════════════════════════════════════════════════════
+public class UploadLaporanUnifiedVm
+{
+    public Guid             PermohonanPPIDID { get; set; }
+    public string           NoPermohonan     { get; set; } = string.Empty;
+    public string           NamaPemohon      { get; set; } = string.Empty;
+    public string           JudulPenelitian  { get; set; } = string.Empty;
+    public List<DokumenPPID> FilesUploaded   { get; set; } = [];
+    public List<string>     Keperluans       { get; set; } = [];
+
+    [Required(ErrorMessage = "File laporan wajib dipilih")]
+    [Display(Name = "File Laporan / Hasil Penelitian")]
+    public IFormFile? FileLaporan { get; set; }
+
+    [Display(Name = "Catatan (opsional)")]
+    public string? Catatan { get; set; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEEDBACK UNIFIED (menggantikan FeedbackTaskVm per-task)
+// ═══════════════════════════════════════════════════════════════════════
+public class FeedbackUnifiedVm
+{
+    public Guid   PermohonanPPIDID { get; set; }
+    public string NoPermohonan     { get; set; } = string.Empty;
+    public string NamaPemohon      { get; set; } = string.Empty;
+    public string JudulPenelitian  { get; set; } = string.Empty;
+    public List<string> Keperluans { get; set; } = [];
+
+    public bool    SudahDiisi  { get; set; }
+    public int     NilaiLama   { get; set; }
+    public string? CatatanLama { get; set; }
+
+    [Required]
+    [Range(1, 5, ErrorMessage = "Pilih nilai kepuasan 1–5")]
+    public int NilaiKepuasan { get; set; }
+
+    [Required(ErrorMessage = "Masukan / saran wajib diisi")]
+    [Display(Name = "Catatan / Saran")]
+    public string? Catatan { get; set; }
+}
 }
 
