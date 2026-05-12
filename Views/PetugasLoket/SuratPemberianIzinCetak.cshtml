@@ -146,39 +146,40 @@
  }
         /* ── Judul surat ── */
         .surat-title { text-align: center; margin: 0 0 4px; }
-        .surat-title .label     { font-size: 12pt; font-weight: }
+        .surat-title .label     { font-size: 12pt; font-family: Arial; }
         .surat-title .nomor     { font-size: 12pt; min-height: 1.4em; }
         .surat-title .nomor::after { content: attr(data-blank); }
         .surat-title .tentang   { font-size: 12pt; margin-top: 4px;}
-        .surat-title .judul     { font-size: 12pt; text-transform: uppercase; }
-        .surat-title .atas-nama { font-size: 12pt; }
+        .surat-title .judul     { font-size: 12pt; text-transform: uppercase; font-family: Arial; }
+        .surat-title .atas-nama { font-size: 12pt; font-family: Arial; }
 
         /* ── Body ── */
         .surat-body { margin-top: 16px; }
 
         /* ── Dasar table ── */
-        .dasar-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        .dasar-table td { vertical-align: top; padding: 2px 4px; font-size: 12pt; }
+        .dasar-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
+        .dasar-table td { vertical-align: top; padding: 2px 4px; font-size: 12pt; font-family: Arial;}
         .dasar-table td:first-child { white-space: nowrap; width: 140px; padding-right: 6px; }
         .dasar-table td:nth-child(2) { width: 14px; padding: 2px 8px 2px 4px; }
+
         .dasar-table ol li { text-align: justify; }
 
         /* ── MEMBERI IZIN ── */
         .memberi-izin {
             text-align: center;
             font-size: 12pt;
-            margin: 16px 0 10px;
+            margin: 24px 0 6px;
             text-transform: uppercase;
         }
 
         /* ── Identitas perorangan ── */
-        .identitas-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-        .identitas-table td { vertical-align: top; padding: 2px 4px; font-size: 12pt; }
-        .identitas-table td:first-child { width: 130px; white-space: nowrap; }
+        .identitas-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; table-layout: fixed; }
+        .identitas-table td { vertical-align: top; padding: 2px 4px; font-size: 12pt; font-family: Arial;}
+        .identitas-table td:first-child { width: 140px; white-space: nowrap; }
         .identitas-table td:nth-child(2) { width: 14px; }
 
         /* ── Tabel kelompok ── */
-        .kelompok-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 12pt; }
+        .kelompok-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 12pt; font-family: Arial; }
         .kelompok-table th, .kelompok-table td {
             border: 1px solid #000;
             padding: 4px 8px;
@@ -190,23 +191,23 @@
 
         /* ── Ketentuan list ── */
         .ketentuan { margin: 10px 0 10px 20px; }
-        .ketentuan li { margin-bottom: 4px; font-size: 12pt; }
+        .ketentuan li { margin-bottom: 4px; font-size: 12pt; font-family: Arial; }
 
         /* ── Untuk table ── */
-        .untuk-table { width: 100%; border-collapse: collapse; }
-        .untuk-table td { vertical-align: top; padding: 2px 4px; font-size: 12pt; }
-        .untuk-table td:first-child { white-space: nowrap; width: 130px; }
+        .untuk-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .untuk-table td { vertical-align: top; padding: 2px 4px; font-size: 12pt; font-family: Arial;}
+        .untuk-table td:first-child { white-space: nowrap; width: 140px; }
         .untuk-table td:nth-child(2) { width: 14px; padding: 2px 6px; }
 
         /* ── TTD area ── */
         .ttd-section { display: flex; justify-content: flex-end; margin-top: 24px; page-break-inside: avoid; break-inside: avoid; }
-        .ttd-block { text-align: center; font-size: 12pt; }
+        .ttd-block { text-align: center; font-size: 12pt; font-family: Arial;; }
         .ttd-space { height: 70px; }
 
         /* ── Tembusan ── */
-        .tembusan { margin-top: 20px; font-size: 12pt; }
+        .tembusan { margin-top: 40px; font-size: 12pt; font-family: Arial; }
         .tembusan .label { font-weight: }
-        .tembusan ol { margin-left: 20px; list-style: decimal; }
+        .tembusan ol { margin-left: 0; padding-left: 28px; list-style: decimal; }
 
         /* ── Print media query ── */
         @@media print {
@@ -291,7 +292,8 @@
                 }
             </div>
             <div class="tentang">TENTANG</div>
-            <div class="judul">@Model.JudulSurat</div>
+            <div class="judul">@Model.JenisKegiatan?.ToUpperInvariant()</div>
+            <div class="judul">UNTUK PEMBUATAN @Model.JenisKarya?.ToUpperInvariant()</div>
             <div class="atas-nama">@Model.AtasNama</div>
         </div>
 
@@ -384,7 +386,7 @@
             </table>
 
             <!-- Ketentuan -->
-            <p style="margin-top:12px; font-size:11pt;">Dengan ketentuan yang harus ditaati sebagai berikut:</p>
+            <p style="margin-top:12px; font-size:12pt; font-family: Arial;">Dengan ketentuan yang harus ditaati sebagai berikut:</p>
             <ol class="ketentuan">
                 <li>Mematuhi ketentuan peraturan yang berlaku;</li>
                 <li>Menyerahkan laporan hasil kegiatan melalui Subkelompok Kepegawaian;</li>
@@ -392,12 +394,12 @@
             </ol>
 
             <!-- Kalimat bidang tujuan -->
-            <p style="font-size:11pt; margin-top:8px;text-align: justify;">
+            <p style="font-size:12pt; margin-top:8px;text-align: justify; font-family: Arial;">
                 untuk kepentingan tersebut kepada yang bersangkutan agar menghubungi
                 @Html.Raw(KalimatBidang()).
             </p>
 
-            <p style="margin-top:14px; font-size:11pt;">
+            <p style="margin-top:14px; margin-bottom:28px; font-size:12pt; font-family: Arial;">
                 Demikian Surat Izin Penelitian ini dibuat untuk dipergunakan seperlunya.
             </p>
 

@@ -35,30 +35,11 @@
 
             <div class="p-6 space-y-8">
 
-                <!-- ══ BAGIAN 1: IDENTITAS SURAT ══ -->
+
+                <!-- ══ BAGIAN 1: JENIS & MODE ══ -->
                 <div>
                     <div class="sec-header">
                         <div class="sec-num">1</div>
-                        <span class="sec-title">Identitas Surat</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="lbl">Nomor Surat <span class="req">*</span></label>
-                            <input asp-for="NomorSurat" class="fld" placeholder="Cth: 123/DLH.KEP/V/2026" />
-                            <span asp-validation-for="NomorSurat" class="err"></span>
-                        </div>
-                        <div>
-                            <label class="lbl">Tanggal Surat <span class="req">*</span></label>
-                            <input asp-for="TanggalSurat" type="date" class="fld" />
-                            <span asp-validation-for="TanggalSurat" class="err"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ══ BAGIAN 2: JENIS & MODE ══ -->
-                <div>
-                    <div class="sec-header">
-                        <div class="sec-num">2</div>
                         <span class="sec-title">Jenis Kegiatan &amp; Mode Pemohon</span>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mb-4">
@@ -112,10 +93,10 @@
                     </div>
                 </div>
 
-                <!-- ══ BAGIAN 3A: DATA PEMOHON (PERORANGAN) ══ -->
+                <!-- ══ BAGIAN 2A: DATA PEMOHON (PERORANGAN) ══ -->
                 <div id="sec-perorangan">
                     <div class="sec-header">
-                        <div class="sec-num">3</div>
+                        <div class="sec-num">2</div>
                         <span class="sec-title">Data Pemohon — Perorangan</span>
                     </div>
                     <div class="space-y-3">
@@ -136,10 +117,10 @@
                     </div>
                 </div>
 
-                <!-- ══ BAGIAN 3B: DATA PEMOHON (KELOMPOK) ══ -->
+                <!-- ══ BAGIAN 2B: DATA PEMOHON (KELOMPOK) ══ -->
                 <div id="sec-kelompok" class="hidden">
                     <div class="sec-header">
-                        <div class="sec-num">3</div>
+                        <div class="sec-num">2</div>
                         <span class="sec-title">Data Pemohon — Kelompok</span>
                     </div>
 
@@ -203,10 +184,10 @@
                     </div>
                 </div>
 
-                <!-- ══ BAGIAN 4: JUDUL PENELITIAN ══ -->
+                <!-- ══ BAGIAN 3: JUDUL PENELITIAN ══ -->
                 <div>
                     <div class="sec-header">
-                        <div class="sec-num">4</div>
+                        <div class="sec-num">3</div>
                         <span class="sec-title">Judul Penelitian</span>
                     </div>
                     <div>
@@ -216,10 +197,10 @@
                     </div>
                 </div>
 
-                <!-- ══ BAGIAN 5: DASAR SURAT PERMOHONAN ══ -->
+                <!-- ══ BAGIAN 4: DASAR SURAT PERMOHONAN ══ -->
                 <div>
                     <div class="sec-header">
-                        <div class="sec-num">5</div>
+                        <div class="sec-num">4</div>
                         <span class="sec-title">Dasar — Surat Permohonan dari Instansi</span>
                     </div>
                     <div class="space-y-3">
@@ -256,10 +237,10 @@
                     </div>
                 </div>
 
-                <!-- ══ BAGIAN 6: BIDANG TUJUAN (dari disposisi) — READ ONLY ══ -->
+                <!-- ══ BAGIAN 5: BIDANG TUJUAN (dari disposisi) — READ ONLY ══ -->
                 <div>
                     <div class="sec-header">
-                        <div class="sec-num">6</div>
+                        <div class="sec-num">5</div>
                         <span class="sec-title">Bidang Tujuan</span>
                         <span class="ml-auto text-[11px] text-gray-400">Ditetapkan oleh Kasubkel Kepegawaian</span>
                     </div>
@@ -292,10 +273,10 @@
                     }
                 </div>
 
-                <!-- ══ BAGIAN 7: TEMBUSAN INSTANSI ══ -->
+                <!-- ══ BAGIAN 6: TEMBUSAN INSTANSI ══ -->
                 <div>
                     <div class="sec-header">
-                        <div class="sec-num">7</div>
+                        <div class="sec-num">6</div>
                         <span class="sec-title">Tembusan — Instansi Pengirim</span>
                     </div>
                     <div>
