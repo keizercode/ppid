@@ -244,7 +244,7 @@ public class HomeController(
         if (p.IsObservasi)      feedbackList.Add("Observasi");
         if (p.IsWawancara)      feedbackList.Add("Wawancara");
 
-        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Unggah Laporan",
+        steps.Add((StatusId.FeedbackPemohon, "8. Pengisian Feedback & Unggah Hasil Laporan",
             feedbackList.Count > 0 ? "Feedback: " + string.Join(", ", feedbackList) : null));
 
         steps.Add((StatusId.Selesai, "9. Selesai", null));

@@ -169,7 +169,7 @@
         }
 
         h1.ftitle { font-size: 12pt; font-weight: bold; text-transform: uppercase; text-align: center; letter-spacing: .03em; margin-bottom: 3px; }
-        .fsub { font-size: 9pt; text-align: center; color: #333; margin-bottom: 8px; }
+        .fsub { font-size: 9pt; text-align: center; color: #333; margin-bottom: 8px; font-family: Arial; }
         hr.thick { border: none; border-top: 2px solid #000; margin-bottom: 10px; }
 
         .nop-box { display: table; width: 100%; border-collapse: collapse; border: 2px solid #1B3B6F; border-radius: 5px; overflow: hidden; margin-bottom: 11px; background: #eef3ff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -242,8 +242,6 @@
 
     <h1 class="ftitle">Formulir Identifikasi Awal</h1>
     <p class="fsub">
-        No. Surat:&nbsp;<strong>@(Model.NoSuratPermohonan ?? "—")</strong>
-        &nbsp;|&nbsp;
         Tanggal:&nbsp;<strong>@(Model.TanggalPermohonan?.ToString("dd MMMM yyyy") ?? "—")</strong>
     </p>
     <hr class="thick" />
@@ -265,10 +263,13 @@
     <table class="dtbl">
         <colgroup><col class="c-lbl" /><col class="c-sep" /><col class="c-val" /></colgroup>
         <tbody>
+
             <tr><td class="lbl">Nama</td><td class="sep">:</td><td><span class="ln">@(pr?.Nama ?? "")</span></td></tr>
             <tr><td class="lbl">NIK</td><td class="sep">:</td><td><span class="ln" style="font-family:monospace;letter-spacing:.05em;">@(pr?.NIK ?? "")</span></td></tr>
             <tr><td class="lbl">No. Telepon</td><td class="sep">:</td><td><span class="ln">@(pr?.Telepon ?? "")</span></td></tr>
             <tr><td class="lbl">Alamat</td><td class="sep">:</td><td><span class="ln">@alamatLengkap</span></td></tr>
+            <tr><td class="lbl">No. Surat Permohonan Izin dari Kampus</td><td class="sep">:</td><td><span class="ln"><strong>@(Model.NoSuratPermohonan ?? "—")</strong>
+
 
             @* ── Baris institusi/lembaga — berbeda untuk Mahasiswa vs LSM ── *@
             @if (isMahasiswa)
