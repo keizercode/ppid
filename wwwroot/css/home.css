@@ -1235,6 +1235,33 @@
     height: 16px;
 }
 
+/* ── Tombol unduh di req-item ── */
+.req-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.req-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--blue, #2563EB);
+  text-decoration: none;
+  border: 1.5px solid currentColor;
+  border-radius: 6px;
+  padding: 3px 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.req-download-btn:hover {
+  background: var(--blue, #2563EB);
+  color: #fff;
+}
+
 /* ── ANIMATIONS ── */
 @keyframes fadeUp {
     from {

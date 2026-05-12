@@ -233,16 +233,39 @@
                     </div>
                 </div>
                 <div class="req-body">
-                    @foreach(var d in new[]{"Fotokopi KTP","Surat Permohonan Izin dari Kampus","Proposal Penelitian Awal"}){
-                        <div class="req-item">
-                            <div class="req-check req-check-blue">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                </svg>
-                            </div>
-                            @d
-                        </div>
-                    }
+                    @{
+    var docsStudent = new (string Label, string? DownloadUrl, string? DownloadTitle)[]
+    {
+        ("Fotokopi KTP",                    null,                                               null),
+        ("Surat Permohonan Izin dari Kampus", null,                                             null),
+        ("Proposal Penelitian Awal",
+         "~/files/Proposal_Penelitian_Awal_PPID_DLH.docx",
+         "Unduh Template Proposal"),
+    };
+}
+@foreach(var d in docsStudent){
+    <div class="req-item">
+        <div class="req-check req-check-blue">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+            </svg>
+        </div>
+        <span style="flex:1">@d.Label</span>
+        @if(d.DownloadUrl != null){
+            <a href="https://docs.google.com/document/d/1EO6HZ7URhTmW9ikDCI6qDIbxKA0vqls8bhFUTEFrYts/export?format=docx"
+            download="Proposal_Penelitian_Awal_PPID_DLH.docx"
+            title="Unduh Template Proposal"
+            class="req-download-btn">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                </svg>
+                Unduh .docx
+            </a>
+        }
+    </div>
+}
                 </div>
             </div>
 

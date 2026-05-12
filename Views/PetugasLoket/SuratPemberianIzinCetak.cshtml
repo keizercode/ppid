@@ -19,10 +19,7 @@
             .Distinct()
             .ToList();
         var parts = parentNames
-        .Select(b => {
-            var bare = b.StartsWith("Bidang ", StringComparison.OrdinalIgnoreCase) ? b[7..] : b;
-            return $"Bidang {enc.Encode(bare)} Dinas Lingkungan Hidup Provinsi DKI Jakarta";
-        })
+        .Select(b => $"{enc.Encode(b)} Dinas Lingkungan Hidup Provinsi DKI Jakarta")
         .ToList();
         if (parts.Count == 1) return parts[0];
         return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
@@ -431,10 +428,8 @@
                                 ? b.Split(new[] { " — " }, 2, StringSplitOptions.None)[0].Trim()
                                 : b)
                             .Select(g => new {
-                                // Strip leading "Bidang " agar tidak jadi "Kepala Bidang Bidang X"
-                                Induk    = g.Key.StartsWith("Bidang ", StringComparison.OrdinalIgnoreCase)
-                                               ? g.Key[7..] : g.Key,
-                                Children = g.Where(b => b.Contains(" — "))
+                        Induk    = g.Key,
+                        Children = g.Where(b => b.Contains(" — "))
                                             .Select(b => b.Split(new[] { " — " }, 2, StringSplitOptions.None)[1].Trim())
                                             .ToList()
                             })
@@ -444,15 +439,13 @@
                     {
                         @if (grp.Children.Count == 0)
                         {
-                            // Tidak ada child → tampilkan baris induk saja
-                            <li>Kepala Bidang @grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
+                            <li>@grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
                         }
                         else
                         {
-                            // Ada child → skip baris induk, hanya render c.q.
                             @foreach (var child in grp.Children)
                             {
-                                <li>Kepala Bidang @grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta c.q. @child;</li>
+                                <li>@grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta c.q. @child;</li>
                             }
                         }
                     }

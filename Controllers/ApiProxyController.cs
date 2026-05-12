@@ -214,19 +214,7 @@ public class ApiProxyController(
             return Json(dbList);
 
         // ── 3. Hardcode DLH Jakarta ───────────────────────────────────────
-        return Json(new[]
-        {
-            new { id = "d0601901-7f57-455f-b9ac-f4b794396030", namaBidang = "Laboratorium Lingkungan Hidup Daerah" },
-            new { id = "c89321db-b4e5-4638-ba59-f4280030f9fe", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Barat" },
-            new { id = "77136212-8ad7-48de-8270-69ae949ed895", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Pusat" },
-            new { id = "d47b8252-a7ac-46a1-8d9f-b0e5a8e4ba67", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Timur" },
-            new { id = "fcc59e08-cf7f-40e0-b6e3-2ef748b8c218", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Utara" },
-            new { id = "0b6d56df-895c-47b5-8883-f373f513dc83", namaBidang = "Sekretariat Dinas Lingkungan Hidup" },
-            new { id = "529d9d7a-b365-47d5-9f4f-3f2b67326c79", namaBidang = "Suku Dinas Lingkungan Hidup Kab. Adm. Kepulauan Seribu" },
-            new { id = "1c74a891-afe4-40c8-aff6-7ca8afa2af95", namaBidang = "Unit Penanganan Sampah Badan Air" },
-            new { id = "2d9b3feb-8690-4198-9a9a-c65e78538a36", namaBidang = "Unit Pengelola Sampah Terpadu" },
-            new { id = "b4b04c3b-3f6f-4005-a79b-2b4daba5de1a", namaBidang = "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Selatan" },
-        });
+        return Json(_HardcodedBidang.Select(b => new { id = b.Id, namaBidang = b.Nama }));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────
@@ -238,13 +226,14 @@ public class ApiProxyController(
     }
 
     // ── GET /api/bidang-hierarki ──────────────────────────────────────────
-// Mengembalikan daftar bidang beserta sub-unit (Ketua Subkelompok/Satpel)
-// yang belum tersedia di API eksternal.
 [HttpGet("bidang-hierarki")]
 public async Task<IActionResult> BidangHierarki()
 {
-    // Ambil data induk dari logika yang sama dengan /api/bidang
-    List<(string Id, string Nama)> parents = [];
+    // _HardcodedBidang adalah satu-satunya sumber urutan & nama yang benar.
+    // API eksternal hanya dipakai untuk mengetahui ID mana yang aktif —
+    // jika API tersedia, sembunyikan ID yang tidak dikenal API;
+    // jika API down atau kosong, tampilkan semua dari _HardcodedBidang.
+    HashSet<string>? activeIds = null;
 
     if (!string.IsNullOrEmpty(BidangUrl))
     {
@@ -253,115 +242,155 @@ public async Task<IActionResult> BidangHierarki()
             var raw = await Http().GetStringAsync(BidangUrl);
             using var doc = JsonDocument.Parse(raw);
             var arr = doc.RootElement;
-            if (arr.ValueKind == JsonValueKind.Array)
+            if (arr.ValueKind == JsonValueKind.Array && arr.GetArrayLength() > 0)
+            {
+                activeIds = [];
                 foreach (var el in arr.EnumerateArray())
                 {
-                    var id   = Str(el, "id")        ?? string.Empty;
-                    var nama = Str(el, "namaBidang") ?? string.Empty;
-                    if (!string.IsNullOrEmpty(id)) parents.Add((id, nama));
+                    var id = Str(el, "id") ?? string.Empty;
+                    if (!string.IsNullOrEmpty(id)) activeIds.Add(id);
                 }
+            }
         }
-        catch { /* lanjut fallback */ }
+        catch { /* API down → activeIds tetap null → tampilkan semua */ }
     }
 
-    if (parents.Count == 0)
-        parents.AddRange(_HardcodedBidang);
-
-    // Gabungkan dengan children statis
-    var result = parents.Select(p => new
-    {
-        id         = p.Id,
-        namaBidang = p.Nama,
-        children   = _BidangChildren.TryGetValue(p.Id, out var ch) ? ch : []
-    });
+    // Urutan dijamin oleh _HardcodedBidang (array berurutan).
+    // Nama selalu dari _HardcodedBidang — tidak terpengaruh urutan/nama API.
+    var result = _HardcodedBidang
+        .Where(b => activeIds is null || activeIds.Contains(b.Id))
+        .Select(b => new
+        {
+            id         = b.Id,
+            namaBidang = b.Nama,
+            children   = _BidangChildren.TryGetValue(b.Id, out var ch) ? ch : Array.Empty<string>()
+        });
 
     return Json(result);
 }
 
-// ── Hardcoded fallback (sama dengan sebelumnya) ───────────────────────
+// ── Hardcoded fallback — urutan resmi: Bidang → UPT → Sudin 5 Kota → Kep. Seribu ──
 private static readonly (string Id, string Nama)[] _HardcodedBidang =
 [
-    ("d0601901-7f57-455f-b9ac-f4b794396030", "Laboratorium Lingkungan Hidup Daerah"),
-    ("c89321db-b4e5-4638-ba59-f4280030f9fe", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Barat"),
-    ("77136212-8ad7-48de-8270-69ae949ed895", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Pusat"),
-    ("d47b8252-a7ac-46a1-8d9f-b0e5a8e4ba67", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Timur"),
-    ("fcc59e08-cf7f-40e0-b6e3-2ef748b8c218", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Utara"),
-    ("0b6d56df-895c-47b5-8883-f373f513dc83", "Sekretariat Dinas Lingkungan Hidup"),
-    ("529d9d7a-b365-47d5-9f4f-3f2b67326c79", "Suku Dinas Lingkungan Hidup Kab. Adm. Kepulauan Seribu"),
-    ("1c74a891-afe4-40c8-aff6-7ca8afa2af95", "Unit Penanganan Sampah Badan Air"),
-    ("d81e1bb5-61b9-44a1-aa97-a7f9450bd046", "Bidang Pengelolaan Sampah dan Limbah B3"),
-    ("08dacde9-9e35-4f34-825a-a6201ea6ff9f", "Bidang Peran Serta Masyarakat, Data dan Informasi"),
-    ("08dacde9-6fb2-4da9-8de6-4207712ffa3f", "Bidang Pengurangan dan Penanganan Sampah"),
-    ("08dacde9-3932-4c5d-8808-5fe4db495eae", "Bidang Tata Lingkungan"),
-    ("08dacde9-eb49-4127-852b-566d7540c603", "Bidang Pengawasan dan Penaatan Hukum"),
-    ("08dacde9-c0e9-4594-84bd-015a21616a8b", "Bidang Pengendalian, Pencemaran dan Kerusakan Lingkungan"),
-    ("2d9b3feb-8690-4198-9a9a-c65e78538a36", "Unit Pengelola Sampah Terpadu"),
-    ("b4b04c3b-3f6f-4005-a79b-2b4daba5de1a", "Suku Dinas Lingkungan Hidup Kota Adm. Jakarta Selatan"),
+    // ── Bidang (6) ────────────────────────────────────────────────────────
+    ("08dacde9-3932-4c5d-8808-5fe4db495eae", "Kepala Bidang Tata Lingkungan"),
+    ("d81e1bb5-61b9-44a1-aa97-a7f9450bd046", "Kepala Bidang Pengelolaan Sampah dan Limbah B3"),
+    ("08dacde9-c0e9-4594-84bd-015a21616a8b", "Kepala Bidang Pengendalian Pencemaran dan Kerusakan Lingkungan"),
+    ("08dacde9-eb49-4127-852b-566d7540c603", "Kepala Bidang Pengawasan dan Penataan Hukum"),
+    ("08dacde9-9e35-4f34-825a-a6201ea6ff9f", "Kepala Bidang Peran Serta Masyarakat, Data, dan Informasi"),
+    ("08dacde9-6fb2-4da9-8de6-4207712ffa3f", "Kepala Bidang Pengurangan dan Penanganan Sampah"),
+    // ── UPT (3) ───────────────────────────────────────────────────────────
+    ("d0601901-7f57-455f-b9ac-f4b794396030", "Kepala Laboratorium Lingkungan Hidup Daerah"),
+    ("1c74a891-afe4-40c8-aff6-7ca8afa2af95", "Kepala Unit Penanganan Sampah Badan Air"),
+    ("2d9b3feb-8690-4198-9a9a-c65e78538a36", "Kepala Unit Pengelola Sampah Terpadu"),
+    // ── Suku Dinas 5 Kota ─────────────────────────────────────────────────
+    ("77136212-8ad7-48de-8270-69ae949ed895", "Kepala Suku Dinas Lingkungan Hidup Kota Administrasi Jakarta Pusat"),
+    ("fcc59e08-cf7f-40e0-b6e3-2ef748b8c218", "Kepala Suku Dinas Lingkungan Hidup Kota Administrasi Jakarta Utara"),
+    ("c89321db-b4e5-4638-ba59-f4280030f9fe", "Kepala Suku Dinas Lingkungan Hidup Kota Administrasi Jakarta Barat"),
+    ("d47b8252-a7ac-46a1-8d9f-b0e5a8e4ba67", "Kepala Suku Dinas Lingkungan Hidup Kota Administrasi Jakarta Timur"),
+    ("b4b04c3b-3f6f-4005-a79b-2b4daba5de1a", "Kepala Suku Dinas Lingkungan Hidup Kota Administrasi Jakarta Selatan"),
+    // ── Suku Dinas Kepulauan Seribu ───────────────────────────────────────
+    ("529d9d7a-b365-47d5-9f4f-3f2b67326c79", "Kepala Suku Dinas Lingkungan Hidup Kabupaten Administrasi Kepulauan Seribu"),
 ];
 
-// ── Sub-unit per Bidang (dari struktur organisasi resmi) ──────────────
+// ── Sub-unit per Bidang (struktur organisasi resmi — lengkap) ─────────
 private static readonly Dictionary<string, string[]> _BidangChildren = new()
 {
+    // ── Bidang Tata Lingkungan ────────────────────────────────────────────
     ["08dacde9-3932-4c5d-8808-5fe4db495eae"] =
     [
         "Ketua Subkelompok Perencanaan Lingkungan",
         "Ketua Subkelompok Kajian Dampak Lingkungan",
         "Ketua Subkelompok Pemeliharaan Lingkungan",
     ],
+    // ── Bidang Pengelolaan Sampah dan Limbah B3 ───────────────────────────
     ["d81e1bb5-61b9-44a1-aa97-a7f9450bd046"] =
     [
         "Ketua Subkelompok Pengelolaan Sampah",
         "Ketua Subkelompok Pengelolaan Limbah B3",
         "Ketua Subkelompok Pengembangan Fasilitas Teknis",
     ],
+    // ── Bidang Pengendalian Pencemaran dan Kerusakan Lingkungan ───────────
     ["08dacde9-c0e9-4594-84bd-015a21616a8b"] =
     [
         "Ketua Subkelompok Pemantauan Lingkungan",
         "Ketua Subkelompok Pencegahan Pencemaran Lingkungan",
         "Ketua Subkelompok Kerusakan Lingkungan",
     ],
+    // ── Bidang Pengawasan dan Penataan Hukum ─────────────────────────────
     ["08dacde9-eb49-4127-852b-566d7540c603"] =
     [
         "Ketua Subkelompok Pengaduan dan Penyelesaian Sengketa Lingkungan",
         "Ketua Subkelompok Pengawasan Lingkungan",
         "Ketua Subkelompok Penegakan Hukum Lingkungan",
     ],
+    // ── Bidang Peran Serta Masyarakat, Data, dan Informasi ───────────────
     ["08dacde9-9e35-4f34-825a-a6201ea6ff9f"] =
     [
         "Ketua Subkelompok Penyuluhan dan Hubungan Masyarakat",
         "Ketua Subkelompok Pemberdayaan Masyarakat",
         "Ketua Subkelompok Kemitraan, Data, dan Informasi",
     ],
+    // ── Bidang Pengurangan dan Penanganan Sampah ──────────────────────────
     ["08dacde9-6fb2-4da9-8de6-4207712ffa3f"] =
     [
         "Kepala Seksi Pengurangan Sampah",
         "Kepala Seksi Pemilahan dan Pengumpulan Sampah",
         "Kepala Seksi Pengangkutan Sampah",
     ],
-    ["d0601901-7f57-455f-b9ac-f4b794396030"] =
+
+    // ── Suku Dinas Jakarta Pusat ──────────────────────────────────────────
+    ["77136212-8ad7-48de-8270-69ae949ed895"] =
     [
-        "Kepala Subbagian Tata Usaha",
-        "Ketua Satuan Pelaksana Prasarana dan Sarana",
-        "Ketua Satuan Pelaksana Pengendali Mutu",
-        "Ketua Satuan Pelaksana Pengujian Air dan Padatan",
-        "Ketua Satuan Pelaksana Pengujian Udara dan Kebisingan",
-        "Sub Kelompok Jabatan Fungsional",
+        "Kepala Subbagian Tata Usaha Sudin Jakpus",
+        "Kepala Seksi Pengelolaan Sampah dan Limbah B3 Sudin Jakpus",
+        "Kepala Seksi Pengendalian Pencemaran Dan Kerusakan Lingkungan Sudin Jakpus",
+        "Kepala Seksi Pengawasan dan Penaatan Hukum Sudin Jakpus",
+        "Kepala Seksi Peran Serta Masyarakat Sudin Jakpus",
     ],
-    ["1c74a891-afe4-40c8-aff6-7ca8afa2af95"] =
+    // ── Suku Dinas Jakarta Utara ──────────────────────────────────────────
+    ["fcc59e08-cf7f-40e0-b6e3-2ef748b8c218"] =
     [
         "Kepala Subbagian Tata Usaha",
-        "Ketua Satuan Pelaksana Prasarana dan Sarana",
-        "Ketua Satuan Pelaksana Penanganan Sampah Badan Air Kota Administrasi",
-        "Sub Kelompok Jabatan Fungsional",
+        "Kepala Seksi Pengelolaan Sampah dan Limbah B3",
+        "Kepala Seksi Pengendalian Pencemaran Dan Kerusakan Lingkungan",
+        "Kepala Seksi Pengawasan dan Penaatan Hukum",
+        "Kepala Seksi Peran Serta Masyarakat",
     ],
-    ["2d9b3feb-8690-4198-9a9a-c65e78538a36"] =
+    // ── Suku Dinas Jakarta Barat ──────────────────────────────────────────
+    ["c89321db-b4e5-4638-ba59-f4280030f9fe"] =
     [
         "Kepala Subbagian Tata Usaha",
-        "Ketua Satuan Pelaksana Prasarana dan Sarana",
-        "Ketua Satuan Pelaksana Pengembangan Bisnis",
-        "Ketua Satuan Pelaksana Pemrosesan Akhir Sampah",
-        "Ketua Satuan Pelaksana Pengolahan Sampah",
-        "Sub Kelompok Jabatan Fungsional",
+        "Kepala Seksi Pengelolaan Sampah dan Limbah B3",
+        "Kepala Seksi Pengendalian Pencemaran Dan Kerusakan Lingkungan",
+        "Kepala Seksi Pengawasan dan Penaatan Hukum",
+        "Kepala Seksi Peran Serta Masyarakat",
+    ],
+    // ── Suku Dinas Jakarta Timur ──────────────────────────────────────────
+    ["d47b8252-a7ac-46a1-8d9f-b0e5a8e4ba67"] =
+    [
+        "Kepala Subbagian Tata Usaha",
+        "Kepala Seksi Pengelolaan Sampah dan Limbah B3",
+        "Kepala Seksi Pengendalian Pencemaran Dan Kerusakan Lingkungan",
+        "Kepala Seksi Pengawasan dan Penaatan Hukum",
+        "Kepala Seksi Peran Serta Masyarakat",
+    ],
+    // ── Suku Dinas Jakarta Selatan ────────────────────────────────────────
+    ["b4b04c3b-3f6f-4005-a79b-2b4daba5de1a"] =
+    [
+        "Kepala Subbagian Tata Usaha",
+        "Kepala Seksi Pengelolaan Sampah dan Limbah B3",
+        "Kepala Seksi Pengendalian Pencemaran Dan Kerusakan Lingkungan",
+        "Kepala Seksi Pengawasan dan Penaatan Hukum",
+        "Kepala Seksi Peran Serta Masyarakat",
+    ],
+    // ── Suku Dinas Kepulauan Seribu ───────────────────────────────────────
+    ["529d9d7a-b365-47d5-9f4f-3f2b67326c79"] =
+    [
+        "Kepala Subbagian Tata Usaha",
+        "Kepala Seksi Pengelolaan Sampah dan Limbah B3",
+        "Kepala Seksi Pengendalian Pencemaran dan Kerusakan Lingkungan",
+        "Kepala Seksi Peran Serta Masyarakat dan Penaatan Hukum",
     ],
 };
 }
