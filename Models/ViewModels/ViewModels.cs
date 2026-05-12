@@ -981,6 +981,7 @@ public class SuratPemberianIzinVm
             return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
         }
     }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // UPLOAD LAPORAN UNIFIED (menggantikan UploadTugas + UploadDokumentasiTask)
@@ -1005,6 +1006,7 @@ public class UploadLaporanUnifiedVm
 // ═══════════════════════════════════════════════════════════════════════
 // FEEDBACK UNIFIED (menggantikan FeedbackTaskVm per-task)
 // ═══════════════════════════════════════════════════════════════════════
+// REPLACE seluruh class FeedbackUnifiedVm
 public class FeedbackUnifiedVm
 {
     public Guid   PermohonanPPIDID { get; set; }
@@ -1017,6 +1019,12 @@ public class FeedbackUnifiedVm
     public int     NilaiLama   { get; set; }
     public string? CatatanLama { get; set; }
 
+    /// <summary>True jika laporan sudah pernah diunggah sebelumnya.</summary>
+    public bool LaporanSudahDiunggah { get; set; }
+
+    [Display(Name = "File Laporan Hasil Penelitian")]
+    public IFormFile? FileLaporan { get; set; }
+
     [Required]
     [Range(1, 5, ErrorMessage = "Pilih nilai kepuasan 1–5")]
     public int NilaiKepuasan { get; set; }
@@ -1025,5 +1033,5 @@ public class FeedbackUnifiedVm
     [Display(Name = "Catatan / Saran")]
     public string? Catatan { get; set; }
 }
-}
+
 
