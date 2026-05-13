@@ -295,6 +295,18 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
                 t.PermohonanPPIDID == id &&
                 t.JenisTask        == JenisTask.PermintaanData);
 
+                // ── UploadData GET ──
+// Tambahkan SEBELUM "return View(new UploadDataSubTaskVm { ... });"
+// (di kedua return path — yang ada subTask dan yang fallback ke p)
+
+    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == id && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+    if (!laporanAda)
+        TempData["Warning"] =
+            "⚠ Pemohon belum mengunggah laporan hasil penelitian. " +
+            "Upload data ini tidak akan dapat diselesaikan sampai laporan tersedia. " +
+            "Minta pemohon mengunggah laporan melalui portal publik terlebih dahulu.";
+
         if (subTask?.Permohonan is not null)
             return View(new UploadDataSubTaskVm
             {
@@ -322,6 +334,21 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
     public async Task<IActionResult> UploadDataPost(UploadDataSubTaskVm vm)
     {
         if (!ModelState.IsValid) return View("UploadData", vm);
+
+        // ── UploadDataPost ──
+// Tambahkan SETELAH "if (!ModelState.IsValid) return View("UploadData", vm);"
+
+    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == vm.PermohonanPPIDID && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+    if (!laporanAda)
+    {
+        TempData["Error"] =
+            "⛔ Penyelesaian sub-tugas Permintaan Data ditolak. " +
+            "Pemohon belum mengunggah laporan hasil penelitian. " +
+            "Sub-tugas tidak dapat ditandai selesai sampai laporan tersedia di sistem. " +
+            "Gunakan tombol <strong>Tandai Selesai (darurat)</strong> hanya jika kondisi mendesak.";
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
 
         var now      = DateTime.UtcNow;
         string? fp   = null;
@@ -692,8 +719,15 @@ public async Task<IActionResult> TandaiSelesai([FromForm] Guid permohonanId)
     p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
     p.UpdatedAt      = now;
 
+    // ── TandaiSelesai POST ── (di KasubkelKdiController)
+// Ganti baris AddAuditLog yang ada dengan versi berikut:
+
+    bool adaLaporan = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == permohonanId && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+
     db.AddAuditLog(permohonanId, lama, StatusId.Selesai,
-        "Permohonan ditandai selesai (override) oleh KDI karena Loket tidak merespons.",
+        "Permohonan ditandai selesai (OVERRIDE DARURAT) oleh KDI karena Loket tidak merespons. " +
+        (adaLaporan ? "Laporan pemohon sudah ada." : "⚠ LAPORAN PEMOHON BELUM ADA saat override dilakukan."),
         CurrentUser);
 
     await db.SaveChangesAsync();

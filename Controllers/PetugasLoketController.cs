@@ -973,7 +973,20 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
         var p = await db.PermohonanPPID.Include(x => x.Pribadi)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p is null) return NotFound();
+        // ── SelesaiObservasi GET ──
+// Tambahkan SEBELUM baris "var sub = await db.GetSubTask(id, JenisTask.Observasi);"
 
+    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == id && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+    if (!laporanAda)
+    {
+        TempData["Error"] =
+            "⛔ Konfirmasi selesai belum dapat dilakukan. " +
+            "Pemohon belum mengunggah laporan hasil penelitian. " +
+            "Minta pemohon mengakses portal publik dengan nomor permohonan mereka " +
+            "dan unggah laporan terlebih dahulu.";
+        return RedirectToAction(nameof(SubTasks), new { id });
+    }
         var sub = await db.GetSubTask(id, JenisTask.Observasi);
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
@@ -997,6 +1010,20 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
         var now = DateTime.UtcNow;
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p is null) return NotFound();
+
+        // ── SelesaiObservasiPost ──
+// Tambahkan SETELAH "if (p is null) return NotFound();"
+
+    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == vm.PermohonanPPIDID && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+    if (!laporanAda)
+    {
+        TempData["Error"] =
+            "⛔ Konfirmasi selesai ditolak. " +
+            "Pemohon belum mengunggah laporan hasil penelitian. " +
+            "Sub-tugas tidak dapat ditandai selesai sampai laporan tersedia di sistem.";
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
 
         var lama = p.StatusPPIDID;
         string? fp = null;
@@ -1176,6 +1203,21 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p is null) return NotFound();
 
+        // ── SelesaiWawancara GET ──
+// Tambahkan SEBELUM baris "var sub = await db.GetSubTask(id, JenisTask.Wawancara);"
+
+    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == id && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+    if (!laporanAda)
+    {
+        TempData["Error"] =
+            "⛔ Konfirmasi selesai belum dapat dilakukan. " +
+            "Pemohon belum mengunggah laporan hasil penelitian. " +
+            "Minta pemohon mengakses portal publik dengan nomor permohonan mereka " +
+            "dan unggah laporan terlebih dahulu.";
+        return RedirectToAction(nameof(SubTasks), new { id });
+    }
+
         var sub = await db.GetSubTask(id, JenisTask.Wawancara);
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
@@ -1199,6 +1241,20 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
         var now = DateTime.UtcNow;
         var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
         if (p is null) return NotFound();
+
+        // ── SelesaiWawancaraPost ──
+// Tambahkan SETELAH "if (p is null) return NotFound();"
+
+    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == vm.PermohonanPPIDID && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+    if (!laporanAda)
+    {
+        TempData["Error"] =
+            "⛔ Konfirmasi selesai ditolak. " +
+            "Pemohon belum mengunggah laporan hasil penelitian. " +
+            "Sub-tugas tidak dapat ditandai selesai sampai laporan tersedia di sistem.";
+        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+    }
 
         var lama = p.StatusPPIDID;
         string? fp = null;
@@ -1721,8 +1777,15 @@ public async Task<IActionResult> TandaiSelesaiFeedback([FromForm] Guid permohona
     p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
     p.UpdatedAt      = now;
 
+    // ── TandaiSelesaiFeedback POST ── (di PetugasLoketController)
+// Ganti baris AddAuditLog yang ada:
+
+    bool adaLaporan = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == permohonanId && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+
     db.AddAuditLog(permohonanId, lama, StatusId.Selesai,
-        "Permohonan ditandai selesai secara manual oleh Loket Kepegawaian (pemohon tidak merespons).",
+        "Permohonan ditandai selesai secara manual oleh Loket Kepegawaian (pemohon tidak merespons). " +
+        (adaLaporan ? "Laporan pemohon sudah ada." : "⚠ LAPORAN PEMOHON BELUM ADA saat override dilakukan."),
         CurrentUser);
 
     await db.SaveChangesAsync();

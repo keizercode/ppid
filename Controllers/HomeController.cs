@@ -288,9 +288,9 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
 
         if (p is null) return NotFound();
 
-        if (p.StatusPPIDID < StatusId.DataSiap)
+        if (p.StatusPPIDID < StatusId.Didisposisi)
         {
-            TempData["Error"] = "Laporan hanya dapat diunggah setelah data tersedia.";
+    TempData["Error"] = "Laporan hanya dapat diunggah setelah permohonan mulai diproses.";
             return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
         }
 
@@ -341,9 +341,9 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
 
         if (p is null) return NotFound();
 
-        if (p.StatusPPIDID < StatusId.DataSiap)
-        {
-            TempData["Error"] = "Upload tidak diizinkan pada status ini.";
+        if (p.StatusPPIDID < StatusId.Didisposisi)
+{
+    TempData["Error"] = "Upload tidak diizinkan pada status ini.";
             return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
         }
 
