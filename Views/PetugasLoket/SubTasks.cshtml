@@ -530,17 +530,52 @@
         }
 
         <div class="pt-3 border-t border-gray-100">
-            <p class="text-xs text-gray-400 mb-2">Jika pemohon tidak merespons dalam waktu wajar:</p>
-            <form asp-action="TandaiSelesaiFeedback" asp-controller="PetugasLoket" method="post"
-                  onsubmit="return confirm('Tandai selesai tanpa feedback pemohon?')">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID"/>
-                <button type="submit"
-                        class="inline-flex items-center gap-2 border border-gray-300 text-gray-600
-                               text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
-                    ✓ Tandai Selesai (Manual)
-                </button>
-            </form>
+            @{
+                bool adaLaporanCheck = tugasDocs.Any();
+            }
+            @if (adaLaporanCheck)
+            {
+                <p class="text-xs text-gray-400 mb-2">Jika pemohon tidak merespons feedback dalam waktu wajar:</p>
+                <form asp-action="TandaiSelesaiFeedback" asp-controller="PetugasLoket" method="post"
+                      onsubmit="return confirm('Tandai selesai manual? Laporan pemohon sudah ada.')">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID" />
+                    <input type="hidden" name="forceOverride" value="false" />
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 border border-gray-300 text-gray-600
+                                   text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                        ✓ Tandai Selesai (Manual)
+                    </button>
+                </form>
+            }
+            else
+            {
+                <div class="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
+                    <div class="flex items-start gap-2">
+                        <span class="text-red-500 flex-shrink-0">⛔</span>
+                        <div>
+                            <p class="text-xs font-bold text-red-800">Laporan Pemohon Belum Ada</p>
+                            <p class="text-xs text-red-600 mt-0.5 leading-relaxed">
+                                Ingatkan pemohon (<span class="font-mono font-bold">@p.NoPermohonan</span>)
+                                untuk mengakses portal publik dan mengunggah laporan hasil penelitian.
+                                Setelah laporan diunggah, tombol selesai normal akan tersedia.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-red-400 mb-2 font-semibold">⚠ Override darurat — hanya jika ada persetujuan atasan:</p>
+                <form asp-action="TandaiSelesaiFeedback" asp-controller="PetugasLoket" method="post"
+                      onsubmit="return confirm('PERINGATAN: Laporan pemohon BELUM ADA.\n\nTindakan ini akan tercatat di audit log.\nLanjutkan hanya jika sudah mendapat persetujuan atasan.\n\nTetap selesaikan?')">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID" />
+                    <input type="hidden" name="forceOverride" value="true" />
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100 border-2 border-red-300
+                                   text-red-700 text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                        ⚠ Selesaikan Darurat (tanpa laporan)
+                    </button>
+                </form>
+            }
         </div>
     </div>
 }

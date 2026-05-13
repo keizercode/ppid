@@ -149,9 +149,20 @@
         .surat-title .label     { font-size: 12pt; font-family: Arial; }
         .surat-title .nomor     { font-size: 12pt; min-height: 1.4em; }
         .surat-title .nomor::after { content: attr(data-blank); }
-        .surat-title .tentang   { font-size: 12pt; margin-top: 4px;}
-        .surat-title .judul     { font-size: 12pt; text-transform: uppercase; font-family: Arial; }
-        .surat-title .atas-nama { font-size: 12pt; font-family: Arial; }
+        .surat-title .tentang,
+        .surat-title .judul,
+        .surat-title .atas-nama {
+            font-size: 12pt;
+            font-family: Arial;
+            line-height: 1.7;
+        }
+        .surat-title .tentang {
+            margin-top: 4px;
+        }
+
+        .surat-title .judul {
+            text-transform: uppercase;
+        }
 
         /* ── Body ── */
         .surat-body { margin-top: 16px; }
@@ -186,7 +197,7 @@
             text-align: left;
             vertical-align: top;
         }
-        .kelompok-table th { text-align: center; font-weight: bold; background: #f3f4f6; }
+        .kelompok-table th { text-align: center; font-weight: normal ; background: #f3f4f6; }
         .kelompok-table td:first-child { text-align: center; width: 40px; }
 
         /* ── Ketentuan list ── */

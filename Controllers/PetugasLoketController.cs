@@ -974,19 +974,6 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
         if (p is null) return NotFound();
         // ── SelesaiObservasi GET ──
-// Tambahkan SEBELUM baris "var sub = await db.GetSubTask(id, JenisTask.Observasi);"
-
-    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
-        d.PermohonanPPIDID == id && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
-    if (!laporanAda)
-    {
-        TempData["Error"] =
-            "⛔ Konfirmasi selesai belum dapat dilakukan. " +
-            "Pemohon belum mengunggah laporan hasil penelitian. " +
-            "Minta pemohon mengakses portal publik dengan nomor permohonan mereka " +
-            "dan unggah laporan terlebih dahulu.";
-        return RedirectToAction(nameof(SubTasks), new { id });
-    }
         var sub = await db.GetSubTask(id, JenisTask.Observasi);
         ViewData["Prefix"] = "petugas-loket";
         return View("~/Views/KasubkelKdi/SelesaiSubTask.cshtml", new SelesaiSubTaskVm
@@ -1012,18 +999,6 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
         if (p is null) return NotFound();
 
         // ── SelesaiObservasiPost ──
-// Tambahkan SETELAH "if (p is null) return NotFound();"
-
-    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
-        d.PermohonanPPIDID == vm.PermohonanPPIDID && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
-    if (!laporanAda)
-    {
-        TempData["Error"] =
-            "⛔ Konfirmasi selesai ditolak. " +
-            "Pemohon belum mengunggah laporan hasil penelitian. " +
-            "Sub-tugas tidak dapat ditandai selesai sampai laporan tersedia di sistem.";
-        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
-    }
 
         var lama = p.StatusPPIDID;
         string? fp = null;
@@ -1204,19 +1179,6 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
         if (p is null) return NotFound();
 
         // ── SelesaiWawancara GET ──
-// Tambahkan SEBELUM baris "var sub = await db.GetSubTask(id, JenisTask.Wawancara);"
-
-    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
-        d.PermohonanPPIDID == id && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
-    if (!laporanAda)
-    {
-        TempData["Error"] =
-            "⛔ Konfirmasi selesai belum dapat dilakukan. " +
-            "Pemohon belum mengunggah laporan hasil penelitian. " +
-            "Minta pemohon mengakses portal publik dengan nomor permohonan mereka " +
-            "dan unggah laporan terlebih dahulu.";
-        return RedirectToAction(nameof(SubTasks), new { id });
-    }
 
         var sub = await db.GetSubTask(id, JenisTask.Wawancara);
         ViewData["Prefix"] = "petugas-loket";
@@ -1243,18 +1205,6 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
         if (p is null) return NotFound();
 
         // ── SelesaiWawancaraPost ──
-// Tambahkan SETELAH "if (p is null) return NotFound();"
-
-    bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
-        d.PermohonanPPIDID == vm.PermohonanPPIDID && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
-    if (!laporanAda)
-    {
-        TempData["Error"] =
-            "⛔ Konfirmasi selesai ditolak. " +
-            "Pemohon belum mengunggah laporan hasil penelitian. " +
-            "Sub-tugas tidak dapat ditandai selesai sampai laporan tersedia di sistem.";
-        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
-    }
 
         var lama = p.StatusPPIDID;
         string? fp = null;
@@ -1760,7 +1710,9 @@ public async Task<IActionResult> MintaFeedbackPost([FromForm] Guid permohonanId)
 }
 
 [HttpPost("tandai-selesai-feedback"), ValidateAntiForgeryToken]
-public async Task<IActionResult> TandaiSelesaiFeedback([FromForm] Guid permohonanId)
+public async Task<IActionResult> TandaiSelesaiFeedback(
+    [FromForm] Guid permohonanId,
+    [FromForm] bool forceOverride = false)
 {
     var p = await db.PermohonanPPID.FindAsync(permohonanId);
     if (p is null) return NotFound();
@@ -1771,26 +1723,36 @@ public async Task<IActionResult> TandaiSelesaiFeedback([FromForm] Guid permohona
         return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
     }
 
+    bool adaLaporan = await db.DokumenPPID.AnyAsync(d =>
+        d.PermohonanPPIDID == permohonanId &&
+        d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
+
+    if (!adaLaporan && !forceOverride)
+    {
+        TempData["Error"] =
+            $"⛔ Tidak dapat diselesaikan. Pemohon <strong>belum mengunggah laporan</strong> hasil penelitian. " +
+            $"Ingatkan pemohon menggunakan nomor <strong>{p.NoPermohonan}</strong> untuk mengakses portal. " +
+            "Gunakan tombol <em>Selesaikan Darurat</em> jika sudah mendapat persetujuan atasan.";
+        return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
+    }
+
     var lama         = p.StatusPPIDID;
     var now          = DateTime.UtcNow;
     p.StatusPPIDID   = StatusId.Selesai;
     p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
     p.UpdatedAt      = now;
 
-    // ── TandaiSelesaiFeedback POST ── (di PetugasLoketController)
-// Ganti baris AddAuditLog yang ada:
-
-    bool adaLaporan = await db.DokumenPPID.AnyAsync(d =>
-        d.PermohonanPPIDID == permohonanId && d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
-
     db.AddAuditLog(permohonanId, lama, StatusId.Selesai,
-        "Permohonan ditandai selesai secara manual oleh Loket Kepegawaian (pemohon tidak merespons). " +
-        (adaLaporan ? "Laporan pemohon sudah ada." : "⚠ LAPORAN PEMOHON BELUM ADA saat override dilakukan."),
+        adaLaporan
+            ? "Permohonan ditandai selesai secara manual oleh Loket Kepegawaian (pemohon tidak merespons). Laporan pemohon sudah ada."
+            : "⚠ OVERRIDE DARURAT: Diselesaikan tanpa laporan pemohon oleh Loket Kepegawaian (forceOverride=true). Harus ada persetujuan atasan.",
         CurrentUser);
 
     await db.SaveChangesAsync();
 
-    TempData["Success"] = "Permohonan berhasil ditandai <strong>Selesai</strong>.";
+    TempData["Success"] = adaLaporan
+        ? "Permohonan berhasil ditandai <strong>Selesai</strong>."
+        : "Permohonan diselesaikan secara darurat (tanpa laporan). Tindakan tercatat di audit log.";
     return RedirectToAction(nameof(SubTasks), new { id = permohonanId });
 }
 
