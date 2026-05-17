@@ -127,18 +127,12 @@ string StDot(int? s) => (s ?? 0) switch {        StatusId.Selesai              =
                             primerHref = $"/kasubkel-kdi/terima/{item.PermohonanPPIDID}";
                             primerLabel = "Terima Disposisi";
                             primerColor = "cyan";
-                        } else if (isInProgress) {
-                            primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
-                            primerLabel = "Kelola Sub-tugas";
-                        } else if (isDataSiap) {
-                            primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
-                            primerLabel = "Review Data Siap";
-                            primerColor = "emerald";
-                        } else if (isFeedback) {
+                        } else {
                             primerHref = $"/kasubkel-kdi/subtasks/{item.PermohonanPPIDID}";
                             primerLabel = "Lihat Sub-tugas";
-                            primerColor = "amber";
+                            primerColor = "";
                         }
+
 
                         <tr class="hover:bg-blue-50/30 transition-colors group @(isNew ? "bg-cyan-50/30" : "")">
 
@@ -202,26 +196,19 @@ string StDot(int? s) => (s ?? 0) switch {        StatusId.Selesai              =
                                     {
                                         <a href="@primerHref" class="btn-action-primary @primerColor">@primerLabel</a>
                                     }
-                                    else if (!isSelesai)
-                                    {
-                                        <a href="/kasubkel-kdi/detail/@item.PermohonanPPIDID"
-                                           class="btn-action-primary" style="background:#6b7280">Detail</a>
-                                    }
+
 
                                     <div class="action-more-wrap">
                                         <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
                                         <div class="action-dropdown hidden">
                                             <a href="/kasubkel-kdi/detail/@item.PermohonanPPIDID" class="action-dd-item">📋 Detail & Log</a>
-                                            @if (!isNew && !isSelesai && !isDataSiap)
-                                            {
-                                                <a href="/kasubkel-kdi/subtasks/@item.PermohonanPPIDID" class="action-dd-item">⚙️ Sub-tugas</a>
-                                            }
-                                            @if (isDataSiap)
+
+                                            @* @if (isDataSiap)
                                             {
                                                 <span class="action-dd-item" style="color:var(--color-text-tertiary);cursor:default">
                                                     📨 Feedback → Loket Kepegawaian
                                                 </span>
-                                            }
+                                            } *@
                                         </div>
                                     </div>
                                 </div>

@@ -25,8 +25,8 @@ public static class FileValidator
         [".png"]  = [[ 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A ]], // PNG
         [".xlsx"] = [[ 0x50, 0x4B, 0x03, 0x04 ]],                          // ZIP (xlsx adalah ZIP)
         [".xls"]  = [[ 0xD0, 0xCF, 0x11, 0xE0 ]],                          // Compound Document
-        [".csv"]  = [],                                                       // Plain text — cek ext saja
-        [".zip"]  = [[ 0x50, 0x4B, 0x03, 0x04 ]],                          // ZIP
+
+
         [".docx"] = [[ 0x50, 0x4B, 0x03, 0x04 ]],                          // ZIP (docx adalah ZIP)
         [".doc"]  = [[ 0xD0, 0xCF, 0x11, 0xE0 ]],                          // Compound Document
     };
@@ -55,7 +55,8 @@ public static class FileValidator
         if (file == null || file.Length == 0)
             return FileValidationResult.Ok(); // File opsional
 
-        var allowedExtensions = new[] { ".pdf", ".xlsx", ".xls", ".csv", ".doc", ".docx", ".zip" };
+        // Hanya PDF dan Microsoft Office — ZIP/CSV dilarang karena tidak bisa diverifikasi isinya
+        var allowedExtensions = new[] { ".pdf", ".xlsx", ".xls", ".doc", ".docx" };
         return Validate(file, allowedExtensions, MaxDataSize);
     }
 

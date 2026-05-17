@@ -1,5 +1,7 @@
 @model DashboardVm
 @{
+    <partial name="Partials/_FormStyles" />
+    <partial name="Partials/_ActionMenu" />
     ViewData["Title"] = "Dashboard Kasubkel KDI";
     ViewData["Role"]  = "Kasubkel KDI";
     Layout = "_LayoutAdmin";
@@ -209,6 +211,7 @@
                         bool isNew      = p.StatusPPIDID == StatusId.Didisposisi;
                         bool isFeedback = p.StatusPPIDID == StatusId.FeedbackPemohon;
                         bool isDataSiap = p.StatusPPIDID == StatusId.DataSiap;
+                        bool isSelesai = p.StatusPPIDID == StatusId.Selesai;
 
                         subTaskMap.TryGetValue(p.PermohonanPPIDID, out var tasks);
                         int done  = tasks?.Count(t => t.StatusTask == SubTaskStatus.Selesai) ?? 0;
@@ -276,33 +279,31 @@
                                 }
                             </td>
 
+
                             <td class="px-4 py-3">
-                                <div class="flex gap-1.5 opacity-80 group-hover:opacity-100 flex-wrap">
-                                    @if (isNew)
-                                    {
-                                        <a href="/kasubkel-kdi/terima/@p.PermohonanPPIDID"
-                                           class="text-[11px] bg-cyan-600 hover:bg-cyan-700 text-white px-2.5 py-1 rounded-lg font-bold">📥 Terima</a>
-                                    }
-                                    else if (isDataSiap)
-                                    {
-                                        <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
-                                        class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-medium">
-                                        📦 Lihat Data Siap
-                                        </a>
-                                    }
-                                    else if (isFeedback)
-                                    {
-                                        <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
-                                           class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">⏳ Tunggu Kuesioner</a>
-                                    }
-                                    else
-                                    {
-                                        <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
-                                           class="text-[11px] bg-[#002d7a] hover:bg-blue-900 text-white px-2.5 py-1 rounded-lg font-bold">⚙️ Kelola Tugas</a>
-                                    }
-                                    <a href="/kasubkel-kdi/detail/@p.PermohonanPPIDID"
-                                       class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">Detail</a>
+                                <div class="action-cell">
+                                @if (isNew)
+                                {
+                                    <a href="/kasubkel-kdi/terima/@p.PermohonanPPIDID"
+                                       class="btn-action-primary cyan">📥 Terima</a>
+                                }
+                                else
+                                {
+                                    <a href="/kasubkel-kdi/subtasks/@p.PermohonanPPIDID"
+                                       class="btn-action-primary">Lihat Sub-tugas</a>
+                                }
+                                <div class="action-more-wrap">
+                                    <button class="btn-action-more" onclick="toggleActionMenu(this)" type="button">⋯</button>
+                                    <div class="action-dropdown hidden">
+                                        <a href="/kasubkel-kdi/detail/@p.PermohonanPPIDID" class="action-dd-item">📋 Detail & Log</a>
+
+                                        @if (isNew)
+                                        {
+                                            <a href="/kasubkel-kdi/detail/@p.PermohonanPPIDID" class="action-dd-item">📋 Detail</a>
+                                        }
+                                    </div>
                                 </div>
+                            </div>
                             </td>
                         </tr>
                     }
