@@ -236,7 +236,7 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
         // Step 6 mencakup pemrosesan s.d. DataSiap — tidak ada step 7 terpisah
         (StatusId.Didisposisi,        "6. Pemrosesan Data & Penjadwalan",        keperluanSub),
         // Step 7: upload laporan + feedback (dulu step 8)
-        (StatusId.FeedbackPemohon,    "7. Unggah Laporan & Isi Feedback",        null),
+        (StatusId.FeedbackPemohon,    "7. Unggah Hasil Laporan & Isi Feedback",        null),
         (StatusId.Selesai,            "8. Selesai",                              null),
     };
 }
@@ -248,12 +248,11 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
         StatusId.IdentifikasiAwal                                             => 2,
         StatusId.MenungguVerifikasi or StatusId.MenungguSuratIzin             => 3,
         StatusId.SuratIzinTerbit                                              => 4,
-        // DataSiap masuk ke grup step 6 (bukan level tersendiri)
         StatusId.Didisposisi or StatusId.DiProses
             or StatusId.ObservasiDijadwalkan or StatusId.ObservasiSelesai
-            or StatusId.WawancaraDijadwalkan or StatusId.WawancaraSelesai
-            or StatusId.DataSiap                                              => 5,
-        StatusId.FeedbackPemohon                                              => 6,
+            or StatusId.WawancaraDijadwalkan or StatusId.WawancaraSelesai    => 5,
+        // DataSiap & FeedbackPemohon → keduanya mengaktifkan step 7 "Unggah Laporan & Isi Feedback"
+        StatusId.DataSiap or StatusId.FeedbackPemohon                        => 6,
         StatusId.Selesai                                                      => 7,
         _                                                                     => 0
     };

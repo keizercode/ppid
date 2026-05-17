@@ -40,14 +40,13 @@
 
     // Kondisi paralel aktif (sedang diproses step 6)
     bool isParallelActive =
-        (p.StatusPPIDID == StatusId.Didisposisi
-         || p.StatusPPIDID == StatusId.DiProses
-         || p.StatusPPIDID == StatusId.ObservasiDijadwalkan
-         || p.StatusPPIDID == StatusId.ObservasiSelesai
-         || p.StatusPPIDID == StatusId.WawancaraDijadwalkan
-         || p.StatusPPIDID == StatusId.WawancaraSelesai
-         || p.StatusPPIDID == StatusId.DataSiap)
-        && (p.IsPermintaanData || p.IsObservasi || p.IsWawancara);
+    (p.StatusPPIDID == StatusId.Didisposisi
+     || p.StatusPPIDID == StatusId.DiProses
+     || p.StatusPPIDID == StatusId.ObservasiDijadwalkan
+     || p.StatusPPIDID == StatusId.ObservasiSelesai
+     || p.StatusPPIDID == StatusId.WawancaraDijadwalkan
+     || p.StatusPPIDID == StatusId.WawancaraSelesai)
+    && (p.IsPermintaanData || p.IsObservasi || p.IsWawancara);
 
 
 
@@ -56,13 +55,8 @@
     var feedbackMap       = ViewData["FeedbackMap"] as Dictionary<string, bool> ?? new();
     bool feedbackTerisi   = feedbackMap.ContainsKey(JenisTask.Semua);
 
-    // NEW — hanya muncul ketika semua tugas selesai (DataSiap) atau sudah di FeedbackPemohon:
-    bool bisaUploadLaporan =
-        p.StatusPPIDID == StatusId.DataSiap ||
-        p.StatusPPIDID == StatusId.FeedbackPemohon;
+ bool laporanTerisi = p.Dokumen.Any(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
 
-    var laporanTerisi = p.Dokumen.Any(d => d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
-    bool bisaFeedback     = p.StatusPPIDID == StatusId.FeedbackPemohon && !feedbackTerisi;
 
     // Helper: reschedule badge
     string BadgeReschedule(SubTaskPPID? st) =>
@@ -386,101 +380,53 @@
                                         }
                                     </div>
 
-@* ══ DataSiap: satu tombol ke Feedback terpadu ══ *@
-@if (bisaUploadLaporan)
-{
-    <div class="mt-3 pt-3 border-t border-blue-100 space-y-2">
-        @if (laporanTerisi)
-        {
-            <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200
-                        rounded-lg px-3 py-2">
-                <span class="text-emerald-500 text-sm flex-shrink-0">✅</span>
-                <p class="text-xs text-emerald-700 font-semibold">Laporan sudah diunggah</p>
-                @if (p.StatusPPIDID == StatusId.DataSiap || p.StatusPPIDID == StatusId.FeedbackPemohon)
-                {
-                    <a asp-action="Feedback" asp-controller="Home"
-                       asp-route-id="@p.PermohonanPPIDID"
-                       class="ml-auto text-xs text-blue-600 hover:underline font-bold flex-shrink-0">
-                        Isi Feedback →
-                    </a>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <p class="text-[11px] text-amber-700 font-semibold leading-snug">
-                    ⚠ Hasil Laporan belum diunggah.
-                </p>
-            </div>
-            @if (p.StatusPPIDID == StatusId.DataSiap || p.StatusPPIDID == StatusId.FeedbackPemohon)
-            {
-                <a asp-action="Feedback" asp-controller="Home"
-                   asp-route-id="@p.PermohonanPPIDID"
-                   class="flex items-center gap-2 w-full text-xs bg-[#002d7a] hover:bg-blue-900
-                          text-white font-bold px-3 py-2.5 rounded-lg transition-colors">
-                    📝 Unggah Hasil Laporan &amp; Isi Feedback →
-                </a>
-            }
-            else
-            {
-                <a asp-action="UploadTugas" asp-controller="Home"
-                   asp-route-id="@p.PermohonanPPIDID"
-                   class="flex items-center gap-2 w-full text-xs bg-indigo-600 hover:bg-indigo-700
-                          text-white font-bold px-3 py-2.5 rounded-lg transition-colors">
-                    📤 Unggah Laporan Hasil Penelitian →
-                </a>
-                <p class="text-[10px] text-gray-400 leading-snug">
-                    Laporan dapat diunggah meski proses masih berjalan.
-                </p>
-            }
-        }
-    </div>
-}
-                                    <p class="text-blue-500 text-[11px] mt-2 font-medium">⏳ Sedang diproses secara paralel</p>
+
+                                    <p class="text-blue-500 text-[11px] mt-2 font-medium">
+                                        ⏳ Sedang diproses secara paralel
+                                    </p>
                                 }
 
                                 @* ── Step lain yang sedang aktif (bukan parallel) ── *@
                                 @if (step.AktifSekarang && !isParallelActive
                                      && step.StatusId != StatusId.Selesai
-                                     && step.StatusId != StatusId.DataSiap
                                      && step.StatusId != StatusId.FeedbackPemohon)
                                 {
                                     <p class="text-blue-500 text-xs mt-1 font-medium">⏳ Sedang dalam proses</p>
                                 }
 
+                                @* ── STEP 7 AKTIF: Unggah Laporan & Isi Feedback (DataSiap → FeedbackPemohon) ── *@
 
 
-                                @* ── GANTI blok STEP 7 AKTIF (FeedbackPemohon) ── *@
+                                @* AFTER *@
+@* ── STEP 7 AKTIF: Unggah Laporan & Isi Feedback (DataSiap → FeedbackPemohon) ── *@
 
 @if (step.AktifSekarang && step.StatusId == StatusId.FeedbackPemohon)
 {
+    @* Preamble kontekstual berdasarkan status aktual *@
+    @if (p.StatusPPIDID == StatusId.DataSiap)
+    {
+        <p class="text-blue-600 text-[11px] mt-1.5 leading-snug font-medium">
+            📦 Semua data sudah siap. Unduh data Anda, lalu unggah hasil laporan.
+        </p>
+    }
+
     @if (feedbackTerisi)
     {
         <p class="text-emerald-600 text-xs mt-1 font-semibold">✅ Feedback sudah dikirim. Terima kasih!</p>
     }
-    else if (!laporanTerisi)
-    {
-        <p class="text-amber-600 text-xs mt-1 font-semibold">
-            📤 Silakan <strong>unggah laporan</strong> hasil penelitian Anda untuk menyelesaikan permohonan.
-        </p>
-        <div class="mt-2">
-            <a href="@Url.Action("Feedback", "Home", new { id = p.PermohonanPPIDID })"
-               class="inline-flex items-center gap-1.5 text-xs bg-[#002d7a] hover:bg-blue-900 text-white font-bold px-3 py-1.5 rounded-lg transition-colors">
-                📤 Unggah Laporan &amp; Isi Feedback →
-            </a>
-        </div>
-    }
     else
     {
-        <p class="text-amber-600 text-xs mt-1 font-semibold">
-            📝 Laporan sudah ada. Silakan isi feedback untuk menyelesaikan permohonan.
-        </p>
-        <div class="mt-2">
+        <div class="mt-2 space-y-1.5">
             <a href="@Url.Action("Feedback", "Home", new { id = p.PermohonanPPIDID })"
-               class="inline-flex items-center gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors">
-                📝 Isi Feedback →
+               class="inline-flex items-center gap-1.5 text-xs bg-[#002d7a] hover:bg-blue-900 text-white font-bold px-3 py-1.5 rounded-lg transition-colors">
+                @(laporanTerisi ? "📝 Isi Feedback →" : "📤 Unggah Hasil Laporan & Isi Feedback →")
             </a>
+            @if (!laporanTerisi)
+            {
+                <p class="text-gray-400 text-[10px] leading-snug">
+                    PDF / Word — maks. 50 MB.
+                </p>
+            }
         </div>
     }
 }

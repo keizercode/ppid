@@ -75,9 +75,9 @@
                         <p class="text-sm font-semibold text-gray-600 group-hover:text-blue-700">
                             @(Model.LaporanSudahDiunggah ? "Klik untuk ganti file laporan" : "Klik atau seret file laporan ke sini")
                         </p>
-                        <p class="text-xs text-gray-400 mt-0.5">PDF, Word, ZIP — maks. 50 MB</p>
+                        <p class="text-xs text-gray-400 mt-0.5">PDF, Word— maks. 50 MB</p>
                         <input asp-for="FileLaporan" type="file" id="fileLaporan"
-                               accept=".pdf,.docx,.doc,.zip" class="hidden" />
+                               accept=".pdf,.docx,.doc" class="hidden" />
                         <p id="fileNameEl" class="text-xs text-blue-700 font-bold mt-2 hidden"></p>
                     </div>
                     <span asp-validation-for="FileLaporan" class="text-red-500 text-xs mt-1 block"></span>
