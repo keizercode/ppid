@@ -1,13 +1,3 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/Home/Detail.cshtml  — VERSI TERBARU
-   Perubahan utama:
-   1. Kuesioner Kepuasan Umum DIHAPUS — digantikan feedback per-task
-   2. Tombol feedback per task muncul di step 6 (saat proses), step 7 (DataSiap),
-      dan step 8 (FeedbackPemohon) sesuai kondisi
-   3. Status Selesai otomatis saat semua feedback terisi (tidak perlu kuesioner umum)
-   4. Overdue: hanya reminder, tidak auto-selesai
-   5. Lokasi jadwal (online/offline + detail) ditampilkan lengkap
-════════════════════════════════════════════════════════════════════════════ *@
 @model DetailLacakViewModel
 @{
     ViewData["Title"] = "Status " + Model.Permohonan.NoPermohonan;
@@ -47,9 +37,6 @@
      || p.StatusPPIDID == StatusId.WawancaraDijadwalkan
      || p.StatusPPIDID == StatusId.WawancaraSelesai)
     && (p.IsPermintaanData || p.IsObservasi || p.IsWawancara);
-
-
-
 
  // Feedback & upload laporan
     var feedbackMap       = ViewData["FeedbackMap"] as Dictionary<string, bool> ?? new();
@@ -100,23 +87,14 @@
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                     <span class="text-gray-400 text-xs">📅 @p.TanggalPermohonan?.ToString("dd MMMM yyyy")</span>
                     <span class="text-xs font-semibold @(p.KategoriPemohon == "Mahasiswa" ? "text-blue-600" : "text-emerald-600")">
-                        @(p.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa/Pelajar" : "🏢 LSM / Umum")
+                        @(p.KategoriPemohon == "Mahasiswa" ? "🎓 Mahasiswa" : "🏢 LSM")
                     </span>
-                    @if (p.BatasWaktu.HasValue && p.StatusPPIDID < StatusId.DataSiap) {
-                        <span class="text-xs @(p.IsOverdue ? "text-red-500 font-semibold" : p.HariSisa <= 3 ? "text-amber-500" : "text-gray-400")">
-                            @(p.IsOverdue ? $"⚠ Lewat {Math.Abs(p.HariSisa??0)} hari" : $"Sisa {p.HariSisa} hari")
-                        </span>
-                    }
                 </div>
             </div>
             <div class="flex flex-col items-start sm:items-end gap-2">
                 <div class="flex items-center gap-2 border @statusBg rounded-full px-4 py-2">
                     <span class="w-2 h-2 rounded-full @statusDot flex-shrink-0"></span>
                     <span class="text-sm font-semibold">@(p.Status?.NamaStatusPPID ?? "—")</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-[10px] text-gray-400" id="refresh-indicator">
-                    <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                    <span>Pembaruan otomatis aktif</span>
                 </div>
             </div>
         </div>
@@ -728,7 +706,6 @@ bool tampilkanPanelData = fileItems.Any()
                 setIndicator(true, 'Ada pembaruan — klik banner');
                 return;
             }
-            setIndicator(true, 'Pembaruan otomatis aktif');
         } catch (err) {
             failCount++;
             if (failCount >= MAX_FAIL) { clearInterval(pollTimer); setIndicator(false, 'Koneksi terputus — muat ulang halaman'); }
