@@ -319,7 +319,7 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
             // Validasi tipe & ukuran file (server-side — tidak bisa di-bypass)
     if (vm.FileTugas != null && vm.FileTugas.Length > 0)
     {
-        var valTugas = Services.FileValidator.ValidateDocument(vm.FileTugas);
+        var valTugas = Services.FileValidator.ValidateDataFile(vm.FileTugas);
         if (!valTugas.IsValid)
             ModelState.AddModelError(nameof(vm.FileTugas), valTugas.ErrorMessage!);
     }
@@ -506,7 +506,7 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
 
     if (vm.FileLaporan != null && vm.FileLaporan.Length > 0)
     {
-        var val = Services.FileValidator.ValidateDocument(vm.FileLaporan);
+        var val = Services.FileValidator.ValidateDataFile(vm.FileLaporan);
         if (!val.IsValid)
             ModelState.AddModelError(nameof(vm.FileLaporan), val.ErrorMessage!);
     }

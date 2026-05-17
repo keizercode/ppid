@@ -24,10 +24,12 @@
     bool canForceClose = isDataSiap || isFeedback;
 
     // Hitung completeness feedback
-    int totalTaskSelesai = Model.SubTasks.Count(t => t.IsSelesai);
-    int fbTerisi         = Model.JumlahFeedback;
-    bool semua_fb_done   = totalTaskSelesai > 0 && fbTerisi >= totalTaskSelesai;
-    int sisaFb           = Math.Max(0, totalTaskSelesai - fbTerisi);
+    var fbUnified      = Model.Feedbacks.FirstOrDefault(f => f.JenisTask == JenisTask.Semua)
+                  ?? Model.Feedbacks.FirstOrDefault();
+    bool semua_fb_done = fbUnified != null;
+    int sisaFb         = semua_fb_done ? 0 : 1;
+    int fbTerisi       = semua_fb_done ? 1 : 0;
+    int totalTaskSelesai = 1; // selalu 1 feedback unified
 }
 
 @if (TempData["Success"] != null)
@@ -75,7 +77,6 @@
                         <span class="text-sm font-bold text-gray-700">@Model.RataRata.ToString("F1")</span>
                         <span class="text-xs text-gray-400">/ 5</span>
                     </div>
-                    <p class="text-[10px] text-gray-400">dari @Model.JumlahFeedback feedback</p>
                 }
                 @* Badge status permohonan *@
                 <div class="flex items-center gap-2 border rounded-full px-3 py-1.5
@@ -133,199 +134,88 @@
         </div>
     }
 
-    @* ── Feedback per Jenis Task ───────────────────────────────────────────── *@
-    @{
-        var taskTypes = new[]
+    @* ── Feedback Unified ─────────────────────────────────────────────────── *@
+@{
+    var fb = Model.Feedbacks.FirstOrDefault(f => f.JenisTask == JenisTask.Semua)
+          ?? Model.Feedbacks.FirstOrDefault();
+}
+
+<div class="bg-white rounded-2xl border @(fb != null ? "border-emerald-200" : "border-gray-100") shadow-sm overflow-hidden mb-5">
+    <div class="px-5 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-blue-100 border border-blue-200 rounded-xl flex items-center justify-center text-lg">📋</div>
+            <p class="font-bold text-gray-800 text-sm">Feedback Layanan</p>
+        </div>
+        @if (fb != null)
         {
-            (JenisTask.PermintaanData, "📊", "Permintaan Data", "blue",   p.IsPermintaanData),
-            (JenisTask.Observasi,      "🔍", "Observasi",       "orange", p.IsObservasi),
-            (JenisTask.Wawancara,      "🎤", "Wawancara",       "violet", p.IsWawancara),
-        };
-    }
-
-    <div class="space-y-4 mb-5">
-        @foreach (var (jenis, icon, label, color, isActive) in taskTypes)
+            <div class="flex items-center gap-1">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    <span class="text-base @(i <= fb.NilaiKepuasan ? "text-amber-400" : "text-gray-200")">★</span>
+                }
+                <span class="ml-1 text-sm font-bold text-gray-700">@fb.NilaiKepuasan/5</span>
+            </div>
+        }
+        else
         {
-            var st = Model.SubTasks.FirstOrDefault(t => t.JenisTask == jenis);
-            var fb = Model.GetFeedback(jenis);
+            <span class="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-full font-medium">⏳ Belum diisi</span>
+        }
+    </div>
 
-            if (!isActive || st is null) continue;
-
-            string cardBorder = fb != null ? "border-emerald-200" :
-                                st.IsSelesai ? "border-amber-200" :
-                                st.IsDibatalkan ? "border-gray-200" : "border-gray-100";
-
-            string headerBg = color switch {
-                "blue"   => "bg-blue-50 border-blue-100",
-                "orange" => "bg-orange-50 border-orange-100",
-                "violet" => "bg-violet-50 border-violet-100",
-                _        => "bg-gray-50 border-gray-100"
-            };
-
-            string iconBg = color switch {
-                "blue"   => "bg-blue-100 border-blue-200",
-                "orange" => "bg-orange-100 border-orange-200",
-                "violet" => "bg-violet-100 border-violet-200",
-                _        => "bg-gray-100 border-gray-200"
-            };
-
-            string labelColor = color switch {
-                "blue"   => "text-blue-800",
-                "orange" => "text-orange-800",
-                "violet" => "text-violet-800",
-                _        => "text-gray-800"
-            };
-
-            <div class="bg-white rounded-2xl border @cardBorder shadow-sm overflow-hidden">
-                @* Task header *@
-                <div class="px-5 py-4 @headerBg border-b flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 @iconBg border rounded-xl flex items-center justify-center text-lg flex-shrink-0">@icon</div>
+    <div class="p-5">
+        @if (fb != null)
+        {
+                var (emoji, nilaiLabel) = fb.NilaiKepuasan switch {
+                    1 => ("😞", "Buruk"),
+                    2 => ("😕", "Kurang"),
+                    3 => ("😐", "Cukup"),
+                    4 => ("😊", "Baik"),
+                    5 => ("😁", "Sangat Baik"),
+                    _ => ("—", "—")
+                };
+                string valueBg = fb.NilaiKepuasan switch {
+                    1 => "bg-red-50 border-red-100 text-red-700",
+                    2 => "bg-orange-50 border-orange-100 text-orange-700",
+                    3 => "bg-amber-50 border-amber-100 text-amber-700",
+                    4 => "bg-blue-50 border-blue-100 text-blue-700",
+                    5 => "bg-emerald-50 border-emerald-100 text-emerald-700",
+                    _ => "bg-gray-50 border-gray-100 text-gray-500"
+                };
+            <div class="space-y-4">
+                <div>
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Nilai Kepuasan</p>
+                    <div class="inline-flex items-center gap-2 @valueBg border rounded-xl px-3 py-2">
+                        <span class="text-xl">@emoji</span>
                         <div>
-                            <p class="font-bold @labelColor text-sm">@label</p>
-                            <div class="flex items-center gap-2 mt-0.5">
-                                <span class="text-[10px] text-gray-400">Sub-tugas:</span>
-                                <span class="text-[10px] font-semibold @(st.IsSelesai ? "text-emerald-600" : st.IsDibatalkan ? "text-red-500" : "text-amber-600")">
-                                    @SubTaskStatus.GetLabel(st.StatusTask)
-                                </span>
-                                @if (st.TanggalJadwal.HasValue)
-                                {
-                                    <span class="text-[10px] text-gray-400">| 📅 @st.TanggalJadwal.Value.ToString("dd MMM yyyy")</span>
-                                }
-                            </div>
+                            <p class="text-sm font-bold">@nilaiLabel</p>
+                            <p class="text-[10px] opacity-70">@fb.NilaiKepuasan dari 5</p>
                         </div>
                     </div>
-                    @* Nilai bintang per task *@
-                    @if (fb != null)
-                    {
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            @for (int i = 1; i <= 5; i++)
-                            {
-                                <span class="text-base @(i <= fb.NilaiKepuasan ? "text-amber-400" : "text-gray-200")">★</span>
-                            }
-                            <span class="ml-1 text-sm font-bold text-gray-700">@fb.NilaiKepuasan/5</span>
-                        </div>
-                    }
-                    else if (st.IsSelesai)
-                    {
-                        <span class="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-full font-medium flex-shrink-0">
-                            ⏳ Belum diisi
-                        </span>
-                    }
-                    else if (st.IsDibatalkan)
-                    {
-                        <span class="text-xs bg-gray-100 text-gray-400 px-2.5 py-1 rounded-full font-medium flex-shrink-0">
-                            Tidak relevan
-                        </span>
-                    }
                 </div>
-
-                @* Konten feedback *@
-                <div class="p-5">
-                    @if (fb != null)
-                    {
-                        <div class="space-y-4">
-                            @* Nilai dengan emoji *@
-                            <div>
-                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Nilai Kepuasan</p>
-                                @{
-                                    var (emoji, nilaiLabel) = fb.NilaiKepuasan switch {
-                                        1 => ("😞", "Buruk"),
-                                        2 => ("😕", "Kurang"),
-                                        3 => ("😐", "Cukup"),
-                                        4 => ("😊", "Baik"),
-                                        5 => ("😁", "Sangat Baik"),
-                                        _ => ("—",  "—")
-                                    };
-                                    string valueBg = fb.NilaiKepuasan switch {
-                                        1 => "bg-red-50 border-red-100 text-red-700",
-                                        2 => "bg-orange-50 border-orange-100 text-orange-700",
-                                        3 => "bg-amber-50 border-amber-100 text-amber-700",
-                                        4 => "bg-blue-50 border-blue-100 text-blue-700",
-                                        5 => "bg-emerald-50 border-emerald-100 text-emerald-700",
-                                        _ => "bg-gray-50 border-gray-100 text-gray-500"
-                                    };
-                                }
-                                <div class="inline-flex items-center gap-2 @valueBg border rounded-xl px-3 py-2">
-                                    <span class="text-xl">@emoji</span>
-                                    <div>
-                                        <p class="text-sm font-bold">@nilaiLabel</p>
-                                        <p class="text-[10px] opacity-70">@fb.NilaiKepuasan dari 5</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            @* Catatan pemohon *@
-                            @if (!string.IsNullOrEmpty(fb.Catatan))
-                            {
-                                <div>
-                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Masukan / Saran Pemohon</p>
-                                    <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                                        <p class="text-sm text-gray-700 leading-relaxed">@fb.Catatan</p>
-                                    </div>
-                                </div>
-                            }
-
-                            @* File laporan per task *@
-                            @if (!string.IsNullOrEmpty(fb.FileLaporan))
-                            {
-                                <div>
-                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Laporan Diunggah Pemohon</p>
-                                    <div class="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
-                                        <span class="text-emerald-500 flex-shrink-0">📎</span>
-                                        <p class="text-xs font-medium text-emerald-800 flex-1 truncate">@(fb.NamaFile ?? "File laporan")</p>
-                                        <div class="flex items-center gap-1 flex-shrink-0">
-                                            <button type="button"
-                                                    onclick="previewFile('@fb.FileLaporan','@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(fb.NamaFile ?? "Laporan"))')"
-                                                    class="text-[11px] bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
-                                                👁 Lihat
-                                            </button>
-                                            <a href="@fb.FileLaporan" target="_blank"
-                                               class="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-bold transition-colors">
-                                                ⬇ Unduh
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-
-                            <p class="text-[10px] text-gray-300">
-                                Diisi: @fb.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
-                            </p>
+                @if (!string.IsNullOrEmpty(fb.Catatan))
+                {
+                    <div>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5">Masukan / Saran Pemohon</p>
+                        <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                            <p class="text-sm text-gray-700 leading-relaxed">@fb.Catatan</p>
                         </div>
-                    }
-                    else if (st.IsSelesai)
-                    {
-                        <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-2 items-start">
-                            <span class="text-amber-500 flex-shrink-0">⏳</span>
-                            <div>
-                                <p class="text-xs text-amber-700 leading-relaxed font-medium">
-                                    Tugas <strong>@label</strong> sudah selesai, namun pemohon belum mengisi feedback.
-                                </p>
-                                <p class="text-[11px] text-amber-600 mt-1">
-                                    Ingatkan pemohon menggunakan nomor <span class="font-mono font-bold">@p.NoPermohonan</span>.
-                                </p>
-                            </div>
-                        </div>
-                    }
-                    else if (st.IsDibatalkan)
-                    {
-                        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex gap-2 items-center">
-                            <span class="text-gray-400 flex-shrink-0">🚫</span>
-                            <p class="text-xs text-gray-500">Sub-tugas @label dibatalkan — tidak ada feedback yang diperlukan.</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex gap-2 items-center">
-                            <span class="text-gray-400 flex-shrink-0">⏳</span>
-                            <p class="text-xs text-gray-500">Sub-tugas @label belum selesai — feedback belum tersedia.</p>
-                        </div>
-                    }
-                </div>
+                    </div>
+                }
+                <p class="text-[10px] text-gray-300">Diisi: @fb.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+            </div>
+        }
+        else
+        {
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-2 items-start">
+                <span class="text-amber-500 flex-shrink-0">⏳</span>
+                <p class="text-xs text-amber-700 leading-relaxed">
+                    Feedback belum diterima. Ingatkan pemohon membuka portal publik dengan nomor
+                    <strong class="font-mono">@p.NoPermohonan</strong>.
+                </p>
             </div>
         }
     </div>
+</div>
 
     @* ── Laporan / Tugas Final Pemohon ────────────────────────────────────── *@
     @if (tugasDocs.Any())
