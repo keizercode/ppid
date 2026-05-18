@@ -580,19 +580,19 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
         existing.Catatan       = vm.Catatan;
     }
 
-    // ── Advance status → Selesai (dari DataSiap atau FeedbackPemohon) ─────
+        // ── Advance → FeedbackPemohon; finalisasi dilakukan Loket ────────────
     var lama         = p.StatusPPIDID;
-    p.StatusPPIDID   = StatusId.Selesai;
-    p.TanggalSelesai = DateOnly.FromDateTime(DateTime.Today);
+    p.StatusPPIDID   = StatusId.FeedbackPemohon;
     p.UpdatedAt      = now;
 
     db.AuditLog.Add(new AuditLogPPID
     {
         PermohonanPPIDID = vm.PermohonanPPIDID,
         StatusLama       = lama,
-        StatusBaru       = StatusId.Selesai,
-        Keterangan       = $"Pemohon mengisi feedback (nilai: {vm.NilaiKepuasan}/5). " +
-                           "Laporan & feedback diterima — permohonan otomatis diselesaikan.",
+        StatusBaru       = StatusId.FeedbackPemohon,
+        Keterangan       = $"Pemohon mengunggah laporan & mengisi feedback " +
+                           $"(nilai: {vm.NilaiKepuasan}/5). " +
+                           "Menunggu konfirmasi selesai dari Loket Kepegawaian.",
         Operator         = "Pemohon",
         CreatedAt        = now
     });
@@ -600,7 +600,8 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
     await db.SaveChangesAsync();
 
     TempData["Success"] =
-        "Laporan & feedback berhasil dikirim! Permohonan dinyatakan <strong>Selesai</strong>.";
+        "Laporan & feedback berhasil dikirim! " +
+        "Permohonan Anda akan dikonfirmasi selesai oleh <strong>petugas loket</strong>.";
     return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
 }
 }

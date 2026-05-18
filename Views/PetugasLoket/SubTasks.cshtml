@@ -346,11 +346,32 @@
                     </div>
                 }
                 else
-{
+            {
 
         bool reopenWillRollback = p.StatusPPIDID == StatusId.DataSiap
                                || p.StatusPPIDID == StatusId.FeedbackPemohon
                                || p.StatusPPIDID == StatusId.Selesai;
+
+                               @* ── Badge: laporan + feedback pemohon sudah masuk ── *@
+                    @if (tugasDocs.Any())
+                    {
+                        <div class="bg-indigo-50 border border-indigo-200 rounded-lg
+                                    px-3 py-2 mb-2 flex items-center gap-2">
+                            <span class="text-indigo-500 flex-shrink-0">📋</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[11px] font-bold text-indigo-800">
+                                    Laporan pemohon sudah diunggah
+                                </p>
+                                <p class="text-[10px] text-indigo-500 mt-0.5">
+                                    @tugasDocs.Count file ·
+                                    @tugasDocs.First().CreatedAt?.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                </p>
+                            </div>
+                            <span class="flex-shrink-0 text-[10px] bg-indigo-100 text-indigo-700
+                                         font-bold px-2 py-0.5 rounded-full">✓</span>
+                        </div>
+                    }
+
 
     <div class="space-y-2">
         <div class="flex items-center justify-between">
@@ -420,12 +441,12 @@
     </div>
 }
 
-    <!-- Laporan Final Pemohon -->
+    <!-- Hasil Laporan Pemohon -->
     @if (tugasDocs.Any())
     {
         <div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 mb-4">
             <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">
-                Laporan Final Pemohon (@tugasDocs.Count)
+                Hasil Laporan Pemohon (@tugasDocs.Count)
             </p>
             <div class="space-y-2">
                 @foreach (var f in tugasDocs)
@@ -519,19 +540,56 @@
             }
             @if (adaLaporanCheck)
             {
-                <p class="text-xs text-gray-400 mb-2">Jika pemohon tidak merespons feedback dalam waktu wajar:</p>
-                <form asp-action="TandaiSelesaiFeedback" asp-controller="PetugasLoket" method="post"
+            @if (isFeedbackLoket)
+            {
+                @* Laporan + feedback sudah masuk dari pemohon → aksi UTAMA *@
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-3
+                            flex items-start gap-2.5">
+                    <span class="text-emerald-500 flex-shrink-0 mt-0.5">📋</span>
+                    <div>
+                        <p class="text-xs font-bold text-emerald-800">
+                            Laporan & feedback pemohon sudah diterima
+                        </p>
+                        <p class="text-xs text-emerald-700 mt-0.5 leading-relaxed">
+                            Klik konfirmasi untuk menutup permohonan ini secara resmi.
+                        </p>
+                    </div>
+                </div>
+                <form asp-action="TandaiSelesaiFeedback" asp-controller="PetugasLoket"
+                      method="post"
+                      onsubmit="return confirm('Konfirmasi selesai? Laporan & feedback pemohon sudah ada.')">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID" />
+                    <input type="hidden" name="forceOverride" value="false" />
+                    <button type="submit"
+                            class="w-full flex items-center justify-center gap-2
+                                   bg-emerald-600 hover:bg-emerald-700 text-white
+                                   text-sm font-bold px-4 py-3 rounded-xl
+                                   transition-colors shadow-sm">
+                        ✓ Konfirmasi Permohonan Selesai →
+                    </button>
+                </form>
+            }
+            else
+            {
+                <p class="text-xs text-gray-400 mb-2">
+                    Jika pemohon tidak merespons dalam waktu wajar:
+                </p>
+                <form asp-action="TandaiSelesaiFeedback" asp-controller="PetugasLoket"
+                      method="post"
                       onsubmit="return confirm('Tandai selesai manual? Laporan pemohon sudah ada.')">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="permohonanId" value="@p.PermohonanPPIDID" />
                     <input type="hidden" name="forceOverride" value="false" />
                     <button type="submit"
-                            class="inline-flex items-center gap-2 border border-gray-300 text-gray-600
-                                   text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                            class="inline-flex items-center gap-2 border border-gray-300
+                                   text-gray-600 text-xs font-semibold px-4 py-2
+                                   rounded-xl hover:bg-gray-50 transition-colors">
                         ✓ Tandai Selesai (Manual)
                     </button>
                 </form>
             }
+        }
             else
             {
                 <div class="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
