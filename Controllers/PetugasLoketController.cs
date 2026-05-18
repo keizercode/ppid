@@ -784,8 +784,8 @@ public async Task<IActionResult> NotifikasiJson()
                        (vm.IsObservasi || vm.IsWawancara
                            ? " Obs/Waw → dikelola Loket Kepegawaian (paralel)."
                            : "");
-            successMsg = $"Surat izin <strong>{vm.NoSuratIzin}</strong> terbit. " +
-                         $"Permintaan Data diteruskan KDI ({p.NamaBidang ?? "PSMDI"})." +
+            successMsg = $"Surat izin <strong>{H(vm.NoSuratIzin)}</strong> terbit. " +
+             $"Permintaan Data diteruskan KDI ({H(p.NamaBidang ?? "PSMDI")})." +
                          (vm.IsObservasi || vm.IsWawancara
                              ? " Obs/Waw dikelola Loket secara paralel."
                              : "");
@@ -1835,7 +1835,7 @@ public async Task<IActionResult> TandaiSelesaiFeedback(
             "Data permohonan diedit oleh petugas loket.", CurrentUser);
 
         await db.SaveChangesAsync();
-        TempData["Success"] = $"Permohonan <strong>{vm.NoPermohonan}</strong> berhasil diperbarui.";
+        TempData["Success"] = $"Permohonan <strong>{H(vm.NoPermohonan)}</strong> berhasil diperbarui.";
         return RedirectToAction("Detail", new { id = vm.PermohonanPPIDID });
     }
 
@@ -1924,7 +1924,7 @@ public async Task<IActionResult> TandaiSelesaiFeedback(
         }
 
         TempData["Success"] =
-            $"Permohonan <strong>{vm.NoPermohonan}</strong> berhasil dibatalkan. " +
+            $"Permohonan <strong>{H(vm.NoPermohonan)}</strong> berhasil dibatalkan. " +
             "Dokumen dan riwayat tetap tersimpan untuk keperluan audit.";
 
         return RedirectToAction("Index");

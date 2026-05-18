@@ -13,6 +13,7 @@ namespace PermintaanData.Controllers;
 [Route("auth")]
 public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 {
+    private static readonly object _attemptLock = new();
     private const int MaxFailedAttempts                  = 5;
     private static readonly TimeSpan LockoutDuration    = TimeSpan.FromMinutes(15);
 
@@ -131,6 +132,8 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
     }
 
     private void RecordFailedAttempt(string key)
+{
+    lock (_attemptLock)
     {
         var info = cache.GetOrCreate(key, e =>
         {
@@ -143,6 +146,7 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 
         cache.Set(key, info, LockoutDuration);
     }
+}
 
     private void ResetFailedAttempts(string key) => cache.Remove(key);
 

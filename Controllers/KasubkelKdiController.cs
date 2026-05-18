@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
 using PermintaanData.Models;
 using PermintaanData.Models.ViewModels;
+using System.Text.Encodings.Web;
 
 namespace PermintaanData.Controllers;
 
@@ -29,6 +30,8 @@ namespace PermintaanData.Controllers;
 [Authorize(Roles = $"{AppRoles.KasubkelKDI},{AppRoles.Admin}")]
 public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
+    protected static string H(string? value) =>
+    HtmlEncoder.Default.Encode(value ?? string.Empty);
     private string UploadsRoot =>
         Path.Combine(
             string.IsNullOrEmpty(env.WebRootPath)
@@ -684,7 +687,7 @@ public async Task<IActionResult> TandaiSelesai([FromForm] Guid permohonanId)
     var p = await db.PermohonanPPID.FindAsync(permohonanId);
     if (p is null) return NotFound();
 
-    if (p.StatusPPIDID < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
+    if ((p.StatusPPIDID ?? 0) < StatusId.DataSiap || p.StatusPPIDID == StatusId.Selesai)
     {
         TempData["Error"] = "Tidak dapat ditandai selesai pada status ini.";
         return RedirectToAction(nameof(SubTasks), new { id = permohonanId });

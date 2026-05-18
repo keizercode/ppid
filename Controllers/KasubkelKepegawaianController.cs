@@ -298,7 +298,7 @@ public async Task<IActionResult> VerifikasiPost(VerifikasiVm vm)
             $"Verifikasi DITOLAK. Alasan: {vm.AlasanDitolak}", CurrentUser);
 
         TempData["Error"] =
-            $"Permohonan <strong>{vm.NoPermohonan}</strong> dikembalikan. Alasan: {vm.AlasanDitolak}";
+    $"Permohonan <strong>{H(vm.NoPermohonan)}</strong> dikembalikan. Alasan: {H(vm.AlasanDitolak)}";
     }
 
     await db.SaveChangesAsync();

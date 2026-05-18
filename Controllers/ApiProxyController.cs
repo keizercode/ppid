@@ -97,8 +97,10 @@ public class ApiProxyController(
     [HttpGet("cek-nik")]
     public async Task<IActionResult> CekNik([FromQuery] string? nik)
     {
-        if (string.IsNullOrWhiteSpace(nik) || nik.Length != 16)
-            return Json(null);
+        if (string.IsNullOrWhiteSpace(nik)
+    || nik.Length != 16
+    || !nik.All(char.IsAsciiDigit))
+    return Json(null);
 
         // ── 1. DB lokal — pemohon yang pernah daftar ──────────────────────
         var pribadi = await db.Pribadi

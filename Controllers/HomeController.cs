@@ -105,10 +105,20 @@ public class HomeController(
     // ════════════════════════════════════════════════════════════════════════
 
     [HttpGet("cek-status")]
-    public async Task<IActionResult> CekStatus([FromQuery] string? no)
+public async Task<IActionResult> CekStatus([FromQuery] string? no)
+{
+    if (string.IsNullOrEmpty(no)) return Json(null);
+
+    no = no.Trim().ToUpperInvariant();
+
+    // Validasi format dasar: MHS/UMM + 6 digit + /PPID/ + angka romawi + / + tahun
+    // Contoh: MHS123456/PPID/III/2026 — max 30 karakter
+    if (no.Length > 35 || no.Length < 15
+        || (!no.StartsWith("MHS", StringComparison.Ordinal)
+            && !no.StartsWith("UMM", StringComparison.Ordinal)))
     {
-        if (string.IsNullOrEmpty(no)) return Json(null);
-        no = no.Trim().ToUpperInvariant();
+        return Json(null);
+    }
 
         var p = await db.PermohonanPPID
             .Where(x => x.NoPermohonan == no)
@@ -287,9 +297,9 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
 
         if (p is null) return NotFound();
 
-        if (p.StatusPPIDID < StatusId.Didisposisi)
+        if ((p.StatusPPIDID ?? 0) < StatusId.Didisposisi)
         {
-    TempData["Error"] = "Laporan hanya dapat diunggah setelah permohonan mulai diproses.";
+            TempData["Error"] = "Laporan hanya dapat diunggah setelah permohonan mulai diproses.";
             return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
         }
 
@@ -340,9 +350,9 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
 
         if (p is null) return NotFound();
 
-        if (p.StatusPPIDID < StatusId.Didisposisi)
-{
-    TempData["Error"] = "Upload tidak diizinkan pada status ini.";
+        if ((p.StatusPPIDID ?? 0) < StatusId.Didisposisi)
+        {
+            TempData["Error"] = "Upload tidak diizinkan pada status ini.";
             return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
         }
 

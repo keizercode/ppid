@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using PermintaanData.Data;
 using PermintaanData.Models;
 using PermintaanData.Services;
+using System.Text.Encodings.Web;
 
 namespace PermintaanData.Controllers;
 
@@ -12,6 +13,8 @@ namespace PermintaanData.Controllers;
 /// </summary>
 public abstract class LoketBaseController(AppDbContext db, IWebHostEnvironment env) : Controller
 {
+    protected static string H(string? value) =>
+    HtmlEncoder.Default.Encode(value ?? string.Empty);
     protected string UploadsRoot =>
            Path.Combine(
        !string.IsNullOrEmpty(env.WebRootPath) && Directory.Exists(env.WebRootPath)
