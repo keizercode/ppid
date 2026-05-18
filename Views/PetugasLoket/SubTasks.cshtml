@@ -429,7 +429,7 @@
 
         @if (fbAda)
         {
-            <p class="text-xs text-emerald-600 font-semibold">🎉 Feedback sudah diterima. Permohonan siap diselesaikan.</p>
+            <p class="text-xs text-emerald-600 font-semibold">Feedback sudah diterima. Permohonan siap diselesaikan.</p>
         }
         else
         {
@@ -498,7 +498,7 @@
 {
     <div id="panel-selesai"
          class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4 scroll-mt-4">
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Status Laporan & Feedback</p>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Status Laporan</p>
 
         @if (isDataSiapLoket)
         {
@@ -512,22 +512,6 @@
                             melalui portal publik menggunakan nomor
                             <span class="font-mono font-bold">@p.NoPermohonan</span>.
                             Setelah unggah laporan, pemohon akan otomatis diarahkan ke form feedback.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        }
-        else if (isFeedbackLoket)
-        {
-            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-3">
-                <div class="flex items-start gap-3">
-                    <span class="text-xl flex-shrink-0">⏳</span>
-                    <div>
-                        <p class="font-bold text-amber-800 text-sm">Menunggu Feedback Pemohon</p>
-                        <p class="text-amber-700 text-xs mt-1 leading-relaxed">
-                            Laporan sudah diunggah. Ingatkan pemohon mengisi feedback di portal publik
-                            (<span class="font-mono font-bold">@p.NoPermohonan</span>).
-                            Status otomatis <strong>Selesai</strong> setelah feedback terkirim.
                         </p>
                     </div>
                 </div>
