@@ -62,36 +62,39 @@ public abstract class LoketBaseController(AppDbContext db, IWebHostEnvironment e
     /// lalu pindahkan ke direktori final setelah commit berhasil.
     /// Kembalikan pesan error jika validasi gagal; null jika berhasil atau file kosong.
     /// </summary>
-    protected async Task<string?> StageDokumen(
-        Guid permohonanId, IFormFile? file,
-        int jenisDokId, string nama, DateTime now,
-        string tempDir, List<(string Temp, string Final)> movers)
+   protected async Task<string?> StageDokumen(
+    Guid permohonanId, IFormFile? file,
+    int jenisDokId, string nama, DateTime now,
+    string tempDir, List<(string Temp, string Final)> movers)
+{
+    if (file == null || file.Length == 0) return null;
+
+    var validation = FileValidator.ValidateDocument(file);
+    if (!validation.IsValid) return validation.ErrorMessage;
+
+    // SanitizeFileName menangani backslash dari Windows browser
+    // ("C:\Users\budi\file.pdf" → "file.pdf")
+    var safeName  = Services.FileValidator.SanitizeFileName(file.FileName);
+    var fileName  = $"{jenisDokId}_{safeName}";
+    var tempPath  = Path.Combine(tempDir, fileName);
+    var finalPath = Path.Combine(UploadsRoot, permohonanId.ToString(), fileName);
+
+    await using var stream = new FileStream(tempPath, FileMode.Create);
+    await file.CopyToAsync(stream);
+    movers.Add((tempPath, finalPath));
+
+    db.DokumenPPID.Add(new DokumenPPID
     {
-        if (file == null || file.Length == 0) return null;
+        PermohonanPPIDID     = permohonanId,
+        NamaDokumenPPID      = nama,
+        UploadDokumenPPID    = $"/uploads/{permohonanId}/{fileName}",
+        JenisDokumenPPIDID   = jenisDokId,
+        NamaJenisDokumenPPID = nama,
+        CreatedAt            = now
+    });
 
-        var validation = FileValidator.ValidateDocument(file);
-        if (!validation.IsValid) return validation.ErrorMessage;
-
-        var fileName  = $"{jenisDokId}_{Path.GetFileName(file.FileName)}";
-        var tempPath  = Path.Combine(tempDir, fileName);
-        var finalPath = Path.Combine(UploadsRoot, permohonanId.ToString(), fileName);
-
-        await using var stream = new FileStream(tempPath, FileMode.Create);
-        await file.CopyToAsync(stream);
-        movers.Add((tempPath, finalPath));
-
-        db.DokumenPPID.Add(new DokumenPPID
-        {
-            PermohonanPPIDID     = permohonanId,
-            NamaDokumenPPID      = nama,
-            UploadDokumenPPID    = $"/uploads/{permohonanId}/{fileName}",
-            JenisDokumenPPIDID   = jenisDokId,
-            NamaJenisDokumenPPID = nama,
-            CreatedAt            = now
-        });
-
-        return null;
-    }
+    return null;
+}
 
     /// <summary>Pindahkan semua file dari temp ke direktori final setelah commit DB berhasil.</summary>
     protected static void CommitStagedFiles(List<(string Temp, string Final)> movers)

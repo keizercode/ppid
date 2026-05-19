@@ -5,6 +5,7 @@ using PermintaanData.Data;
 using PermintaanData.Models;
 using PermintaanData.Models.ViewModels;
 using System.Text.Encodings.Web;
+using PermintaanData.Helpers;
 
 namespace PermintaanData.Controllers;
 
@@ -28,8 +29,12 @@ namespace PermintaanData.Controllers;
 /// </summary>
 [Route("kasubkel-kdi")]
 [Authorize(Roles = $"{AppRoles.KasubkelKDI},{AppRoles.Admin}")]
-public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : Controller
+public class KasubkelKdiController(
+    AppDbContext db,
+    IWebHostEnvironment env,
+    ILogger<KasubkelKdiController> logger) : Controller
 {
+    private readonly ILogger<KasubkelKdiController> logger = logger;
     protected static string H(string? value) =>
     HtmlEncoder.Default.Encode(value ?? string.Empty);
     private string UploadsRoot =>
@@ -89,27 +94,33 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
 
     // ── Sub-menu: Permintaan Data ─────────────────────────────────────────
 
-    [HttpGet("permintaan-data")]
-    public async Task<IActionResult> PermintaanData(string? q, int? status)
-    {
-        var query = db.PermohonanPPID
-            .Include(p => p.Pribadi)
-            .Include(p => p.Status)
-            .Where(p => p.IsPermintaanData)
-            .AsQueryable();
+   [HttpGet("permintaan-data")]
+public async Task<IActionResult> PermintaanData(string? q, int? status, int page = 1)
+{
+    var query = db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Include(p => p.Status)
+        .AsNoTracking()
+        .Where(p => p.IsPermintaanData)
+        .AsQueryable();
 
-        if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+    if (!string.IsNullOrEmpty(q))
+        query = query.Where(p =>
+            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
 
-        if (status.HasValue)
-            query = query.Where(p => p.StatusPPIDID == status.Value);
+    if (status.HasValue)
+        query = query.Where(p => p.StatusPPIDID == status.Value);
 
-        ViewData["Q"]      = q;
-        ViewData["Status"] = status;
-        return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
-    }
+    var paged = await PaginatedList<PermohonanPPID>.CreateAsync(
+        query.OrderByDescending(p => p.CratedAt), page);
+
+    ViewData["Q"]          = q;
+    ViewData["Status"]     = status;
+    ViewData["Pagination"] = paged;
+
+    return View(paged.Items);
+}
 
     // ── Detail ────────────────────────────────────────────────────────────
 
@@ -324,79 +335,105 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
     }
 
     [HttpPost("upload-data"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> UploadDataPost(UploadDataSubTaskVm vm)
+public async Task<IActionResult> UploadDataPost(UploadDataSubTaskVm vm)
+{
+    if (!ModelState.IsValid) return View("UploadData", vm);
+
+    var now = DateTime.UtcNow;
+
+    string? tempPath  = null;
+    string? finalPath = null;
+    string? finalDir  = null;
+    string? fp        = null;
+    string? nama      = null;
+
+    if (vm.FileData?.Length > 0)
     {
-        if (!ModelState.IsValid) return View("UploadData", vm);
-
-        // ── UploadDataPost ──
-
-        var now      = DateTime.UtcNow;
-        string? fp   = null;
-        string? nama = null;
-
-        if (vm.FileData?.Length > 0)
+        var valData = Services.FileValidator.ValidateDataFile(vm.FileData);
+        if (!valData.IsValid)
         {
-            // Data hasil bisa berupa Excel/ZIP — gunakan ValidateDataFile
-            var valData = Services.FileValidator.ValidateDataFile(vm.FileData);
-            if (!valData.IsValid)
-            {
-                ModelState.AddModelError(nameof(vm.FileData), valData.ErrorMessage!);
-                return View("UploadData", vm);
-            }
-
-            var dir = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
-            Directory.CreateDirectory(dir);
-            var fn = $"data_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileData.FileName)}";
-            await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
-            await vm.FileData.CopyToAsync(s);
-            fp   = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
-            nama = vm.FileData.FileName;
-
-            db.DokumenPPID.Add(new DokumenPPID
-            {
-                PermohonanPPIDID   = vm.PermohonanPPIDID,
-                NamaDokumenPPID    = "Data Hasil",
-                UploadDokumenPPID  = fp,
-
-                JenisDokumenPPIDID = JenisDokumenId.DataHasilPermintaan,
-                CreatedAt          = now
-            });
+            ModelState.AddModelError(nameof(vm.FileData), valData.ErrorMessage!);
+            return View("UploadData", vm);
         }
 
-        var subTask = vm.SubTaskID != Guid.Empty
-            ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
-            : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.PermintaanData);
+        var fn    = $"data_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileData.FileName)}";
+        finalDir  = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
+        tempPath  = Path.Combine(Path.GetTempPath(), $"ppid_data_{Guid.NewGuid()}_{fn}");
+        finalPath = Path.Combine(finalDir, fn);
+        fp        = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+        nama      = vm.FileData.FileName;
 
-        if (subTask is not null)
+        await using var s = new FileStream(tempPath, FileMode.Create);
+        await vm.FileData.CopyToAsync(s);
+
+        db.DokumenPPID.Add(new DokumenPPID
         {
-            subTask.StatusTask = SubTaskStatus.Selesai;
-            subTask.FilePath   = fp;
-            subTask.NamaFile   = nama;
-            subTask.Catatan    = vm.Catatan;
-            subTask.Operator   = CurrentUser;
-            subTask.SelesaiAt  = now;
-            subTask.UpdatedAt  = now;
-        }
-
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p is not null)
-            db.AddAuditLog(vm.PermohonanPPIDID, p.StatusPPIDID,
-                p.StatusPPIDID ?? StatusId.DiProses,
-                $"Sub-tugas Permintaan Data selesai. File: {nama ?? "(tidak ada)"}.",
-                CurrentUser);
-
-        await db.SaveChangesAsync();
-
-        var advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
-        await db.SaveChangesAsync();
-
-
-        TempData["Success"] = advanced
-            ? "Data diupload. Semua tugas selesai — status menjadi <strong>Data Siap</strong>!"
-            : "Data diupload. Sub-tugas Obs/Waw Kepegawaian masih dalam proses.";
-
-        return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+            PermohonanPPIDID   = vm.PermohonanPPIDID,
+            NamaDokumenPPID    = "Data Hasil",
+            UploadDokumenPPID  = fp,
+            JenisDokumenPPIDID = JenisDokumenId.DataHasilPermintaan,
+            CreatedAt          = now
+        });
     }
+
+    var subTask = vm.SubTaskID != Guid.Empty
+        ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
+        : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.PermintaanData);
+
+    if (subTask is not null)
+    {
+        subTask.StatusTask = SubTaskStatus.Selesai;
+        subTask.FilePath   = fp;
+        subTask.NamaFile   = nama;
+        subTask.Catatan    = vm.Catatan;
+        subTask.Operator   = CurrentUser;
+        subTask.SelesaiAt  = now;
+        subTask.UpdatedAt  = now;
+    }
+
+    var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (p is not null)
+        db.AddAuditLog(vm.PermohonanPPIDID, p.StatusPPIDID,
+            p.StatusPPIDID ?? StatusId.DiProses,
+            $"Sub-tugas Permintaan Data selesai. File: {nama ?? "(tidak ada)"}.",
+            CurrentUser);
+
+    // Change tracker sudah punya subTask.StatusTask = Selesai —
+    // AdvanceIfAllSubTasksDone akan melihatnya tanpa SaveChanges terlebih dulu.
+    var advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
+
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch
+    {
+        if (tempPath is not null)
+            try { System.IO.File.Delete(tempPath); } catch { /* best-effort */ }
+        throw;
+    }
+
+    if (tempPath is not null && finalPath is not null && finalDir is not null)
+    {
+        try
+        {
+            Directory.CreateDirectory(finalDir);
+            System.IO.File.Move(tempPath, finalPath, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Gagal pindah file data dari temp ke final. Temp={T} Final={F}",
+                tempPath, finalPath);
+        }
+    }
+
+    TempData["Success"] = advanced
+        ? "Data diupload. Semua tugas selesai — status menjadi <strong>Data Siap</strong>!"
+        : "Data diupload. Sub-tugas Obs/Waw Kepegawaian masih dalam proses.";
+
+    return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+}
 
     // ── Batalkan SubTask Data ─────────────────────────────────────────────
 
@@ -454,49 +491,48 @@ public class KasubkelKdiController(AppDbContext db, IWebHostEnvironment env) : C
             pBefore.StatusPPIDID == StatusId.FeedbackPemohon ||
             pBefore.StatusPPIDID == StatusId.Selesai);
 
-        var success = await db.BatalSubTask(
-            vm.PermohonanPPIDID, vm.JenisTask, vm.AlasanBatal, CurrentUser);
+        // SESUDAH — semua perubahan dikumpulkan dulu, baru satu SaveChanges di akhir
+var success = await db.BatalSubTask(
+    vm.PermohonanPPIDID, vm.JenisTask, vm.AlasanBatal, CurrentUser);
 
-        if (!success)
-        {
-            TempData["Error"] = "Pembatalan gagal — sub-tugas tidak ditemukan atau sudah dibatalkan.";
-            return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
-        }
-
-        await db.SaveChangesAsync();
-
-    bool rolledBack = false;
-    bool advanced   = false;   // ← add this
-
-    if (wasSelesai && statusTerminal)
-    {
-        var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
-        if (p is not null)
-        {
-            var lama       = p.StatusPPIDID;
-            p.StatusPPIDID = StatusId.DiProses;
-            p.UpdatedAt    = DateTime.UtcNow;
-            db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
-                $"Status di-rollback ke DiProses karena Permintaan Data dibatalkan. " +
-                $"Alasan: {vm.AlasanBatal}", CurrentUser);
-            await db.SaveChangesAsync();
-            rolledBack = true;
-        }
-    }
-    else
-    {
-        // FIX: always attempt advance — cancelled task should unblock the others
-        advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
-        await db.SaveChangesAsync();
-    }
-
-    TempData["Success"] = rolledBack
-        ? "Sub-tugas Permintaan Data dibatalkan. Status dimundurkan ke <strong>Sedang Diproses</strong>."
-        : advanced
-            ? "Sub-tugas dibatalkan. Tugas lain sudah selesai — status menjadi <strong>Data Siap</strong>."
-            : "Sub-tugas Permintaan Data berhasil dibatalkan.";
-
+if (!success)
+{
+    TempData["Error"] = "Pembatalan gagal — sub-tugas tidak ditemukan atau sudah dibatalkan.";
     return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
+}
+
+bool rolledBack = false;
+bool advanced   = false;
+
+if (wasSelesai && statusTerminal)
+{
+    var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (p is not null)
+    {
+        var lama       = p.StatusPPIDID;
+        p.StatusPPIDID = StatusId.DiProses;
+        p.UpdatedAt    = DateTime.UtcNow;
+        db.AddAuditLog(vm.PermohonanPPIDID, lama, StatusId.DiProses,
+            $"Status di-rollback ke DiProses karena Permintaan Data dibatalkan. " +
+            $"Alasan: {vm.AlasanBatal}", CurrentUser);
+        rolledBack = true;
+    }
+}
+else
+{
+    advanced = await db.AdvanceIfAllSubTasksDone(vm.PermohonanPPIDID, CurrentUser);
+}
+
+// Satu SaveChanges untuk semua perubahan — atomic
+await db.SaveChangesAsync();
+
+TempData["Success"] = rolledBack
+    ? "Sub-tugas Permintaan Data dibatalkan. Status dimundurkan ke <strong>Sedang Diproses</strong>."
+    : advanced
+        ? "Sub-tugas dibatalkan. Tugas lain sudah selesai — status menjadi <strong>Data Siap</strong>."
+        : "Sub-tugas Permintaan Data berhasil dibatalkan.";
+
+return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
 }
 
     // ── Reopen SubTask Data ───────────────────────────────────────────────

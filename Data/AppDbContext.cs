@@ -62,6 +62,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasIndex(e => e.PermohonanPPIDID);
         m.Entity<SubTaskPPID>()
             .HasIndex(e => new { e.PermohonanPPIDID, e.JenisTask });
+        m.Entity<SubTaskPPID>()
+        .Property(e => e.RowVersion)
+        .IsRowVersion()          // Otomatis increment di setiap UPDATE
+        .IsConcurrencyToken();   // EF akan throw DbUpdateConcurrencyException jika konflik
 
         m.Entity<AppUser>()
             .HasIndex(e => e.Username).IsUnique();
@@ -256,6 +260,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     /// </summary>
     public async Task<bool> AdvanceIfAllSubTasksDone(Guid permohonanId, string operatorName)
 {
+    for (int attempt = 0; attempt < 2; attempt++)
+    {
+        try
+        {
+            return await AdvanceIfAllSubTasksDoneCore(permohonanId, operatorName);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex) when (attempt == 0)
+        {
+            foreach (var entry in ex.Entries)
+            {
+                await entry.ReloadAsync();
+            }
+        }
+    }
+
+    return false;
+}
+
+private async Task<bool> AdvanceIfAllSubTasksDoneCore(Guid permohonanId, string operatorName)
+{
     var p = await PermohonanPPID.FindAsync(permohonanId);
     if (p is null) return false;
 
@@ -268,14 +292,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         StatusId.WawancaraDijadwalkan,
         StatusId.WawancaraSelesai,
     };
+
     if (!statusAktif.Contains(p.StatusPPIDID ?? 0)) return false;
 
     var allSubTasks = await SubTaskPPID
         .Where(t => t.PermohonanPPIDID == permohonanId)
         .ToListAsync();
 
-    // ── GUARD: minimal satu task harus Selesai ────────────────────────────
-    // Jika semua dibatalkan → tidak otomatis advance, butuh keputusan manual.
+    // GUARD: minimal satu task harus selesai.
+    // Jika semua dibatalkan, tidak otomatis advance.
     bool atLeastOneSelesai = allSubTasks.Any(t => t.IsSelesai);
     if (!atLeastOneSelesai) return false;
 
@@ -283,12 +308,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         if (!isActive) return true;
 
-        var st = allSubTasks.FirstOrDefault(t => t.JenisTask == jenisTask
-                                               && !t.IsDibatalkan);
+        var st = allSubTasks.FirstOrDefault(t =>
+            t.JenisTask == jenisTask &&
+            !t.IsDibatalkan);
 
-        // FIX: st == null artinya semua subtask jenis ini dibatalkan → gugur, tidak blocking.
-        // SEBELUMNYA: if (st is null) return false; ← inilah yang memblokir progress.
-        if (st is null)    return true;
+        // Jika semua subtask jenis ini dibatalkan, dianggap gugur dan tidak blocking.
+        if (st is null) return true;
         if (!st.IsSelesai) return false;
 
         return true;
@@ -302,19 +327,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     var now  = DateTime.UtcNow;
     var lama = p.StatusPPIDID;
+
     p.StatusPPIDID = StatusId.DataSiap;
     p.UpdatedAt    = now;
 
-    // Audit log: pisahkan mana yang selesai vs gugur (dibatalkan)
     var selesaiList = new List<string>();
     var gugurList   = new List<string>();
 
     void KlasifikasiKeperluan(bool isActive, string jenisTask, string label)
     {
         if (!isActive) return;
-        var aktif = allSubTasks.FirstOrDefault(t => t.JenisTask == jenisTask && !t.IsDibatalkan);
-        if (aktif?.IsSelesai == true) selesaiList.Add(label);
-        else                          gugurList.Add(label);
+
+        var aktif = allSubTasks.FirstOrDefault(t =>
+            t.JenisTask == jenisTask &&
+            !t.IsDibatalkan);
+
+        if (aktif?.IsSelesai == true)
+            selesaiList.Add(label);
+        else
+            gugurList.Add(label);
     }
 
     KlasifikasiKeperluan(p.IsPermintaanData, JenisTask.PermintaanData, "Permintaan Data");
@@ -323,10 +354,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     var ket = $"Semua tugas aktif selesai → Data Siap. " +
               $"Selesai: {string.Join(", ", selesaiList)}.";
+
     if (gugurList.Any())
         ket += $" Gugur (dibatalkan, tidak dihitung): {string.Join(", ", gugurList)}.";
 
     AddAuditLog(permohonanId, lama, StatusId.DataSiap, ket, operatorName);
+
     return true;
 }
 

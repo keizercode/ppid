@@ -4,6 +4,8 @@ using PermintaanData.Data;
 using System.Text.Json;
 
 namespace PermintaanData.Controllers;
+using Microsoft.AspNetCore.Authorization;
+
 
 /// <summary>
 /// Proxy ke semua API eksternal — fully self-contained.
@@ -21,8 +23,11 @@ namespace PermintaanData.Controllers;
 public class ApiProxyController(
     IHttpClientFactory httpFactory,
     IConfiguration cfg,
-    AppDbContext db) : Controller
+    AppDbContext db,
+    ILogger<ApiProxyController> logger) : Controller
 {
+    private readonly ILogger<ApiProxyController> _logger = logger;
+
     // HttpClient stateless — aman dibuat per-request lewat factory
     private HttpClient Http() => httpFactory.CreateClient();
 
@@ -40,7 +45,11 @@ public class ApiProxyController(
             var res = await Http().GetStringAsync($"{WilayahBase}/api/provinsi/search");
             return Content(res, "application/json");
         }
-        catch { return Ok("[]"); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Wilayah API error: GET {Endpoint}", "provinsi/search");
+            return Ok("[]");
+        }
     }
 
     // ── GET /api/kabupaten ────────────────────────────────────────────────
@@ -54,36 +63,49 @@ public class ApiProxyController(
             var res = await Http().GetStringAsync($"{WilayahBase}/api/kabupaten/dkj/search");
             return Content(res, "application/json");
         }
-        catch { return Ok("[]"); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Wilayah API error: GET {Endpoint}", "kabupaten/dkj/search");
+            return Ok("[]");
+        }
     }
 
     // ── GET /api/kecamatan?kab=31XX ───────────────────────────────────────
     [HttpGet("kecamatan")]
-    public async Task<IActionResult> Kecamatan([FromQuery] string? kab)
+public async Task<IActionResult> Kecamatan([FromQuery] string? kab)
+{
+    if (string.IsNullOrEmpty(kab) || string.IsNullOrEmpty(WilayahBase))
+        return Ok("[]");
+    try
     {
-        if (string.IsNullOrEmpty(kab) || string.IsNullOrEmpty(WilayahBase))
-            return Ok("[]");
-        try
-        {
-            var res = await Http().GetStringAsync($"{WilayahBase}/api/kecamatan/search?kab={kab}");
-            return Content(res, "application/json");
-        }
-        catch { return Ok("[]"); }
+        var res = await Http().GetStringAsync(
+            $"{WilayahBase}/api/kecamatan/search?kab={Uri.EscapeDataString(kab)}");
+        return Content(res, "application/json");
     }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "Kecamatan API error for kab={Kab}", kab);
+        return Ok("[]");
+    }
+}
 
-    // ── GET /api/kelurahan?kec=31XX01 ─────────────────────────────────────
-    [HttpGet("kelurahan")]
-    public async Task<IActionResult> Kelurahan([FromQuery] string? kec)
+[HttpGet("kelurahan")]
+public async Task<IActionResult> Kelurahan([FromQuery] string? kec)
+{
+    if (string.IsNullOrEmpty(kec) || string.IsNullOrEmpty(WilayahBase))
+        return Ok("[]");
+    try
     {
-        if (string.IsNullOrEmpty(kec) || string.IsNullOrEmpty(WilayahBase))
-            return Ok("[]");
-        try
-        {
-            var res = await Http().GetStringAsync($"{WilayahBase}/api/kelurahan/search?kec={kec}");
-            return Content(res, "application/json");
-        }
-        catch { return Ok("[]"); }
+        var res = await Http().GetStringAsync(
+            $"{WilayahBase}/api/kelurahan/search?kec={Uri.EscapeDataString(kec)}");
+        return Content(res, "application/json");
     }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "Kelurahan API error for kec={Kec}", kec);
+        return Ok("[]");
+    }
+}
 
     // ── GET /api/cek-nik?nik=3174XXXXXX ──────────────────────────────────
     //
@@ -94,8 +116,9 @@ public class ApiProxyController(
     //
     // Prioritas: DB lokal dulu → banksampah API.
 
-    [HttpGet("cek-nik")]
-    public async Task<IActionResult> CekNik([FromQuery] string? nik)
+[HttpGet("cek-nik")]
+[Authorize] // Endpoint ini hanya untuk petugas loket yang sudah login
+public async Task<IActionResult> CekNik([FromQuery] string? nik)
     {
         if (string.IsNullOrWhiteSpace(nik)
     || nik.Length != 16
@@ -140,7 +163,7 @@ public class ApiProxyController(
 
         try
         {
-            var raw = await Http().GetStringAsync($"{NikUrl}/?nik={nik}");
+            var raw = await Http().GetStringAsync($"{NikUrl}/?nik={Uri.EscapeDataString(nik)}");
 
             using var doc = JsonDocument.Parse(raw);
             var root = doc.RootElement;
@@ -172,7 +195,11 @@ public class ApiProxyController(
                 source = "api"
             });
         }
-        catch { return Json(null); }
+        catch (Exception ex)
+{
+    _logger.LogWarning(ex, "NIK check API error for nik prefix={Prefix}", nik[..4]);
+    return Json(null);
+}
     }
 
     // ── GET /api/bidang ───────────────────────────────────────────────────
@@ -254,7 +281,11 @@ public async Task<IActionResult> BidangHierarki()
                 }
             }
         }
-        catch { /* API down → activeIds tetap null → tampilkan semua */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Bidang API error: GET {Url}", BidangUrl);
+            /* lanjut fallback */
+        }
     }
 
     // Urutan dijamin oleh _HardcodedBidang (array berurutan).

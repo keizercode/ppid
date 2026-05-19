@@ -292,7 +292,7 @@ public class SubTaskPPID
     /// Optimistic concurrency guard (EC-4).
     /// Di-increment setiap UPDATE di AdvanceIfAllSubTasksDone.
     /// </summary>
-    [Column("RowVersion")]           public long      RowVersion       { get; set; }
+    [Column("RowVersion")]             public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 

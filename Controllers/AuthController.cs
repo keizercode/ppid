@@ -14,8 +14,8 @@ namespace PermintaanData.Controllers;
 public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 {
     private static readonly object _attemptLock = new();
-    private const int MaxFailedAttempts                  = 5;
-    private static readonly TimeSpan LockoutDuration    = TimeSpan.FromMinutes(15);
+    private const int MaxFailedAttempts       = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
 
     // ── Login ─────────────────────────────────────────────────────────────
 
@@ -38,6 +38,7 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
         var clientIp = GetClientIp();
         var cacheKey = $"login_attempts:{clientIp}";
 
+        // Cek lockout sebelum DB query (baca saja, tidak perlu lock)
         if (IsLockedOut(cacheKey, out var remaining))
         {
             ModelState.AddModelError(string.Empty,
@@ -50,8 +51,16 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 
         if (user == null || !user.VerifyPassword(vm.Password))
         {
-            RecordFailedAttempt(cacheKey);
-            ModelState.AddModelError(string.Empty, "Username atau password salah.");
+            // Atomic: increment counter dan cek lockout dalam satu operasi
+            if (RecordAndCheckLockout(cacheKey, out var remaining2))
+            {
+                ModelState.AddModelError(string.Empty,
+                    $"Terlalu banyak percobaan login. Akun dikunci {remaining2} menit.");
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "Username atau password salah.");
+            }
             return View("Login", vm);
         }
 
@@ -109,44 +118,68 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
             });
     }
 
-    /// <summary>Redirect ke landing page sesuai role.</summary>
     private static IActionResult RedirectByRole(string role) => role switch
-{
-    AppRoles.Loket               => new RedirectResult("/petugas-loket"),
-    AppRoles.LoketUmum           => new RedirectResult("/loket-umum"),
-    AppRoles.KasubkelKepegawaian => new RedirectResult("/kasubkel-kepegawaian"),
-    AppRoles.KasubkelKDI         => new RedirectResult("/kasubkel-kdi"),
-    AppRoles.Admin               => new RedirectResult("/petugas-loket"),
-    _                            => new RedirectResult("/petugas-loket")
-};
+    {
+        AppRoles.Loket               => new RedirectResult("/petugas-loket"),
+        AppRoles.LoketUmum           => new RedirectResult("/loket-umum"),
+        AppRoles.KasubkelKepegawaian => new RedirectResult("/kasubkel-kepegawaian"),
+        AppRoles.KasubkelKDI         => new RedirectResult("/kasubkel-kdi"),
+        AppRoles.Admin               => new RedirectResult("/petugas-loket"),
+        _                            => new RedirectResult("/petugas-loket")
+    };
 
-    // ── Rate limiting ─────────────────────────────────────────────────────
+    // ── Rate limiting (P-03 FIX) ──────────────────────────────────────────
 
+    /// <summary>
+    /// Cek apakah IP sedang dalam lockout. Thread-safe untuk read.
+    /// Dipanggil SEBELUM query DB agar login yang dikunci tidak membebani DB.
+    /// </summary>
     private bool IsLockedOut(string key, out int remainingMinutes)
     {
         remainingMinutes = 0;
-        if (!cache.TryGetValue(key, out LoginAttemptInfo? info) || info is null) return false;
-        if (info.Count < MaxFailedAttempts) return false;
-        remainingMinutes = (int)Math.Ceiling((info.LockedUntil - DateTime.UtcNow).TotalMinutes);
-        return remainingMinutes > 0;
+        if (!cache.TryGetValue(key, out LoginAttemptInfo? info) || info is null)
+            return false;
+        if (info.Count < MaxFailedAttempts)
+            return false;
+        var rem = (info.LockedUntil - DateTime.UtcNow).TotalMinutes;
+        if (rem <= 0) return false;
+        remainingMinutes = (int)Math.Ceiling(rem);
+        return true;
     }
 
-    private void RecordFailedAttempt(string key)
-{
-    lock (_attemptLock)
+    /// <summary>
+    /// Increment counter DAN cek lockout dalam satu lock — mencegah TOCTOU.
+    /// Menggantikan RecordFailedAttempt yang terpisah dari IsLockedOut.
+    /// </summary>
+    private bool RecordAndCheckLockout(string key, out int remainingMinutes)
     {
-        var info = cache.GetOrCreate(key, e =>
+        remainingMinutes = 0;
+        lock (_attemptLock)
         {
-            e.AbsoluteExpirationRelativeToNow = LockoutDuration;
-            return new LoginAttemptInfo();
-        })!;
+            var info = cache.GetOrCreate(key, e =>
+            {
+                e.AbsoluteExpirationRelativeToNow = LockoutDuration;
+                return new LoginAttemptInfo();
+            })!;
 
-        if (++info.Count >= MaxFailedAttempts)
-            info.LockedUntil = DateTime.UtcNow.Add(LockoutDuration);
+            info.Count++;
+            if (info.Count >= MaxFailedAttempts)
+                info.LockedUntil = DateTime.UtcNow.Add(LockoutDuration);
 
-        cache.Set(key, info, LockoutDuration);
+            cache.Set(key, info, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = LockoutDuration
+            });
+
+            if (info.Count >= MaxFailedAttempts)
+            {
+                var rem = (info.LockedUntil - DateTime.UtcNow).TotalMinutes;
+                remainingMinutes = (int)Math.Ceiling(Math.Max(rem, 1));
+                return true;
+            }
+            return false;
+        }
     }
-}
 
     private void ResetFailedAttempts(string key) => cache.Remove(key);
 

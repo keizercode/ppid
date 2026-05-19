@@ -1,0 +1,49 @@
+@using PermintaanData.Helpers
+@{
+    var pagination = ViewData["Pagination"] as PaginatedList<PermintaanData.Models.PermohonanPPID>;
+    if (pagination is null || pagination.TotalPages <= 1) return;
+
+    var q      = ViewData["Q"]      as string;
+    var status = ViewData["Status"] as int?;
+}
+
+<div class="flex items-center justify-between mt-4 px-1">
+    <p class="text-xs text-gray-500">
+        Menampilkan
+        <strong>@((pagination.Page - 1) * pagination.PageSize + 1)–@Math.Min(pagination.Page * pagination.PageSize, pagination.TotalCount)</strong>
+        dari <strong>@pagination.TotalCount</strong> permohonan
+    </p>
+
+    <div class="flex items-center gap-1">
+        @if (pagination.HasPrev)
+        {
+            <a href="?page=@(pagination.Page - 1)@(q != null ? $"&q={Uri.EscapeDataString(q)}" : "")@(status.HasValue ? $"&status={status}" : "")"
+               class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold
+                      text-gray-600 hover:bg-gray-50 transition-colors">
+                ← Sebelumnya
+            </a>
+        }
+
+        @for (int i = Math.Max(1, pagination.Page - 2);
+                  i <= Math.Min(pagination.TotalPages, pagination.Page + 2); i++)
+        {
+            var pageNum = i;
+            <a href="?page=@pageNum@(q != null ? $"&q={Uri.EscapeDataString(q)}" : "")@(status.HasValue ? $"&status={status}" : "")"
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
+                      @(pageNum == pagination.Page
+                          ? "bg-[#002d7a] text-white border border-[#002d7a]"
+                          : "border border-gray-200 text-gray-600 hover:bg-gray-50")">
+                @pageNum
+            </a>
+        }
+
+        @if (pagination.HasNext)
+        {
+            <a href="?page=@(pagination.Page + 1)@(q != null ? $"&q={Uri.EscapeDataString(q)}" : "")@(status.HasValue ? $"&status={status}" : "")"
+               class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold
+                      text-gray-600 hover:bg-gray-50 transition-colors">
+                Berikutnya →
+            </a>
+        }
+    </div>
+</div>

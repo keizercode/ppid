@@ -319,14 +319,11 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
     }
 
     [HttpPost("upload-tugas"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> UploadTugasPost(UploadTugasVm vm)
-    {
-        if (vm.FileTugas == null || vm.FileTugas.Length == 0)
-        {
-            ModelState.AddModelError(nameof(vm.FileTugas), "File wajib dipilih.");
-        }
+public async Task<IActionResult> UploadTugasPost(UploadTugasVm vm)
+{
+    if (vm.FileTugas == null || vm.FileTugas.Length == 0)
+        ModelState.AddModelError(nameof(vm.FileTugas), "File wajib dipilih.");
 
-            // Validasi tipe & ukuran file (server-side — tidak bisa di-bypass)
     if (vm.FileTugas != null && vm.FileTugas.Length > 0)
     {
         var valTugas = Services.FileValidator.ValidateDataFile(vm.FileTugas);
@@ -347,56 +344,77 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
     }
 
     var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+    if (p is null) return NotFound();
 
-        if (p is null) return NotFound();
-
-        if ((p.StatusPPIDID ?? 0) < StatusId.Didisposisi)
-        {
-            TempData["Error"] = "Upload tidak diizinkan pada status ini.";
-            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
-        }
-
-        var now = DateTime.UtcNow;
-
-        var uploadsDir = Path.Combine(
-            string.IsNullOrEmpty(env.WebRootPath)
-                ? Path.Combine(env.ContentRootPath, "wwwroot")
-                : env.WebRootPath,
-            "uploads", vm.PermohonanPPIDID.ToString());
-        Directory.CreateDirectory(uploadsDir);
-
-        // UploadTugasPost
-        var fn = $"tugas_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileTugas!.FileName)}";
-        await using (var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create))
-            await vm.FileTugas.CopyToAsync(s);
-
-        var fp = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
-
-        db.DokumenPPID.Add(new DokumenPPID
-        {
-            PermohonanPPIDID     = vm.PermohonanPPIDID,
-            NamaDokumenPPID      = $"Laporan/Tugas Final — {vm.FileTugas.FileName}",
-            UploadDokumenPPID    = fp,
-            JenisDokumenPPIDID   = JenisDokumenId.TugasFinal,
-            NamaJenisDokumenPPID = "Tugas / Laporan Final",
-            CreatedAt            = now
-        });
-
-        db.AuditLog.Add(new AuditLogPPID
-        {
-            PermohonanPPIDID = vm.PermohonanPPIDID,
-            StatusLama       = p.StatusPPIDID,
-            StatusBaru       = p.StatusPPIDID ?? StatusId.DataSiap,
-            Keterangan       = $"Pemohon mengunggah laporan/tugas final: {vm.FileTugas.FileName}. Catatan: {vm.Catatan ?? "(kosong)"}",
-            Operator         = "Pemohon",
-            CreatedAt        = now
-        });
-
-        await db.SaveChangesAsync();
-
-        TempData["SuccessTugas"] = "Laporan berhasil diunggah! Terima kasih telah menyelesaikan penelitian Anda.";
-        return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
+    if ((p.StatusPPIDID ?? 0) < StatusId.Didisposisi)
+    {
+        TempData["Error"] = "Upload tidak diizinkan pada status ini.";
+        return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
     }
+
+    var now = DateTime.UtcNow;
+    var fn  = $"tugas_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileTugas!.FileName)}";
+
+    var finalDir  = Path.Combine(
+        string.IsNullOrEmpty(env.WebRootPath)
+            ? Path.Combine(env.ContentRootPath, "wwwroot")
+            : env.WebRootPath,
+        "uploads", vm.PermohonanPPIDID.ToString());
+
+    var tempPath  = Path.Combine(Path.GetTempPath(), $"ppid_tugas_{Guid.NewGuid()}_{fn}");
+    var finalPath = Path.Combine(finalDir, fn);
+    var fp        = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+
+    // Tulis ke temp path dulu
+    await using (var s = new FileStream(tempPath, FileMode.Create))
+        await vm.FileTugas.CopyToAsync(s);
+
+    db.DokumenPPID.Add(new DokumenPPID
+    {
+        PermohonanPPIDID     = vm.PermohonanPPIDID,
+        NamaDokumenPPID      = $"Laporan/Tugas Final — {vm.FileTugas.FileName}",
+        UploadDokumenPPID    = fp,
+        JenisDokumenPPIDID   = JenisDokumenId.TugasFinal,
+        NamaJenisDokumenPPID = "Tugas / Laporan Final",
+        CreatedAt            = now
+    });
+
+    db.AuditLog.Add(new AuditLogPPID
+    {
+        PermohonanPPIDID = vm.PermohonanPPIDID,
+        StatusLama       = p.StatusPPIDID,
+        StatusBaru       = p.StatusPPIDID ?? StatusId.DataSiap,
+        Keterangan       = $"Pemohon mengunggah laporan/tugas final: {vm.FileTugas.FileName}. Catatan: {vm.Catatan ?? "(kosong)"}",
+        Operator         = "Pemohon",
+        CreatedAt        = now
+    });
+
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch
+    {
+        try { System.IO.File.Delete(tempPath); } catch { /* best-effort */ }
+        throw;
+    }
+
+    // Pindah ke final hanya setelah DB berhasil
+    try
+    {
+        Directory.CreateDirectory(finalDir);
+        System.IO.File.Move(tempPath, finalPath, overwrite: true);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex,
+            "Gagal pindah file tugas dari temp ke final. Temp={T} Final={F}",
+            tempPath, finalPath);
+    }
+
+    TempData["SuccessTugas"] = "Laporan berhasil diunggah! Terima kasih telah menyelesaikan penelitian Anda.";
+    return RedirectToAction("Lacak", new { noPermohonan = vm.NoPermohonan });
+}
 
     // ═══════════════════════════════════════════════════════════════════════
 // DOWNLOAD TEMPLATE LAPORAN
@@ -504,12 +522,10 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
 {
     var now = DateTime.UtcNow;
 
-    // Cek apakah laporan sudah pernah ada
     bool laporanAda = await db.DokumenPPID.AnyAsync(d =>
         d.PermohonanPPIDID   == vm.PermohonanPPIDID &&
         d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal);
 
-    // Validasi file: wajib jika belum ada laporan sebelumnya
     if (!laporanAda && (vm.FileLaporan == null || vm.FileLaporan.Length == 0))
         ModelState.AddModelError(nameof(vm.FileLaporan),
             "File laporan wajib diunggah sebelum mengisi feedback.");
@@ -533,25 +549,42 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
     var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
     if (p is null) return NotFound();
 
-    // ── Simpan laporan jika diunggah ─────────────────────────────────────
+    // ── P-04 FIX: Tulis file ke temp path terlebih dahulu ────────────────
+    // File hanya dipindahkan ke final path SETELAH SaveChangesAsync berhasil.
+    // Ini mencegah file orphan di disk jika transaksi DB gagal.
+    string? tempFilePath  = null;
+    string? finalFilePath = null;
+    string? finalDir      = null;
+    string? webRelPath    = null;
+    string? namaFile      = null;
+
     if (vm.FileLaporan != null && vm.FileLaporan.Length > 0)
     {
-        var uploadsDir = Path.Combine(
+        var fn = $"laporan_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileLaporan.FileName)}";
+
+        finalDir     = Path.Combine(
             string.IsNullOrEmpty(env.WebRootPath)
                 ? Path.Combine(env.ContentRootPath, "wwwroot")
                 : env.WebRootPath,
             "uploads", vm.PermohonanPPIDID.ToString());
-        Directory.CreateDirectory(uploadsDir);
 
-        var fn = $"laporan_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileLaporan.FileName)}";
-        await using var s = new FileStream(Path.Combine(uploadsDir, fn), FileMode.Create);
+        tempFilePath  = Path.Combine(Path.GetTempPath(), $"ppid_laporan_{Guid.NewGuid()}_{fn}");
+        finalFilePath = Path.Combine(finalDir, fn);
+        webRelPath    = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+        namaFile      = vm.FileLaporan.FileName;
+
+        await using var s = new FileStream(tempFilePath, FileMode.Create);
         await vm.FileLaporan.CopyToAsync(s);
+    }
 
+    // ── Daftarkan dokumen ke DbContext (belum commit) ─────────────────────
+    if (tempFilePath is not null)
+    {
         db.DokumenPPID.Add(new DokumenPPID
         {
             PermohonanPPIDID     = vm.PermohonanPPIDID,
-            NamaDokumenPPID      = $"Laporan Hasil Penelitian — {vm.FileLaporan.FileName}",
-            UploadDokumenPPID    = $"/uploads/{vm.PermohonanPPIDID}/{fn}",
+            NamaDokumenPPID      = $"Laporan Hasil Penelitian — {vm.FileLaporan!.FileName}",
+            UploadDokumenPPID    = webRelPath,
             JenisDokumenPPIDID   = JenisDokumenId.TugasFinal,
             NamaJenisDokumenPPID = "Laporan Final Pemohon",
             CreatedAt            = now
@@ -562,13 +595,13 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
             PermohonanPPIDID = vm.PermohonanPPIDID,
             StatusLama       = p.StatusPPIDID,
             StatusBaru       = p.StatusPPIDID ?? StatusId.DataSiap,
-            Keterangan       = $"Pemohon mengunggah laporan hasil penelitian: {vm.FileLaporan.FileName}.",
+            Keterangan       = $"Pemohon mengunggah laporan hasil penelitian: {namaFile}.",
             Operator         = "Pemohon",
             CreatedAt        = now
         });
     }
 
-    // ── Simpan feedback (upsert) ──────────────────────────────────────────
+    // ── Upsert feedback ───────────────────────────────────────────────────
     var existing = await db.FeedbackTaskPPID
         .FirstOrDefaultAsync(f => f.PermohonanPPIDID == vm.PermohonanPPIDID
                                && f.JenisTask        == JenisTask.Semua);
@@ -590,10 +623,10 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
         existing.Catatan       = vm.Catatan;
     }
 
-        // ── Advance → FeedbackPemohon; finalisasi dilakukan Loket ────────────
-    var lama         = p.StatusPPIDID;
-    p.StatusPPIDID   = StatusId.FeedbackPemohon;
-    p.UpdatedAt      = now;
+    // ── Advance status ────────────────────────────────────────────────────
+    var lama       = p.StatusPPIDID;
+    p.StatusPPIDID = StatusId.FeedbackPemohon;
+    p.UpdatedAt    = now;
 
     db.AuditLog.Add(new AuditLogPPID
     {
@@ -607,7 +640,39 @@ public async Task<IActionResult> FeedbackPost(FeedbackUnifiedVm vm)
         CreatedAt        = now
     });
 
-    await db.SaveChangesAsync();
+    // ── Single SaveChanges — jika gagal, file temp belum dipindah ─────────
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch
+    {
+        // DB gagal: hapus file temp agar tidak menumpuk
+        if (tempFilePath is not null)
+        {
+            try { System.IO.File.Delete(tempFilePath); } catch { /* best-effort */ }
+        }
+        throw; // biarkan exception handler global menangani
+    }
+
+    // ── DB berhasil: pindahkan file dari temp ke final ────────────────────
+    if (tempFilePath is not null && finalFilePath is not null && finalDir is not null)
+    {
+        try
+        {
+            Directory.CreateDirectory(finalDir);
+            System.IO.File.Move(tempFilePath, finalFilePath, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            // DB sudah commit — log error, jangan throw (tidak bisa rollback DB)
+            // File ada di temp path, perlu penanganan manual oleh admin
+            logger.LogError(ex,
+                "Gagal memindahkan file laporan dari temp ke final setelah DB commit. " +
+                "TempPath={Temp} FinalPath={Final} PermohonanID={Id}",
+                tempFilePath, finalFilePath, vm.PermohonanPPIDID);
+        }
+    }
 
     TempData["Success"] =
         "Laporan & feedback berhasil dikirim! " +

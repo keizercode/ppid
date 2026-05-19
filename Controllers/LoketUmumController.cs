@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
 using PermintaanData.Models;
 using PermintaanData.Models.ViewModels;
+using PermintaanData.Helpers;
 
 namespace PermintaanData.Controllers;
 
@@ -25,41 +26,47 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
     // ── DASHBOARD ─────────────────────────────────────────────────────────
 
     [HttpGet("")]
-    public async Task<IActionResult> Index(string? q, int? status)
+public async Task<IActionResult> Index(string? q, int? status, int page = 1)
+{
+    var allStatus = await db.PermohonanPPID
+        .AsNoTracking()
+        .Where(p => p.LoketJenis == LoketJenis.Umum)
+        .Select(p => p.StatusPPIDID)
+        .ToListAsync();
+
+    ViewData["DashVm"] = new DashboardVm
     {
-        var allStatus = await db.PermohonanPPID
-            .AsNoTracking()
-            .Where(p => p.LoketJenis == LoketJenis.Umum)
-            .Select(p => p.StatusPPIDID)
-            .ToListAsync();
+        Total        = allStatus.Count,
+        Proses       = allStatus.Count(s => StatusId.IsProses(s)),
+        Selesai      = allStatus.Count(s => StatusId.IsSelesai(s)),
+        MonthlyStats = await GetMonthlyStatsUmum()
+    };
 
-        ViewData["DashVm"] = new DashboardVm
-        {
-            Total = allStatus.Count,
-            Proses = allStatus.Count(s => StatusId.IsProses(s)),
-            Selesai = allStatus.Count(s => StatusId.IsSelesai(s)),
-            MonthlyStats = await GetMonthlyStatsUmum()
-        };
+    var query = db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Include(p => p.Status)
+        .AsNoTracking()
+        .Where(p => p.LoketJenis == LoketJenis.Umum)
+        .AsQueryable();
 
-        var query = db.PermohonanPPID
-            .Include(p => p.Pribadi)
-            .Include(p => p.Status)
-            .Where(p => p.LoketJenis == LoketJenis.Umum)
-            .AsQueryable();
+    if (!string.IsNullOrEmpty(q))
+        query = query.Where(p =>
+            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
+            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
+            (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.Contains(q)));
 
-        if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.NIK != null && p.Pribadi.NIK.Contains(q)));
+    if (status.HasValue)
+        query = query.Where(p => p.StatusPPIDID == status.Value);
 
-        if (status.HasValue)
-            query = query.Where(p => p.StatusPPIDID == status.Value);
+    var paged = await PaginatedList<PermohonanPPID>.CreateAsync(
+        query.OrderByDescending(p => p.CratedAt), page);
 
-        ViewData["Q"] = q;
-        ViewData["Status"] = status;
-        return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
-    }
+    ViewData["Q"]          = q;
+    ViewData["Status"]     = status;
+    ViewData["Pagination"] = paged;
+
+    return View(paged.Items);
+}
 
     // ── Sub-menu: Permintaan Data ─────────────────────────────────────────
 
@@ -143,7 +150,11 @@ public class LoketUmumController(AppDbContext db, IWebHostEnvironment env)
         if (!string.IsNullOrEmpty(vm.BidangID) && Guid.TryParse(vm.BidangID, out var parsed))
             bidangGuid = parsed;
 
-        if (!ModelState.IsValid) return View("DaftarPemohon", vm);
+        if (!vm.IsObservasi && !vm.IsPermintaanData && !vm.IsWawancara)
+    ModelState.AddModelError(string.Empty,
+        "Pilih minimal satu keperluan: Observasi, Permintaan Data, atau Wawancara.");
+
+if (!ModelState.IsValid) return View("DaftarPemohon", vm);
 
         Guid lastId = Guid.Empty;
         string noPerm = string.Empty;
