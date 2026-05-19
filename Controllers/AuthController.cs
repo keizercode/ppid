@@ -183,8 +183,22 @@ public class AuthController(AppDbContext db, IMemoryCache cache) : Controller
 
     private void ResetFailedAttempts(string key) => cache.Remove(key);
 
-    private string GetClientIp() =>
-        HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    private string GetClientIp()
+    {
+        // Cek X-Forwarded-For terlebih dahulu (set oleh reverse proxy seperti Nginx/Cloudflare).
+        // Ambil IP pertama (client asli) — bukan entry terakhir (proxy).
+        // PENTING: pastikan hanya proxy terpercaya yang dapat set header ini
+        //          (konfigurasi di Nginx: proxy_set_header X-Forwarded-For $remote_addr).
+        var forwarded = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(forwarded))
+        {
+            var firstIp = forwarded.Split(',', StringSplitOptions.TrimEntries)[0];
+            if (!string.IsNullOrWhiteSpace(firstIp))
+                return firstIp;
+        }
+
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    }
 
     private IActionResult? RedirectToLocal(string? url) =>
         !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? Redirect(url) : null;

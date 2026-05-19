@@ -62,10 +62,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasIndex(e => e.PermohonanPPIDID);
         m.Entity<SubTaskPPID>()
             .HasIndex(e => new { e.PermohonanPPIDID, e.JenisTask });
+
+        // Gunakan xmin (system column PostgreSQL) sebagai concurrency token.
+        // Tidak perlu migrasi — xmin selalu ada dan otomatis di-update oleh PostgreSQL
+        // pada setiap UPDATE row. Tidak bergantung pada kolom bigint "RowVersion" di DB.
         m.Entity<SubTaskPPID>()
-        .Property(e => e.RowVersion)
-        .IsRowVersion()          // Otomatis increment di setiap UPDATE
-        .IsConcurrencyToken();   // EF akan throw DbUpdateConcurrencyException jika konflik
+            .UseXminAsConcurrencyToken();
 
         m.Entity<AppUser>()
             .HasIndex(e => e.Username).IsUnique();

@@ -197,7 +197,8 @@ public async Task<IActionResult> CekNik([FromQuery] string? nik)
         }
         catch (Exception ex)
 {
-    _logger.LogWarning(ex, "NIK check API error for nik prefix={Prefix}", nik[..4]);
+            // Tidak log bagian NIK — data pribadi tidak boleh masuk log (UU PDP).
+        _logger.LogWarning(ex, "NIK check API error — external API unreachable");
     return Json(null);
 }
     }

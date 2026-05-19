@@ -288,11 +288,8 @@ public class SubTaskPPID
     /// <summary>Alasan reopen (EC-3).</summary>
     [Column("ReopenAlasan")]         public string?   ReopenAlasan     { get; set; }
 
-    /// <summary>
-    /// Optimistic concurrency guard (EC-4).
-    /// Di-increment setiap UPDATE di AdvanceIfAllSubTasksDone.
-    /// </summary>
-    [Column("RowVersion")]             public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    // RowVersion dihapus — digantikan xmin via UseXminAsConcurrencyToken() di DbContext.
+   // Kolom bigint "RowVersion" di DB dibiarkan apa adanya (tidak dikelola EF lagi).
 
     [ForeignKey("PermohonanPPIDID")] public PermohonanPPID? Permohonan { get; set; }
 

@@ -671,13 +671,15 @@ return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
         Directory.CreateDirectory(dir);
 
         // RevisiFilePost
-        var fn = $"revisi_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileRevisi.FileName)}";
-        await using var s = new FileStream(Path.Combine(dir, fn), FileMode.Create);
-        await vm.FileRevisi.CopyToAsync(s);
-        s.Close();
+        var fn        = $"revisi_{now:yyyyMMddHHmmss}_{Services.FileValidator.SanitizeFileName(vm.FileRevisi.FileName)}";
+        var finalDir2 = Path.Combine(UploadsRoot, vm.PermohonanPPIDID.ToString());
+        var tempPath2 = Path.Combine(Path.GetTempPath(), $"ppid_revisi_{Guid.NewGuid()}_{fn}");
+        var finalPath2= Path.Combine(finalDir2, fn);
+        var fp        = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
+        var nama      = vm.FileRevisi.FileName;
 
-        var fp   = $"/uploads/{vm.PermohonanPPIDID}/{fn}";
-        var nama = vm.FileRevisi.FileName;
+        await using (var s = new FileStream(tempPath2, FileMode.Create))
+            await vm.FileRevisi.CopyToAsync(s);
 
         db.DokumenPPID.Add(new DokumenPPID
         {
@@ -693,11 +695,34 @@ return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
 
         if (!success)
         {
+            try { System.IO.File.Delete(tempPath2); } catch { /* best-effort */ }
             TempData["Error"] = "Revisi file gagal.";
             return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
         }
 
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            try { System.IO.File.Delete(tempPath2); } catch { /* best-effort */ }
+            throw;
+        }
+
+        // DB berhasil — pindahkan file dari temp ke final
+        try
+        {
+            Directory.CreateDirectory(finalDir2);
+            System.IO.File.Move(tempPath2, finalPath2, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Gagal pindah file revisi dari temp ke final. Temp={T} Final={F}",
+                tempPath2, finalPath2);
+        }
+
         TempData["Success"] = "File data hasil berhasil direvisi. File lama tetap tersimpan di riwayat dokumen.";
 
         return RedirectToAction(nameof(SubTasks), new { id = vm.PermohonanPPIDID });
