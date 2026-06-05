@@ -89,7 +89,7 @@ public class HomeController(
         return View("Detail", vm);
     }
 
-    [HttpPost]
+    [HttpPost("lacak")]
     [ValidateAntiForgeryToken]
     public IActionResult LacakPost(LacakViewModel model)
     {

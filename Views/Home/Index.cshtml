@@ -350,7 +350,7 @@
                 </div>
             }
 
-            <form asp-action="LacakPost" method="post">
+            <form asp-action="LacakPost" asp-controller="Home" method="post">
                 @Html.AntiForgeryToken()
                 <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Nomor Permohonan</label>
                 <div class="search-row">
