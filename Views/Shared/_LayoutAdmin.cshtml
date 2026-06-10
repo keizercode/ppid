@@ -211,15 +211,15 @@
                         <p style="color:var(--user-title)" class="text-[11px] font-semibold mt-0.5 truncate">@ViewData["Role"]</p>
                     </div>
                 </div>
-                <form asp-action="Logout" asp-controller="Auth" method="post" class="flex-shrink-0">
-                    <button type="submit" title="Keluar"
-                            class="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border border-transparent hover:bg-red-50 hover:border-red-100 hover:text-red-500 transition-colors"
-                            style="color:var(--logout-text)">
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                        </svg>
-                        Keluar
-                    </button>
+                <form id="logout-form" asp-action="Logout" asp-controller="Auth" method="post" class="flex-shrink-0">
+                <button type="button" title="Keluar" onclick="showLogoutModal()"
+                class="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border border-transparent hover:bg-red-50 hover:border-red-100 hover:text-red-500 transition-colors"
+                style="color:var(--logout-text)">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Keluar
+                </button>
                 </form>
             </div>
         </div>
@@ -694,6 +694,154 @@ function toggleTheme() {
 }
     </script>
 }
+
+
+
+@* {{-- ══ LOGOUT MODAL ══ --}} *@
+<div id="logout-modal-backdrop"
+     class="hidden fixed inset-0 z-[99998] flex items-center justify-center"
+     style="background:rgba(0,0,0,.45);backdrop-filter:blur(3px)"
+     onclick="hideLogoutModal()">
+</div>
+
+<div id="logout-modal"
+     class="hidden fixed z-[99999] w-[340px] rounded-2xl shadow-2xl overflow-hidden"
+     style="background:var(--bg-sidebar);border:1px solid var(--border-sidebar)">
+
+    <div class="flex flex-col items-center pt-7 pb-2 px-6">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+             style="background:#FEF2F2;border:1px solid #FECACA">
+            <svg class="w-7 h-7" style="color:#EF4444" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+        </div>
+        <p class="text-[15px] font-bold text-center" style="color:var(--topbar-title)">
+            Konfirmasi Keluar
+        </p>
+        <p class="text-[12.5px] text-center mt-1.5 leading-relaxed" style="color:var(--topbar-sub)">
+            Apakah Anda yakin ingin keluar dari sesi ini?
+        </p>
+    </div>
+
+    <div class="flex gap-2.5 px-6 pb-6 pt-4">
+        <button onclick="hideLogoutModal()"
+                class="flex-1 py-2.5 rounded-xl text-[12.5px] font-semibold border transition-all"
+                style="background:var(--toggle-bg);border-color:var(--toggle-border);color:var(--topbar-title)">
+            Tidak
+        </button>
+        <button onclick="confirmLogout()"
+                id="logout-confirm-btn"
+                class="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold text-white transition-all
+                       flex items-center justify-center gap-2"
+                style="background:#EF4444">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            Ya, Keluar
+        </button>
+    </div>
+</div>
+
+@* {{-- ══ LOGOUT SUCCESS TOAST ══ --}} *@
+<div id="logout-success-toast"
+     class="hidden fixed bottom-6 left-1/2 z-[999999]
+            flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl"
+     style="background:#111827;min-width:220px;transform:translateX(-50%)">
+    <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+         style="background:#10B981">
+        <svg class="w-3.5 h-3.5" style="color:white" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+    </div>
+    <p class="text-[13px] font-semibold" style="color:white">Logout Berhasil!</p>
+</div>
+
+<style>
+    #logout-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    #logout-modal.open    { animation: _lmIn  .22s cubic-bezier(.34,1.56,.64,1) both; }
+    #logout-modal.closing { animation: _lmOut .18s ease both; }
+    @@keyframes _lmIn  {
+        from { opacity:0; transform:translate(-50%,-50%) scale(.92); }
+        to   { opacity:1; transform:translate(-50%,-50%) scale(1);   }
+    }
+    @@keyframes _lmOut {
+        from { opacity:1; transform:translate(-50%,-50%) scale(1);   }
+        to   { opacity:0; transform:translate(-50%,-50%) scale(.94); }
+    }
+    #logout-success-toast.show { animation: _ltIn .3s cubic-bezier(.34,1.56,.64,1) both; }
+    @@keyframes _ltIn { from{opacity:0;transform:translateX(-50%) translateY(16px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+    #logout-confirm-btn:hover { filter:brightness(.9); }
+    #logout-confirm-btn:active { transform:scale(.98); }
+</style>
+
+<script>
+(function () {
+    function showLogoutModal() {
+        document.getElementById('logout-modal-backdrop').classList.remove('hidden');
+        var m = document.getElementById('logout-modal');
+        m.classList.remove('hidden', 'closing');
+        m.classList.add('open');
+        document.addEventListener('keydown', _escHandler);
+    }
+
+    function hideLogoutModal() {
+        var m = document.getElementById('logout-modal');
+        m.classList.remove('open');
+        m.classList.add('closing');
+        setTimeout(function () {
+            m.classList.add('hidden');
+            m.classList.remove('closing');
+            document.getElementById('logout-modal-backdrop').classList.add('hidden');
+        }, 180);
+        document.removeEventListener('keydown', _escHandler);
+    }
+
+    function _escHandler(e) { if (e.key === 'Escape') hideLogoutModal(); }
+
+    function confirmLogout() {
+        var btn = document.getElementById('logout-confirm-btn');
+        btn.disabled = true;
+        btn.innerHTML =
+            '<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">' +
+            '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>' +
+            '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>' +
+            ' Keluar\u2026';
+
+        var m        = document.getElementById('logout-modal');
+        var backdrop = document.getElementById('logout-modal-backdrop');
+        var toast    = document.getElementById('logout-success-toast');
+
+        m.classList.remove('open');
+        m.classList.add('closing');
+
+        setTimeout(function () {
+            m.classList.add('hidden');
+            m.classList.remove('closing');
+            backdrop.classList.add('hidden');
+
+            toast.classList.remove('hidden');
+            toast.classList.add('show');
+
+            setTimeout(function () {
+                document.getElementById('logout-form').submit();
+            }, 950);
+        }, 180);
+    }
+
+    window.showLogoutModal = showLogoutModal;
+    window.hideLogoutModal = hideLogoutModal;
+    window.confirmLogout   = confirmLogout;
+}());
+</script>
 
 @await RenderSectionAsync("Scripts", required: false)
 </body>
