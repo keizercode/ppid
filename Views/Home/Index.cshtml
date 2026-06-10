@@ -84,6 +84,16 @@
             }
         </div>
     </div>
+
+    @if (ViewData["ScrollTo"] != null)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var el = document.getElementById('@ViewData["ScrollTo"]');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    </script>
+}
 </section>
 
 
@@ -359,10 +369,12 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
                         </svg>
                         <input asp-for="NoPermohonan"
-                               class="search-input"
-                               placeholder="Contoh: MHS687592/PPID/III/2026"
-                               autocomplete="off"
-                               oninput="this.value=this.value.toUpperCase()"/>
+                            class="search-input"
+                            placeholder="Contoh: MHS687592/PPID/III/2026"
+                            autocomplete="off"
+                            required
+                            oninput="this.setCustomValidity('');this.value=this.value.toUpperCase()"
+                            oninvalid="this.setCustomValidity('Nomor permohonan wajib diisi')" />
                     </div>
                     <button type="submit" class="btn-primary" style="white-space:nowrap;flex-shrink:0">
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
@@ -419,7 +431,17 @@
             </div>
         </div>
     </div>
+@if (ViewData["ScrollTo"] != null)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var el = document.getElementById('@ViewData["ScrollTo"]');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    </script>
+}
 </section>
+
 
 <!-- ══ CTA BANNER ══ -->
 <section class="cta-section">

@@ -12,7 +12,12 @@ public class HomeController(
     ILogger<HomeController> logger,
     IWebHostEnvironment env) : Controller
 {
-    public IActionResult Index() => View(new LacakViewModel());
+    public IActionResult Index(string? noPermohonan, string? anchor)
+{
+    if (anchor == "lacak")
+        ViewData["ScrollTo"] = "lacak";
+    return View(new LacakViewModel { NoPermohonan = noPermohonan ?? string.Empty });
+}
 
     // ════════════════════════════════════════════════════════════════════════
     // LACAK
@@ -36,8 +41,8 @@ public class HomeController(
         if (permohonan == null)
         {
             TempData["Error"] = "Nomor permohonan tidak ditemukan. "
-                              + "Pastikan nomor diketik persis seperti yang tertera di formulir Anda.";
-            return View("Index", new LacakViewModel { NoPermohonan = noPermohonan });
+                            + "Pastikan nomor diketik persis seperti yang tertera di formulir Anda.";
+            return RedirectToAction("Index", new { anchor = "lacak", noPermohonan });
         }
 
         var pribadi = await db.Pribadi
