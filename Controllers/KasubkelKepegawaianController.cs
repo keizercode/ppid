@@ -201,9 +201,12 @@ public async Task<IActionResult> Permohonan(string? q, int? status, int page = 1
         .AsQueryable();
 
     if (!string.IsNullOrEmpty(q))
-        query = query.Where(p =>
-            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+{
+    var ql = q.ToLower();
+    query = query.Where(p =>
+        (p.NoPermohonan != null && p.NoPermohonan.ToLower().Contains(ql)) ||
+        (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.ToLower().Contains(ql)));
+}
 
     if (status.HasValue)
         query = query.Where(p => p.StatusPPIDID == status.Value);

@@ -213,10 +213,13 @@ public async Task<IActionResult> Index(string? q, int? status, int page = 1)
         .AsQueryable();
 
     if (!string.IsNullOrEmpty(q))
-        query = query.Where(p =>
-            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.Contains(q)));
+{
+    var ql = q.ToLower();
+    query = query.Where(p =>
+        (p.NoPermohonan != null && p.NoPermohonan.ToLower().Contains(ql)) ||
+        (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.ToLower().Contains(ql)) ||
+        (p.Pribadi != null && p.Pribadi.NIK  != null && p.Pribadi.NIK.ToLower().Contains(ql)));
+}
 
     if (status.HasValue)
         query = query.Where(p => p.StatusPPIDID == status.Value);
@@ -243,9 +246,12 @@ public async Task<IActionResult> Index(string? q, int? status, int page = 1)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+{
+    var ql = q.ToLower();
+    query = query.Where(p =>
+        (p.NoPermohonan != null && p.NoPermohonan.ToLower().Contains(ql)) ||
+        (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.ToLower().Contains(ql)));
+}
 
         ViewData["Q"] = q;
         return View(await query.OrderByDescending(p => p.CratedAt).ToListAsync());
@@ -265,9 +271,12 @@ public async Task<IActionResult> Wawancara(string? q, string? filterStatus, int 
         .AsQueryable();
 
     if (!string.IsNullOrEmpty(q))
-        query = query.Where(p =>
-            (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-            (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+{
+    var ql = q.ToLower();
+    query = query.Where(p =>
+        (p.NoPermohonan != null && p.NoPermohonan.ToLower().Contains(ql)) ||
+        (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.ToLower().Contains(ql)));
+}
 
     // Load subtask map HANYA untuk ID yang relevan (tidak semua record)
     var pagedRaw = await PaginatedList<PermohonanPPID>.CreateAsync(
@@ -313,9 +322,12 @@ public async Task<IActionResult> Wawancara(string? q, string? filterStatus, int 
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+{
+    var ql = q.ToLower();
+    query = query.Where(p =>
+        (p.NoPermohonan != null && p.NoPermohonan.ToLower().Contains(ql)) ||
+        (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.ToLower().Contains(ql)));
+}
 
         var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
         var ids = list.Select(p => p.PermohonanPPIDID).ToList();
@@ -2024,9 +2036,12 @@ public async Task<IActionResult> TandaiSelesaiFeedback(
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(q))
-            query = query.Where(p =>
-                (p.NoPermohonan != null && p.NoPermohonan.Contains(q)) ||
-                (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.Contains(q)));
+{
+    var ql = q.ToLower();
+    query = query.Where(p =>
+        (p.NoPermohonan != null && p.NoPermohonan.ToLower().Contains(ql)) ||
+        (p.Pribadi != null && p.Pribadi.Nama != null && p.Pribadi.Nama.ToLower().Contains(ql)));
+}
 
         var list = await query.OrderByDescending(p => p.CratedAt).ToListAsync();
 

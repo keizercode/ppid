@@ -351,16 +351,14 @@
         </div>
 
         <div class="lacak-card">
-            @if(TempData["Error"] != null){
-                <div class="error-box">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-                    </svg>
-                    <p>@Html.Raw(TempData["Error"])</p>
-                </div>
-            }
+                    <div class="error-box" id="lacak-error-box" style="@(TempData["Error"] != null ? "" : "display:none")">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                </svg>
+                <p id="lacak-error-msg">@Html.Raw(TempData["Error"] as string ?? "")</p>
+            </div>
 
-            <form asp-action="LacakPost" asp-controller="Home" method="post">
+            <form asp-action="LacakPost" asp-controller="Home" method="post" id="lacak-form">
                 @Html.AntiForgeryToken()
                 <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Nomor Permohonan</label>
                 <div class="search-row">
@@ -372,11 +370,9 @@
                             class="search-input"
                             placeholder="Contoh: MHS687592/PPID/III/2026"
                             autocomplete="off"
-                            required
-                            oninput="this.setCustomValidity('');this.value=this.value.toUpperCase()"
-                            oninvalid="this.setCustomValidity('Nomor permohonan wajib diisi')" />
+                            oninput="this.value=this.value.toUpperCase()" />
                     </div>
-                    <button type="submit" class="btn-primary" style="white-space:nowrap;flex-shrink:0">
+                    <button type="submit" id="lacak-submit-btn" class="btn-primary" style="white-space:nowrap;flex-shrink:0">
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
                         </svg>
@@ -431,15 +427,65 @@
             </div>
         </div>
     </div>
-@if (ViewData["ScrollTo"] != null)
-{
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var el = document.getElementById('@ViewData["ScrollTo"]');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-    </script>
-}
+<script>
+(function () {
+    var form     = document.getElementById('lacak-form');
+    var input    = form ? form.querySelector('[name="NoPermohonan"]') : null;
+    var errBox   = document.getElementById('lacak-error-box');
+    var errMsg   = document.getElementById('lacak-error-msg');
+    var btn      = document.getElementById('lacak-submit-btn');
+    var origHtml = btn ? btn.innerHTML : '';
+
+    if (!form || !input || !errBox || !btn) return;
+
+    function showErr(msg) {
+        errMsg.textContent = msg;
+        errBox.style.removeProperty('display');
+        errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    function hideErr() { errBox.style.display = 'none'; }
+
+    input.addEventListener('input', hideErr);
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideErr();
+
+        var val = input.value.trim().toUpperCase();
+        input.value = val;
+
+        if (!val) {
+            showErr('Nomor permohonan wajib diisi.');
+            input.focus();
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Memeriksa\u2026';
+
+        var navigating = false;
+        try {
+            var res  = await fetch('/cek-status?no=' + encodeURIComponent(val));
+            var data = await res.json();
+            if (data === null) {
+                showErr('Nomor permohonan tidak ditemukan. Pastikan nomor diketik persis seperti yang tertera di formulir Anda.');
+                input.focus();
+            } else {
+                navigating = true;
+                form.submit(); // bypass listener → POST → LacakPost → Detail
+            }
+        } catch (_) {
+            navigating = true;
+            form.submit(); // fallback: biarkan server handle
+        } finally {
+            if (!navigating) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    });
+}());
+</script>
 </section>
 
 
