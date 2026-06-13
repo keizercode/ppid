@@ -90,10 +90,90 @@ public async Task<IActionResult> NotifikasiJson()
         .Take(30)
         .ToListAsync();
 
-    // ── Value tuple bertipe kuat — menggantikan List<object> + .Cast<dynamic>()
-    // yang menyebabkan InvalidOperationException karena Comparer<dynamic>.Default
-    // tidak dapat membandingkan nilai secara reliable di runtime. ──────────────
-    var sortable = new List<(int Priority, string DateKey, object Payload)>();
+        // ── 3. Dokumen dikembalikan (verifikasi ditolak Kasubkel Kepegawaian) ─
+    // Status sudah kembali ke IdentifikasiAwal DAN ada audit log "DITOLAK"
+    // yang belum "tertutup" oleh aksi Loket (mis. upload TTD ulang akan
+    // memajukan status ke MenungguVerifikasi sehingga otomatis hilang dari sini).
+    var dikembalikanList = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Include(p => p.AuditLog)
+        .Where(p =>
+            p.StatusPPIDID == StatusId.IdentifikasiAwal &&
+            p.AuditLog.Any(a =>
+                a.StatusBaru == StatusId.IdentifikasiAwal &&
+                a.Keterangan != null &&
+                a.Keterangan.Contains("DITOLAK")))
+        .Take(20)
+        .ToListAsync();
+
+        // ── 4. Permohonan menunggu pembuatan Surat Izin ──────────────────────
+    // Sudah diverifikasi Kasubkel Kepegawaian (status MenungguSuratIzin),
+    // Loket perlu membuat Surat Pemberian Izin lalu mengupload Surat Izin resmi.
+    var menungguSuratIzinList = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Where(p => p.StatusPPIDID == StatusId.MenungguSuratIzin)
+        .OrderBy(p => p.UpdatedAt)
+        .Take(30)
+        .ToListAsync();
+
+// ── Pakai value tuple agar sorting aman (tidak ada dynamic) ─────────
+     var sortable = new List<(int Priority, string DateKey, object Payload)>();
+
+    foreach (var p in dikembalikanList)
+    {
+        // Ambil log penolakan terbaru untuk konteks alasan & tanggal
+        var lastReject = p.AuditLog
+            .Where(a => a.StatusBaru == StatusId.IdentifikasiAwal &&
+                        a.Keterangan != null &&
+                        a.Keterangan.Contains("DITOLAK"))
+            .OrderByDescending(a => a.CreatedAt)
+            .FirstOrDefault();
+
+        var alasan = lastReject?.Keterangan?.Replace("Verifikasi DITOLAK. Alasan: ", "").Trim();
+
+        sortable.Add((
+            Priority: 0,
+            DateKey:  lastReject?.CreatedAt.ToString("yyyy-MM-dd") ?? p.UpdatedAt?.ToString("yyyy-MM-dd") ?? "0000-00-00",
+            Payload: new
+            {
+                id        = $"pengembalian_{p.PermohonanPPIDID}",
+                type      = "pengembalian",
+                icon      = "↩️",
+                title     = "Dokumen Dikembalikan",
+                message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+                detail    = string.IsNullOrWhiteSpace(alasan)
+                    ? "Verifikasi ditolak Kasubkel Kepegawaian. Periksa & upload ulang dokumen identifikasi."
+                    : $"Ditolak Kasubkel: {alasan}",
+                href      = $"/petugas-loket/upload-ttd/{p.PermohonanPPIDID}",
+                dateIso   = lastReject?.CreatedAt.ToString("yyyy-MM-dd"),
+                dateLabel = lastReject?.CreatedAt.ToString("dd MMM yyyy"),
+                severity  = "danger",
+                createdAt = lastReject?.CreatedAt.ToString("yyyy-MM-dd")
+            }
+        ));
+    }
+
+    foreach (var p in menungguSuratIzinList)
+    {
+        sortable.Add((
+            Priority: 0,
+            DateKey:  p.UpdatedAt?.ToString("yyyy-MM-dd") ?? "0000-00-00",
+            Payload: new
+            {
+                id        = $"suratizin_{p.PermohonanPPIDID}",
+                type      = "surat_izin",
+                icon      = "📋",
+                title     = "Buat Surat Izin",
+                message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+                detail    = "Verifikasi disetujui Kasubkel. Buat Surat Pemberian Izin & upload Surat Izin resmi.",
+                href      = $"/petugas-loket/surat-pemberian-izin/{p.PermohonanPPIDID}",
+                dateIso   = p.UpdatedAt?.ToString("yyyy-MM-dd"),
+                dateLabel = p.UpdatedAt?.ToString("dd MMM yyyy"),
+                severity  = "warning",
+                createdAt = p.UpdatedAt?.ToString("yyyy-MM-dd")
+            }
+        ));
+    }
 
     foreach (var p in overdueList)
     {
