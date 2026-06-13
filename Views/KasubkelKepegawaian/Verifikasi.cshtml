@@ -274,8 +274,10 @@ function onDisposisiChange() {
     counter.textContent = `${checked.length} dipilih`;
     counter.classList.toggle('hidden', checked.length === 0);
 
-    // Clear error
-    document.getElementById('disposisi-error').classList.add('hidden');
+   // Clear error (reset ke pesan default)
+   const errEl = document.getElementById('disposisi-error');
+   errEl.textContent = '⚠ Pilih minimal satu unit disposisi.';
+   errEl.classList.add('hidden');
 }
 
 // ── Show/hide panel keputusan ─────────────────────────────────────
@@ -302,10 +304,51 @@ function collectValues() {
 // ── Validate ──────────────────────────────────────────────────────
 function validate(v) {
     if (!v.isSetujui) { showToast('Pilih keputusan verifikasi terlebih dahulu.'); return false; }
-    if (v.isSetujui === 'true' && v.disposisiList.length === 0) {
-        document.getElementById('disposisi-error').classList.remove('hidden');
-        showToast('Pilih minimal satu unit disposisi.');
-        return false;
+    if (v.isSetujui === 'true') {
+        const errEl = document.getElementById('disposisi-error');
+
+        // 1) Minimal satu unit harus dicentang
+        if (v.disposisiList.length === 0) {
+            errEl.textContent = '⚠ Pilih minimal satu unit disposisi.';
+            errEl.classList.remove('hidden');
+            showToast('Pilih minimal satu unit disposisi.');
+            return false;
+        }
+
+        // 2) Jika Kepala (parent/induk bidang) dicentang,
+        //    minimal satu turunannya (sub-unit) harus ikut dicentang.
+        if (_hierarkiCache) {
+            for (const item of _hierarkiCache) {
+                const hasChildren = item.children && item.children.length > 0;
+                if (!hasChildren) continue;
+
+                const parentChecked = v.disposisiList.includes(item.namaBidang);
+                if (!parentChecked) continue;
+
+                const anyChildChecked = item.children.some(child =>
+                    v.disposisiList.includes(`${item.namaBidang} — ${child}`));
+
+                if (!anyChildChecked) {
+                    errEl.textContent =
+                        `⚠ "${item.namaBidang}" dicentang — pilih minimal satu turunan/sub-unitnya.`;
+                    errEl.classList.remove('hidden');
+                    showToast(`Pilih minimal satu turunan untuk "${item.namaBidang}".`);
+
+                    // Auto-expand daftar turunan agar terlihat oleh user
+                    const parentCb = [...document.querySelectorAll('.disposisi-cb')]
+                        .find(cb => cb.value === item.namaBidang);
+                    const parentRow   = parentCb?.closest('.tree-parent');
+                    const childrenDiv = parentRow?.parentElement?.querySelector('.tree-children');
+                    if (childrenDiv) {
+                        childrenDiv.classList.remove('hidden');
+                        parentRow.classList.add('open');
+                        childrenDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+
+                    return false;
+                }
+            }
+        }
     }
     return true;
 }
