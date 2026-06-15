@@ -1042,18 +1042,29 @@ public async Task<IActionResult> JadwalObservasiPost(JadwalSubTaskVm vm)
         ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
         : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Observasi);
 
-    if (sub is not null)
+    // Fallback: permohonan lama / IsObservasi ditambah via Edit setelah SuratIzin terbit
+    // → subtask belum pernah dibuat; buat on-the-fly agar status terlacak dengan benar.
+    if (sub is null)
     {
-        sub.StatusTask    = SubTaskStatus.InProgress;
-        sub.TanggalJadwal = vm.Tanggal;
-        sub.WaktuJadwal   = vm.Waktu;
-        sub.NamaPIC       = vm.NamaPIC;
-        sub.TeleponPIC    = vm.TeleponPIC;
-        sub.LokasiJenis   = vm.LokasiJenis;
-        sub.LokasiDetail  = vm.LokasiDetail;
-        sub.Operator      = CurrentUser;
-        sub.UpdatedAt     = now;
+        sub = new SubTaskPPID
+        {
+            PermohonanPPIDID = vm.PermohonanPPIDID,
+            JenisTask        = JenisTask.Observasi,
+            Operator         = CurrentUser,
+            CreatedAt        = now,
+        };
+        db.SubTaskPPID.Add(sub);
     }
+
+    sub.StatusTask    = SubTaskStatus.InProgress;
+    sub.TanggalJadwal = vm.Tanggal;
+    sub.WaktuJadwal   = vm.Waktu;
+    sub.NamaPIC       = vm.NamaPIC;
+    sub.TeleponPIC    = vm.TeleponPIC;
+    sub.LokasiJenis   = vm.LokasiJenis;
+    sub.LokasiDetail  = vm.LokasiDetail;
+    sub.Operator      = CurrentUser;
+    sub.UpdatedAt     = now;
 
     var p = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
     if (p is not null)
@@ -1281,18 +1292,29 @@ public async Task<IActionResult> JadwalWawancaraPost(JadwalSubTaskVm vm)
         ? await db.SubTaskPPID.FindAsync(vm.SubTaskID)
         : await db.GetSubTask(vm.PermohonanPPIDID, JenisTask.Wawancara);
 
-    if (sub is not null)
+    // Fallback: permohonan lama / IsWawancara ditambah via Edit setelah SuratIzin terbit
+    // → subtask belum pernah dibuat; buat on-the-fly agar status terlacak dengan benar.
+    if (sub is null)
     {
-        sub.StatusTask    = SubTaskStatus.InProgress;
-        sub.TanggalJadwal = vm.Tanggal;
-        sub.WaktuJadwal   = vm.Waktu;
-        sub.NamaPIC       = vm.NamaPIC;
-        sub.TeleponPIC    = vm.TeleponPIC;
-        sub.LokasiJenis   = vm.LokasiJenis;
-        sub.LokasiDetail  = vm.LokasiDetail;
-        sub.Operator      = CurrentUser;
-        sub.UpdatedAt     = now;
+        sub = new SubTaskPPID
+        {
+            PermohonanPPIDID = vm.PermohonanPPIDID,
+            JenisTask        = JenisTask.Wawancara,
+            Operator         = CurrentUser,
+            CreatedAt        = now,
+        };
+        db.SubTaskPPID.Add(sub);
     }
+
+    sub.StatusTask    = SubTaskStatus.InProgress;
+    sub.TanggalJadwal = vm.Tanggal;
+    sub.WaktuJadwal   = vm.Waktu;
+    sub.NamaPIC       = vm.NamaPIC;
+    sub.TeleponPIC    = vm.TeleponPIC;
+    sub.LokasiJenis   = vm.LokasiJenis;
+    sub.LokasiDetail  = vm.LokasiDetail;
+    sub.Operator      = CurrentUser;
+    sub.UpdatedAt     = now;
 
     bool isWawOnly = p.IsWawancara && !p.IsPermintaanData && !p.IsObservasi;
     if (isWawOnly && p.StatusPPIDID == StatusId.DiProses)
