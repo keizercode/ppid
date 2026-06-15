@@ -50,13 +50,15 @@
                     </p>
 
                     @* Download template *@
-                    <a href="@Url.Action("DownloadTemplate", "Home", new { id = Model.PermohonanPPIDID })"
-                       class="flex items-center gap-2 w-full bg-gray-50 hover:bg-gray-100 border border-gray-200
-                              text-gray-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors mb-3">
-                        <span class="text-base">📥</span>
-                        <span>Unduh Template Laporan</span>
-                        <span class="ml-auto text-gray-400 text-[10px]">docx</span>
-                    </a>
+                    <div class="flex flex-col gap-1.5 mb-3">
+                       <a href="/files/contoh-laporan-ppid.docx" download
+                          class="flex items-center gap-2 w-full bg-gray-50 hover:bg-gray-100 border border-gray-200
+                                 text-gray-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                           <span class="text-base">🗂️</span>
+                           <span>Unduh Template Laporan</span>
+                           <span class="ml-auto text-gray-400 text-[10px]">docx</span>
+                       </a>
+                   </div>
 
                     @if (Model.LaporanSudahDiunggah)
                     {
