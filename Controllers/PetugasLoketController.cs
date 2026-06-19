@@ -116,6 +116,21 @@ public async Task<IActionResult> NotifikasiJson()
         .Take(30)
         .ToListAsync();
 
+            // ── 5. Pemohon sudah mengirim laporan & feedback — menunggu konfirmasi selesai ──
+    var laporanFeedbackList = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Where(p =>
+            p.StatusPPIDID == StatusId.FeedbackPemohon &&
+            db.FeedbackTaskPPID.Any(f =>
+                f.PermohonanPPIDID == p.PermohonanPPIDID &&
+                f.JenisTask == JenisTask.Semua) &&
+            db.DokumenPPID.Any(d =>
+                d.PermohonanPPIDID == p.PermohonanPPIDID &&
+                d.JenisDokumenPPIDID == JenisDokumenId.TugasFinal))
+        .OrderBy(p => p.UpdatedAt)
+        .Take(30)
+        .ToListAsync();
+
 // ── Pakai value tuple agar sorting aman (tidak ada dynamic) ─────────
      var sortable = new List<(int Priority, string DateKey, object Payload)>();
 
@@ -167,6 +182,28 @@ public async Task<IActionResult> NotifikasiJson()
                 message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
                 detail    = "Verifikasi disetujui Kasubkel. Buat Surat Pemberian Izin & upload Surat Izin resmi.",
                 href      = $"/petugas-loket/surat-pemberian-izin/{p.PermohonanPPIDID}",
+                dateIso   = p.UpdatedAt?.ToString("yyyy-MM-dd"),
+                dateLabel = p.UpdatedAt?.ToString("dd MMM yyyy"),
+                severity  = "warning",
+                createdAt = p.UpdatedAt?.ToString("yyyy-MM-dd")
+            }
+        ));
+    }
+
+    foreach (var p in laporanFeedbackList)
+    {
+        sortable.Add((
+            Priority: 0,
+            DateKey:  p.UpdatedAt?.ToString("yyyy-MM-dd") ?? "0000-00-00",
+            Payload: new
+            {
+                id        = $"laporan_feedback_{p.PermohonanPPIDID}",
+                type      = "laporan_feedback",
+                icon      = "📥",
+                title     = "Laporan & Feedback Masuk",
+                message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+                detail    = "Pemohon telah mengunggah laporan dan mengisi feedback. Segera konfirmasi selesai.",
+                href      = $"/petugas-loket/feedback/{p.PermohonanPPIDID}",
                 dateIso   = p.UpdatedAt?.ToString("yyyy-MM-dd"),
                 dateLabel = p.UpdatedAt?.ToString("dd MMM yyyy"),
                 severity  = "warning",
