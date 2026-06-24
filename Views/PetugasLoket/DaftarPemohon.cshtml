@@ -11,10 +11,12 @@
    ════════════════════════════════════════════════════════════════════════ *@
 @model DaftarPemohonVm
 @{
-    ViewData["Title"] = "Formulir Permohonan";
-    ViewData["Role"]  = "Petugas Loket";
-    Layout = "_LayoutAdmin";
+    bool isPublicOnline = ViewData["IsPublicOnline"] as bool? == true;
+    ViewData["Title"] = isPublicOnline ? "Pendaftaran Online" : "Formulir Permohonan";
+    ViewData["Role"]  = isPublicOnline ? "Pemohon" : "Petugas Loket";
+    Layout = isPublicOnline ? "_Layout" : "_LayoutAdmin";
     bool isMahasiswa = Model.Kategori == "Mahasiswa";
+    bool isLsmOffline = !isMahasiswa && !isPublicOnline;
 
     // ── Label & placeholder adaptif per kategori ──────────────────────────
     string labelPengampu       = isMahasiswa ? "Dosen Pembimbing / Pengampu" : "Penanggung Jawab / Kontak PIC";
@@ -30,6 +32,16 @@
 }
 
 <div class="max-w-3xl mx-auto">
+
+@if (isPublicOnline)
+{
+    <partial name="Partials/_PublicNavBar" />
+    <link rel="stylesheet" href="~/css/home.css" />
+    <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5 text-sm text-emerald-900">
+        <strong>Pengajuan Online — Mahasiswa.</strong>
+        Setelah terdaftar, permohonan masuk antrean Loket Kepegawaian untuk diproses sama seperti pendaftaran offline.
+    </div>
+}
 
     <!-- Category badge -->
     <div class="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-5 text-sm">
@@ -68,10 +80,13 @@
         </div>
     </div>
 
-    <form asp-action="DaftarPemohonPost" method="post" enctype="multipart/form-data" id="mainForm">
+    <form asp-action="@(isPublicOnline ? "IndexPost" : "DaftarPemohonPost")"
+          asp-controller="@(isPublicOnline ? "PublicRegistrasi" : "PetugasLoket")"
+          method="post" enctype="multipart/form-data" id="mainForm">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Kategori"   />
         <input type="hidden" asp-for="LoketJenis" />
+        @if (isPublicOnline) { <input type="hidden" asp-for="IsOnlineRegistration" value="true" /> }
 
         <!-- ── 1. DATA PRIBADI ── -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
@@ -230,8 +245,31 @@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
             <div class="sec-header">
                 <span class="sec-num">5</span>
-                <p class="sec-title">Keperluan <span class="text-gray-400 font-normal text-xs">(bisa lebih dari 1)</span></p>
+                <p class="sec-title">Keperluan
+                    @if (isLsmOffline)
+                    {
+                        <span class="text-gray-400 font-normal text-xs">(LSM: hanya Permintaan Data)</span>
+                    }
+                    else
+                    {
+                        <span class="text-gray-400 font-normal text-xs">(bisa lebih dari 1)</span>
+                    }
+                </p>
             </div>
+            @if (isLsmOffline)
+            {
+                <input type="hidden" asp-for="IsPermintaanData" value="true" />
+                <input type="hidden" asp-for="IsObservasi" value="false" />
+                <input type="hidden" asp-for="IsWawancara" value="false" />
+                <div class="border border-blue-100 bg-blue-50 rounded-xl p-4 mb-3">
+                    <span class="font-semibold text-blue-800 text-sm">📊 Permintaan Data</span>
+                    <p class="text-[11px] text-blue-600 mt-1">Keperluan LSM dibatasi hanya permintaan data.</p>
+                </div>
+                <textarea asp-for="DetailPermintaanData" rows="2" class="fld resize-none text-sm"
+                          placeholder="Jelaskan data/dokumen yang dibutuhkan, periode data, format yang diinginkan..."></textarea>
+            }
+            else
+            {
             <div class="space-y-3">
                 <div class="border border-gray-100 rounded-xl overflow-hidden">
                     <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
@@ -284,6 +322,7 @@
                     </div>
                 </div>
             </div>
+            }
         </div>
 
         <!-- ── 6. UPLOAD DOKUMEN ── -->

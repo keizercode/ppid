@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using PermintaanData.Helpers;
 using PermintaanData.Models;
 using PermintaanData.Data;
 
@@ -139,6 +140,9 @@ public class DaftarPemohonVm
 {
     public string Kategori   { get; set; } = "Mahasiswa";
     public string LoketJenis { get; set; } = Models.LoketJenis.Kepegawaian;
+
+    /// <summary>True jika formulir diisi pemohon via portal online.</summary>
+    public bool IsOnlineRegistration { get; set; }
 
     // Data Pribadi
     [Required(ErrorMessage = "NIK wajib diisi")]
@@ -975,12 +979,8 @@ public class SuratPemberianIzinVm
         get
         {
             if (BidangTujuan.Count == 0) return string.Empty;
-            var parentNames = BidangTujuan
-                .Select(b => b.Contains(" — ") ? b.Split(new[] { " — " }, 2, StringSplitOptions.None)[0].Trim() : b)
-                .Distinct()
-                .ToList();
-            var parts = parentNames
-                .Select(b => $"Bidang {b} Dinas Lingkungan Hidup Provinsi DKI Jakarta")
+            var parts = PermohonanRules.ParentDisposisiLabels(BidangTujuan)
+                .Select(PermohonanRules.FormatUnitHubungi)
                 .ToList();
             if (parts.Count == 1) return parts[0];
             return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
@@ -1019,7 +1019,6 @@ public class SuratPemberianIzinVm
     public IEnumerable<string> BuildTembusanLines()
     {
         yield return TembusanPimpinanLabel;
-        yield return "Sekretaris Dinas Lingkungan Hidup Provinsi DKI Jakarta";
 
         var bidangGroups = BidangTujuan
             .GroupBy(b => b.Contains(" — ")
@@ -1063,6 +1062,37 @@ public static class PenandatanganSuratIzin
     public const string NipKepalaDinas       = "196902011995031003";
     public const string NamaWakilKepalaDinas = "Purwanti Suryandari";
     public const string NipWakilKepalaDinas  = "197509192001122001";
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// REKAP BULANAN
+// ═══════════════════════════════════════════════════════════════════════
+public class RekapBulananRowVm
+{
+    public int    No       { get; set; }
+    public string Kategori { get; set; } = string.Empty;
+    public int    Jumlah   { get; set; }
+    public string Status   { get; set; } = string.Empty;
+}
+
+public class RekapBulananCalendarDayVm
+{
+    public DateOnly Date            { get; set; }
+    public int      Count           { get; set; }
+    public bool     IsCurrentMonth  { get; set; }
+}
+
+public class RekapBulananVm
+{
+    public int     Year         { get; set; }
+    public int     Month        { get; set; }
+    public string  BulanLabel   { get; set; } = string.Empty;
+    public RekapBulananScope Scope { get; set; }
+    public string  RoutePrefix  { get; set; } = string.Empty;
+    public string  ScopeTitle   { get; set; } = string.Empty;
+    public int     TotalBulan   { get; set; }
+    public List<RekapBulananRowVm> Rows { get; set; } = [];
+    public List<RekapBulananCalendarDayVm> CalendarDays { get; set; } = [];
 }
 
 // ═══════════════════════════════════════════════════════════════════════

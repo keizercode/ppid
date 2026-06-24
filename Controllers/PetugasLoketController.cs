@@ -522,6 +522,10 @@ public async Task<IActionResult> Wawancara(string? q, string? filterStatus, int 
     ModelState.AddModelError(string.Empty,
         "Pilih minimal satu keperluan: Observasi, Permintaan Data, atau Wawancara.");
 
+        if (PermohonanRules.IsLsm(vm.Kategori, vm.LoketJenis) && !vm.IsPermintaanData)
+            ModelState.AddModelError(string.Empty,
+                "Permohonan LSM hanya dapat memilih keperluan Permintaan Data.");
+
 if (!ModelState.IsValid) return View("DaftarPemohon", vm);
 
         Guid lastId = Guid.Empty;
@@ -626,6 +630,7 @@ if (!ModelState.IsValid) return View("DaftarPemohon", vm);
                         BidangID = bidangGuid,
                         NamaBidang = vm.NamaBidang,
                         StatusPPIDID = StatusId.TerdaftarSistem,
+                        SumberRegistrasi = SumberRegistrasi.Offline,
                         Sequance = nextSeq,
                         CratedAt = now,
                         UpdatedAt = now

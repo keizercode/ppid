@@ -90,6 +90,9 @@ public class PermohonanPPID
     [Column("NamaProdusenData")]      public string?   NamaProdusenData  { get; set; }
     [Column("LoketJenis")]            public string?   LoketJenis        { get; set; }
 
+    /// <summary>"Online" | "Offline" — sumber registrasi awal.</summary>
+    [Column("SumberRegistrasi")]      public string?   SumberRegistrasi  { get; set; }
+
     [ForeignKey("PribadiID")]    public Pribadi?    Pribadi  { get; set; }
     [ForeignKey("StatusPPIDID")] public StatusPPID? Status   { get; set; }
 

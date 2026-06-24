@@ -1,0 +1,99 @@
+@* Views/Shared/RekapBulanan.cshtml — reusable rekap + kalender *@
+@model RekapBulananVm
+@{
+    Layout = "_LayoutAdmin";
+    var prev = new DateTime(Model.Year, Model.Month, 1).AddMonths(-1);
+    var next = new DateTime(Model.Year, Model.Month, 1).AddMonths(1);
+    string DayUrl(DateOnly d) => $"{Model.RoutePrefix}?year={d.Year}&month={d.Month}";
+}
+
+<partial name="Partials/_FormStyles" />
+
+<div class="max-w-5xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div>
+            <h2 class="text-lg font-bold text-gray-800">Rekap Bulanan</h2>
+            <p class="text-xs text-gray-400">@Model.ScopeTitle · @Model.BulanLabel</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="@($"{Model.RoutePrefix}?year={prev.Year}&month={prev.Month}")"
+               class="px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50">← @prev.ToString("MMM yyyy")</a>
+            <span class="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 rounded-lg">@Model.BulanLabel</span>
+            <a href="@($"{Model.RoutePrefix}?year={next.Year}&month={next.Month}")"
+               class="px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50">@next.ToString("MMM yyyy") →</a>
+        </div>
+    </div>
+
+    <!-- Kalender -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Kalender Permohonan Masuk</p>
+        <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 mb-1">
+            @foreach (var h in new[] { "Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min" })
+            {
+                <div class="py-1">@h</div>
+            }
+        </div>
+        <div class="grid grid-cols-7 gap-1">
+            @foreach (var day in Model.CalendarDays)
+            {
+                if (!day.IsCurrentMonth)
+                {
+                    <div class="aspect-square rounded-lg bg-gray-50/50"></div>
+                }
+                else
+                {
+                    var isToday = day.Date == DateOnly.FromDateTime(DateTime.Today);
+                    var hasData = day.Count > 0;
+                    <a href="@DayUrl(day.Date)"
+                       class="aspect-square rounded-lg flex flex-col items-center justify-center text-xs border transition-all
+                              @(isToday ? "border-blue-400 bg-blue-50 font-bold" : "border-gray-100 hover:border-blue-200 hover:bg-blue-50/40")
+                              @(hasData ? "ring-1 ring-emerald-200" : "")">
+                        <span class="@(isToday ? "text-blue-700" : "text-gray-700")">@day.Date.Day</span>
+                        @if (hasData)
+                        {
+                            <span class="text-[9px] font-bold text-emerald-600 mt-0.5">@day.Count</span>
+                        }
+                    </a>
+                }
+            }
+        </div>
+        <p class="text-[11px] text-gray-400 mt-3">Angka hijau = jumlah permohonan masuk pada tanggal tersebut.</p>
+    </div>
+
+    <!-- Tabel rekap -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+            <p class="text-sm font-bold text-gray-800">Ringkasan @Model.BulanLabel</p>
+            <span class="text-xs font-semibold text-gray-500">Total: <strong class="text-gray-800">@Model.TotalBulan</strong> permohonan</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                        <th class="col-th w-12 text-center">No</th>
+                        <th class="col-th">Kategori</th>
+                        <th class="col-th w-24 text-center">Jumlah</th>
+                        <th class="col-th">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-400 text-sm">Belum ada permohonan pada bulan ini.</td>
+                        </tr>
+                    }
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="px-4 py-3 text-center text-gray-400 font-bold text-xs">@row.No</td>
+                            <td class="px-4 py-3 font-medium text-gray-800">@row.Kategori</td>
+                            <td class="px-4 py-3 text-center font-bold text-gray-800">@row.Jumlah</td>
+                            <td class="px-4 py-3 text-gray-600 text-xs">@row.Status</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

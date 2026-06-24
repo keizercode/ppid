@@ -1,5 +1,6 @@
 @* ── Views/PetugasLoket/SuratPemberianIzinCetak.cshtml ───────────────────── *@
 @* Layout = null → halaman standalone yang printable *@
+@using PermintaanData.Helpers
 @model SuratPemberianIzinVm
 @{
     Layout = null;
@@ -13,14 +14,9 @@
     {
         var enc = System.Text.Encodings.Web.HtmlEncoder.Default;
         if (!Model.BidangTujuan.Any()) return "Dinas Lingkungan Hidup Provinsi DKI Jakarta";
-        // Jika dipilih sub-unit (format "IndukBidang — NamaChild"), ambil hanya nama induk
-        var parentNames = Model.BidangTujuan
-            .Select(b => b.Contains(" — ") ? b.Split(new[] { " — " }, 2, StringSplitOptions.None)[0].Trim() : b)
-            .Distinct()
+        var parts = PermohonanRules.ParentDisposisiLabels(Model.BidangTujuan)
+            .Select(b => enc.Encode(PermohonanRules.FormatUnitHubungi(b)))
             .ToList();
-        var parts = parentNames
-        .Select(b => $"{enc.Encode(b)} Dinas Lingkungan Hidup Provinsi DKI Jakarta")
-        .ToList();
         if (parts.Count == 1) return parts[0];
         return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
     }

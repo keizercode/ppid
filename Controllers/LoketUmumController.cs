@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
+using PermintaanData.Helpers;
 using PermintaanData.Models;
 using PermintaanData.Models.ViewModels;
 using PermintaanData.Helpers;
@@ -149,6 +150,11 @@ public async Task<IActionResult> Index(string? q, int? status, int page = 1)
         vm.LoketJenis = LoketJenis.Umum;
         if (string.IsNullOrEmpty(vm.Kategori)) vm.Kategori = "LSM";
 
+        // LSM hanya permintaan data
+        vm.IsPermintaanData = true;
+        vm.IsObservasi      = false;
+        vm.IsWawancara      = false;
+
         Guid? bidangGuid = null;
         if (!string.IsNullOrEmpty(vm.BidangID) && Guid.TryParse(vm.BidangID, out var parsed))
             bidangGuid = parsed;
@@ -257,6 +263,7 @@ if (!ModelState.IsValid) return View("DaftarPemohon", vm);
                         BidangID = bidangGuid,
                         NamaBidang = vm.NamaBidang,
                         StatusPPIDID = StatusId.TerdaftarSistem,
+                        SumberRegistrasi = SumberRegistrasi.Offline,
                         Sequance = nextSeq,
                         CratedAt = now,
                         UpdatedAt = now

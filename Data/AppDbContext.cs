@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using PermintaanData.Helpers;
 using PermintaanData.Models;
+using PermintaanData.Models.ViewModels;
 
 namespace PermintaanData.Data;
 
@@ -329,6 +331,19 @@ private async Task<bool> AdvanceIfAllSubTasksDoneCore(Guid permohonanId, string 
 
     var now  = DateTime.UtcNow;
     var lama = p.StatusPPIDID;
+
+    // LSM: langsung Selesai setelah pemrosesan (tanpa unggah laporan & feedback)
+    if (PermohonanRules.IsLsm(p))
+    {
+        p.StatusPPIDID   = StatusId.Selesai;
+        p.TanggalSelesai = DateOnly.FromDateTime(now);
+        p.UpdatedAt      = now;
+
+        AddAuditLog(permohonanId, lama, StatusId.Selesai,
+            "Semua tugas LSM selesai → status Selesai (tanpa tahap feedback pemohon).",
+            operatorName);
+        return true;
+    }
 
     p.StatusPPIDID = StatusId.DataSiap;
     p.UpdatedAt    = now;
@@ -707,6 +722,105 @@ public async Task<(bool Success, string? ErrorMessage)> BatalkanPermohonan(
                 Selesai = g.Count(p => StatusId.IsSelesai(p.StatusPPIDID))
             })
             .ToList();
+    }
+
+    public async Task<RekapBulananVm> BuildRekapBulanan(RekapBulananScope scope, int year, int month)
+    {
+        var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end   = start.AddMonths(1);
+
+        var query = PermohonanPPID.AsNoTracking().AsQueryable();
+
+        query = scope switch
+        {
+            RekapBulananScope.LoketKepegawaian =>
+                query.Where(p => p.LoketJenis == LoketJenis.Kepegawaian || p.KategoriPemohon == "Mahasiswa"),
+            RekapBulananScope.LoketUmum =>
+                query.Where(p => p.LoketJenis == LoketJenis.Umum),
+            RekapBulananScope.KasubkelKepegawaian =>
+                query.Where(p => p.LoketJenis == LoketJenis.Kepegawaian
+                              || p.LoketJenis == LoketJenis.Umum
+                              || p.KategoriPemohon == "Mahasiswa"),
+            RekapBulananScope.KasubkelKdi =>
+                query.Where(p => p.IsPermintaanData || p.IsObservasi),
+            _ => query
+        };
+
+        var inMonth = await query
+            .Where(p => p.CratedAt >= start && p.CratedAt < end)
+            .Select(p => new { p.CratedAt, p.StatusPPIDID, p.KategoriPemohon, p.IsPermintaanData, p.IsObservasi, p.IsWawancara })
+            .ToListAsync();
+
+        var bulanIndonesia = new[] { "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
+
+        static string KeperluanLabel(bool data, bool obs, bool waw)
+        {
+            var parts = new List<string>();
+            if (data) parts.Add("Permintaan Data");
+            if (obs)  parts.Add("Observasi");
+            if (waw)  parts.Add("Wawancara");
+            return parts.Count > 0 ? string.Join(" + ", parts) : "Lainnya";
+        }
+
+        var rows = inMonth
+            .GroupBy(p => new
+            {
+                Kat = p.KategoriPemohon ?? "Tidak diketahui",
+                Kep = KeperluanLabel(p.IsPermintaanData, p.IsObservasi, p.IsWawancara)
+            })
+            .OrderBy(g => g.Key.Kat).ThenBy(g => g.Key.Kep)
+            .Select((g, i) =>
+            {
+                var proses  = g.Count(x => StatusId.IsProses(x.StatusPPIDID));
+                var selesai = g.Count(x => StatusId.IsSelesai(x.StatusPPIDID));
+                var batal   = g.Count(x => x.StatusPPIDID == StatusId.Dibatalkan);
+                var statusParts = new List<string>();
+                if (proses > 0)  statusParts.Add($"{proses} Proses");
+                if (selesai > 0) statusParts.Add($"{selesai} Selesai");
+                if (batal > 0)   statusParts.Add($"{batal} Dibatalkan");
+                return new RekapBulananRowVm
+                {
+                    No       = i + 1,
+                    Kategori = $"{g.Key.Kat} — {g.Key.Kep}",
+                    Jumlah   = g.Count(),
+                    Status   = statusParts.Count > 0 ? string.Join(", ", statusParts) : "-"
+                };
+            })
+            .ToList();
+
+        var firstDay    = new DateOnly(year, month, 1);
+        var daysInMonth = DateTime.DaysInMonth(year, month);
+        var startOffset = (int)firstDay.DayOfWeek;
+        if (startOffset == 0) startOffset = 7;
+        startOffset--;
+
+        var calendarDays = new List<RekapBulananCalendarDayVm>();
+        for (int pad = 0; pad < startOffset; pad++)
+            calendarDays.Add(new RekapBulananCalendarDayVm { IsCurrentMonth = false });
+
+        for (int d = 1; d <= daysInMonth; d++)
+        {
+            var date = new DateOnly(year, month, d);
+            var count = inMonth.Count(p =>
+                p.CratedAt.HasValue &&
+                DateOnly.FromDateTime(p.CratedAt.Value.ToUniversalTime()) == date);
+            calendarDays.Add(new RekapBulananCalendarDayVm
+            {
+                Date = date, Count = count, IsCurrentMonth = true
+            });
+        }
+
+        return new RekapBulananVm
+        {
+            Year         = year,
+            Month        = month,
+            BulanLabel   = $"{bulanIndonesia[month]} {year}",
+            Scope        = scope,
+            Rows         = rows,
+            CalendarDays = calendarDays,
+            TotalBulan   = inMonth.Count
+        };
     }
 }
 

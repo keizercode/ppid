@@ -255,6 +255,17 @@ public async Task<IActionResult> CekNik([FromQuery] string? nik)
         return null;
     }
 
+    // Sekretaris — dipilih via verifikasi Kasubkel (bukan tembusan surat otomatis)
+    private const string SekretarisId = "sekretaris-dlh-dki";
+
+    private static readonly string[] SekretarisChildren =
+    [
+        "Kepala Subbagian Umum",
+        "Kepala Subbagian Keuangan",
+        "Ketua Subkelompok Kepegawaian",
+        "Ketua Subkelompok Program dan Pelaporan",
+    ];
+
     // ── GET /api/bidang-hierarki ──────────────────────────────────────────
 [HttpGet("bidang-hierarki")]
 public async Task<IActionResult> BidangHierarki()
@@ -291,7 +302,7 @@ public async Task<IActionResult> BidangHierarki()
 
     // Urutan dijamin oleh _HardcodedBidang (array berurutan).
     // Nama selalu dari _HardcodedBidang — tidak terpengaruh urutan/nama API.
-    var result = _HardcodedBidang
+    var bidangItems = _HardcodedBidang
         .Where(b => activeIds is null || activeIds.Contains(b.Id))
         .Select(b => new
         {
@@ -299,6 +310,16 @@ public async Task<IActionResult> BidangHierarki()
             namaBidang = b.Nama,
             children   = _BidangChildren.TryGetValue(b.Id, out var ch) ? ch : Array.Empty<string>()
         });
+
+    var result = new[]
+    {
+        new
+        {
+            id         = SekretarisId,
+            namaBidang = "Sekretaris Dinas Lingkungan Hidup",
+            children   = SekretarisChildren
+        }
+    }.Concat(bidangItems);
 
     return Json(result);
 }

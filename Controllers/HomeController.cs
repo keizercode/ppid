@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PermintaanData.Data;
+using PermintaanData.Helpers;
 using PermintaanData.Models;
 using PermintaanData.Models.ViewModels;
 
@@ -241,19 +242,24 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
     if (p.IsWawancara)      keperluanList.Add("Wawancara");
     string? keperluanSub = keperluanList.Count > 0 ? string.Join(" + ", keperluanList) : null;
 
-    return new List<(int, string, string?)>
+    var steps = new List<(int, string, string?)>
     {
         (StatusId.TerdaftarSistem,    "1. Permohonan Terdaftar",                 null),
         (StatusId.IdentifikasiAwal,   "2. Tanda Tangan Identifikasi Awal",       null),
         (StatusId.MenungguVerifikasi, "3. Verifikasi Kasubkel & Disposisi Unit", null),
         (StatusId.MenungguSuratIzin,  "4. Pembuatan Surat Izin",                 null),
         (StatusId.SuratIzinTerbit,    "5. Surat Izin Terbit",                    null),
-        // Step 6 mencakup pemrosesan s.d. DataSiap — tidak ada step 7 terpisah
         (StatusId.Didisposisi,        "6. Pemrosesan Data & Penjadwalan",        keperluanSub),
-        // Step 7: upload laporan + feedback (dulu step 8)
-        (StatusId.FeedbackPemohon,    "7. Unggah Hasil Laporan & Isi Feedback",        null),
-        (StatusId.Selesai,            "8. Selesai",                              null),
     };
+
+    if (!PermohonanRules.IsLsm(p))
+        steps.Add((StatusId.FeedbackPemohon, "7. Unggah Hasil Laporan & Isi Feedback", null));
+
+    steps.Add((StatusId.Selesai,
+        PermohonanRules.IsLsm(p) ? "7. Selesai" : "8. Selesai",
+        null));
+
+    return steps;
 }
 
     // metode GetWorkflowOrder
@@ -301,6 +307,12 @@ private static List<(int StatusId, string Label, string? SubLabel)> GetSteps(Per
             .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
 
         if (p is null) return NotFound();
+
+        if (PermohonanRules.IsLsm(p))
+        {
+            TempData["Error"] = "Permohonan LSM tidak memerlukan unggah laporan hasil penelitian.";
+            return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+        }
 
         if ((p.StatusPPIDID ?? 0) < StatusId.Didisposisi)
         {
@@ -486,6 +498,12 @@ public async Task<IActionResult> Feedback(Guid id)
         .Include(x => x.Dokumen)
         .FirstOrDefaultAsync(x => x.PermohonanPPIDID == id);
     if (p is null) return NotFound();
+
+    if (PermohonanRules.IsLsm(p))
+    {
+        TempData["Error"] = "Permohonan LSM tidak memerlukan pengisian feedback.";
+        return RedirectToAction("Lacak", new { noPermohonan = p.NoPermohonan });
+    }
 
     // Buka feedback di DataSiap DAN FeedbackPemohon
     if (p.StatusPPIDID != StatusId.FeedbackPemohon

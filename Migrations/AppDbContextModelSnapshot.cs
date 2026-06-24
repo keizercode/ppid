@@ -462,6 +462,10 @@ namespace PermintaanData.Migrations
                         .HasColumnType("text")
                         .HasColumnName("LoketJenis");
 
+                    b.Property<string>("SumberRegistrasi")
+                        .HasColumnType("text")
+                        .HasColumnName("SumberRegistrasi");
+
                     b.Property<string>("NamaBidang")
                         .HasColumnType("text")
                         .HasColumnName("NamaBidang");
