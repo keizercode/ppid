@@ -273,10 +273,45 @@
                     }
                 </div>
 
-                <!-- ══ BAGIAN 6: TEMBUSAN INSTANSI ══ -->
+                <!-- ══ BAGIAN 6: PENANDATANGAN SURAT ══ -->
                 <div>
                     <div class="sec-header">
                         <div class="sec-num">6</div>
+                        <span class="sec-title">Penandatangan Surat</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                            <input type="radio" name="Penandatangan" value="WakilKepalaDinas"
+                                   class="accent-blue-600 mt-0.5"
+                                   @(Model.Penandatangan != "KepalaDinas" ? "checked" : "")
+                                   onchange="syncPenandatanganTembusan()" />
+                            <div>
+                                <span class="text-sm font-semibold text-gray-700">Wakil Kepala Dinas</span>
+                                <p class="text-[11px] text-gray-500 mt-0.5">Purwanti Suryandari · NIP 197509192001122001</p>
+                                <p class="text-[10px] text-blue-600 mt-1 font-medium">Default</p>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
+                            <input type="radio" name="Penandatangan" value="KepalaDinas"
+                                   class="accent-blue-600 mt-0.5"
+                                   @(Model.Penandatangan == "KepalaDinas" ? "checked" : "")
+                                   onchange="syncPenandatanganTembusan()" />
+                            <div>
+                                <span class="text-sm font-semibold text-gray-700">Kepala Dinas</span>
+                                <p class="text-[11px] text-gray-500 mt-0.5">Dudi Gardesi Asikin · NIP 196902011995031003</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div id="penandatangan-info" class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[12px] text-amber-900">
+                        <span class="font-semibold">Ketentuan tembusan:</span>
+                        <span id="penandatangan-info-text"></span>
+                    </div>
+                </div>
+
+                <!-- ══ BAGIAN 7: TEMBUSAN INSTANSI ══ -->
+                <div>
+                    <div class="sec-header">
+                        <div class="sec-num">7</div>
                         <span class="sec-title">Tembusan — Instansi Pengirim</span>
                     </div>
                     <div>
@@ -390,10 +425,25 @@ function escH(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+const LABEL_KEPALA = 'Kepala Dinas Lingkungan Hidup Provinsi DKI Jakarta';
+const LABEL_WAKIL  = 'Wakil Kepala Dinas Lingkungan Hidup Provinsi DKI Jakarta';
+
+function syncPenandatanganTembusan() {
+    const isKepala = document.querySelector('[name="Penandatangan"]:checked')?.value === 'KepalaDinas';
+    const tembusanPimpinan = isKepala ? LABEL_WAKIL : LABEL_KEPALA;
+    const penandatangan = isKepala ? LABEL_KEPALA : LABEL_WAKIL;
+    const info = document.getElementById('penandatangan-info-text');
+    if (info) {
+        info.textContent =
+            ` Surat ditandatangani ${penandatangan}; tembusan otomatis mencantumkan ${tembusanPimpinan}.`;
+    }
+}
+
 // Init
 document.addEventListener('DOMContentLoaded', () => {
     const isKelompok = @(Model.IsKelompok ? "true" : "false");
     toggleMode(isKelompok);
     updatePreview();
+    syncPenandatanganTembusan();
 });
 </script>

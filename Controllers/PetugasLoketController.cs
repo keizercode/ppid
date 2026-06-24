@@ -2338,6 +2338,8 @@ public async Task<IActionResult> TandaiSelesaiFeedback(
         if (!vm.IsKelompok && string.IsNullOrWhiteSpace(vm.NamaPemohon))
             ModelState.AddModelError(nameof(vm.NamaPemohon), "Nama pemohon wajib diisi.");
 
+        vm.NormalizePenandatangan();
+
         if (!ModelState.IsValid)
             return View("SuratPemberianIzin", vm);
 

@@ -420,11 +420,11 @@
                     <div>Dikeluarkan di Jakarta</div>
                     <div>Pada tanggal, &nbsp;&nbsp;&nbsp;@FmtTanggal(Model.TanggalSurat)</div>
                     <br />
-                    <div>Wakil Kepala Dinas Lingkungan Hidup</div>
+                    <div>@Model.JabatanPenandatangan</div>
                     <div>Provinsi DKI Jakarta,</div>
                     <div class="ttd-space"></div>
-                    <div>Purwanti Suryandari</div>
-                    <div>NIP 197509192001122001</div>
+                    <div>@Model.NamaPenandatangan</div>
+                    <div>NIP @Model.NipPenandatangan</div>
                 </div>
             </div>
 
@@ -432,39 +432,9 @@
             <div class="tembusan">
                 <span class="label">Tembusan:</span>
                 <ol>
-                    <li>Kepala Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
-                    <li>Sekretaris Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
-                    @{
-                        // Group by induk; entry tanpa " — " berarti parent-only (tidak ada child)
-                        var bidangGroups = Model.BidangTujuan
-                            .GroupBy(b => b.Contains(" — ")
-                                ? b.Split(new[] { " — " }, 2, StringSplitOptions.None)[0].Trim()
-                                : b)
-                            .Select(g => new {
-                        Induk    = g.Key,
-                        Children = g.Where(b => b.Contains(" — "))
-                                            .Select(b => b.Split(new[] { " — " }, 2, StringSplitOptions.None)[1].Trim())
-                                            .ToList()
-                            })
-                            .ToList();
-                    }
-                    @foreach (var grp in bidangGroups)
+                    @foreach (var line in Model.BuildTembusanLines())
                     {
-                        @if (grp.Children.Count == 0)
-                        {
-                            <li>@grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta;</li>
-                        }
-                        else
-                        {
-                            @foreach (var child in grp.Children)
-                            {
-                                <li>@grp.Induk Dinas Lingkungan Hidup Provinsi DKI Jakarta c.q. @child;</li>
-                            }
-                        }
-                    }
-                    @if (!string.IsNullOrEmpty(Model.TembusanInstansi))
-                    {
-                        <li>@Model.TembusanInstansi.</li>
+                        <li>@line;</li>
                     }
                 </ol>
             </div>

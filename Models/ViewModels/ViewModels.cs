@@ -950,6 +950,11 @@ public class SuratPemberianIzinVm
     [Display(Name = "Tembusan — Instansi Pengirim")]
     public string TembusanInstansi { get; set; } = string.Empty;
 
+    // ── Penandatangan surat ───────────────────────────────────────────────
+    /// <summary>"WakilKepalaDinas" (default) | "KepalaDinas"</summary>
+    [Display(Name = "Penandatangan Surat")]
+    public string Penandatangan { get; set; } = PenandatanganSuratIzin.WakilKepalaDinas;
+
     // ── Computed helpers ──────────────────────────────────────────────────
     /// <summary>Judul surat, mis. "PERMINTAAN DATA DAN WAWANCARA UNTUK PEMBUATAN TUGAS AKHIR".</summary>
     public string JudulSurat =>
@@ -981,6 +986,83 @@ public class SuratPemberianIzinVm
             return string.Join(", ", parts.Take(parts.Count - 1)) + ", dan " + parts.Last();
         }
     }
+
+    /// <summary>Memastikan nilai penandatangan valid (default: Wakil Kepala Dinas).</summary>
+    public void NormalizePenandatangan()
+    {
+        if (Penandatangan != PenandatanganSuratIzin.KepalaDinas
+         && Penandatangan != PenandatanganSuratIzin.WakilKepalaDinas)
+            Penandatangan = PenandatanganSuratIzin.WakilKepalaDinas;
+    }
+
+    public string JabatanPenandatangan =>
+        Penandatangan == PenandatanganSuratIzin.KepalaDinas
+            ? "Kepala Dinas Lingkungan Hidup"
+            : "Wakil Kepala Dinas Lingkungan Hidup";
+
+    public string NamaPenandatangan =>
+        Penandatangan == PenandatanganSuratIzin.KepalaDinas
+            ? PenandatanganSuratIzin.NamaKepalaDinas
+            : PenandatanganSuratIzin.NamaWakilKepalaDinas;
+
+    public string NipPenandatangan =>
+        Penandatangan == PenandatanganSuratIzin.KepalaDinas
+            ? PenandatanganSuratIzin.NipKepalaDinas
+            : PenandatanganSuratIzin.NipWakilKepalaDinas;
+
+    /// <summary>Baris tembusan pimpinan (selalu lawan dari penandatangan).</summary>
+    public string TembusanPimpinanLabel =>
+        Penandatangan == PenandatanganSuratIzin.KepalaDinas
+            ? PenandatanganSuratIzin.LabelWakilKepalaDinas
+            : PenandatanganSuratIzin.LabelKepalaDinas;
+
+    public IEnumerable<string> BuildTembusanLines()
+    {
+        yield return TembusanPimpinanLabel;
+        yield return "Sekretaris Dinas Lingkungan Hidup Provinsi DKI Jakarta";
+
+        var bidangGroups = BidangTujuan
+            .GroupBy(b => b.Contains(" — ")
+                ? b.Split(new[] { " — " }, 2, StringSplitOptions.None)[0].Trim()
+                : b)
+            .Select(g => new
+            {
+                Induk    = g.Key,
+                Children = g.Where(b => b.Contains(" — "))
+                            .Select(b => b.Split(new[] { " — " }, 2, StringSplitOptions.None)[1].Trim())
+                            .ToList()
+            });
+
+        foreach (var grp in bidangGroups)
+        {
+            if (grp.Children.Count == 0)
+                yield return $"{grp.Induk} Dinas Lingkungan Hidup Provinsi DKI Jakarta";
+            else
+                foreach (var child in grp.Children)
+                    yield return $"{grp.Induk} Dinas Lingkungan Hidup Provinsi DKI Jakarta c.q. {child}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(TembusanInstansi))
+            yield return TembusanInstansi.Trim().TrimEnd('.');
+    }
+}
+
+/// <summary>Data tetap penandatangan Surat Pemberian Izin DLH DKI Jakarta.</summary>
+public static class PenandatanganSuratIzin
+{
+    public const string KepalaDinas      = "KepalaDinas";
+    public const string WakilKepalaDinas = "WakilKepalaDinas";
+
+    public const string LabelKepalaDinas =
+        "Kepala Dinas Lingkungan Hidup Provinsi DKI Jakarta";
+
+    public const string LabelWakilKepalaDinas =
+        "Wakil Kepala Dinas Lingkungan Hidup Provinsi DKI Jakarta";
+
+    public const string NamaKepalaDinas      = "Dudi Gardesi Asikin";
+    public const string NipKepalaDinas       = "196902011995031003";
+    public const string NamaWakilKepalaDinas = "Purwanti Suryandari";
+    public const string NipWakilKepalaDinas  = "197509192001122001";
 }
 
 // ═══════════════════════════════════════════════════════════════════════
