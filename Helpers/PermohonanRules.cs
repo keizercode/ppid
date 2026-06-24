@@ -23,12 +23,16 @@ public static class PermohonanRules
             : label.Trim();
     }
 
-    /// <summary>Format unit untuk kalimat "agar menghubungi …".</summary>
+    /// <summary>Format unit untuk kalimat "agar menghubungi …" (tanpa awalan Kepala).</summary>
     public static string FormatUnitHubungi(string disposisiLabel)
     {
         var unit = StripKepalaPrefix(disposisiLabel);
         if (unit.StartsWith("Suku Dinas", StringComparison.OrdinalIgnoreCase))
+        {
+            if (unit.Contains("Lingkungan Hidup", StringComparison.OrdinalIgnoreCase))
+                return unit;
             return $"{unit} Lingkungan Hidup";
+        }
         if (unit.StartsWith("Bidang ", StringComparison.OrdinalIgnoreCase))
             return $"{unit} Dinas Lingkungan Hidup Provinsi DKI Jakarta";
         if (unit.StartsWith("Unit ", StringComparison.OrdinalIgnoreCase)

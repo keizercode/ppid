@@ -1,0 +1,20 @@
+@{
+    var title = ViewData["FormTitle"] as string ?? "Pendaftaran Online";
+}
+<div class="max-w-3xl mx-auto mb-6">
+    <div class="flex items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-3 min-w-0">
+            <img src="https://res.cloudinary.com/dmcvht1vr/image/upload/v1778220475/Logo_PPID_opsi_2_n485vz.png"
+                 alt="Logo PPID DLH Jakarta"
+                 class="h-10 sm:h-12 object-contain flex-shrink-0" />
+            <div class="min-w-0">
+                <p class="text-sm font-bold text-[#002d7a] truncate">@title</p>
+                <p class="text-[11px] text-gray-500 truncate">Mahasiswa · PPID DLH Jakarta</p>
+            </div>
+        </a>
+        <a href="/"
+           class="flex-shrink-0 text-xs font-semibold text-gray-500 hover:text-[#002d7a] border border-gray-200 rounded-lg px-3 py-2 bg-white transition-colors">
+            ← Beranda
+        </a>
+    </div>
+</div>

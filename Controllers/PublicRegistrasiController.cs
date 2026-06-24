@@ -34,6 +34,7 @@ public class PublicRegistrasiController(AppDbContext db, IWebHostEnvironment env
 
         ViewData["IsPublicOnline"] = true;
         ViewData["Title"]          = "Pendaftaran Online — Mahasiswa";
+        ViewData["FormTitle"]      = "Pendaftaran Online";
         return View("~/Views/PetugasLoket/DaftarPemohon.cshtml", vm);
     }
 
@@ -55,6 +56,7 @@ public class PublicRegistrasiController(AppDbContext db, IWebHostEnvironment env
         {
             ViewData["IsPublicOnline"] = true;
             ViewData["Title"]          = "Pendaftaran Online — Mahasiswa";
+            ViewData["FormTitle"]      = "Pendaftaran Online";
             return View("~/Views/PetugasLoket/DaftarPemohon.cshtml", vm);
         }
 
@@ -223,6 +225,7 @@ public class PublicRegistrasiController(AppDbContext db, IWebHostEnvironment env
     public IActionResult Sukses(string no)
     {
         ViewData["Title"] = "Pendaftaran Berhasil";
+        ViewData["FormTitle"] = "Pendaftaran Online";
         ViewData["NoPermohonan"] = no;
         return View("~/Views/Public/Sukses.cshtml");
     }
