@@ -780,6 +780,50 @@
     border: 1px solid rgba(244, 152, 39, 0.2);
     margin-top: auto;
 }
+.req-portal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    transition: background 0.18s;
+}
+.req-portal-btn:hover {
+    background: #d1fae5;
+    color: #065f46;
+}
+.step-card .req-portal-btn {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+    margin-bottom: 2px;
+}
+.req-lsm-note {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+.req-lsm-note-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #065f46;
+    margin-bottom: 4px;
+}
+.req-lsm-note-text {
+    font-size: 12px;
+    color: #047857;
+    line-height: 1.55;
+    margin: 0;
+}
 
 /* ── REQUIREMENTS ── */
 .req-bg {

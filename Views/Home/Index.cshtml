@@ -1,6 +1,7 @@
 @model LacakViewModel
 @{
     ViewData["Title"] = "PPID — Dinas Lingkungan Hidup DKI Jakarta";
+    var daftarOnlineUrl = ViewData["DaftarOnlineUrl"] as string ?? "https://dev2.dinaslhdki.id/daftar-online";
 }
 
 @section Styles {
@@ -48,11 +49,11 @@
                 cepat, terbuka, dan akuntabel.
             </p>
             <div class="hero-actions au au-4">
-                <a href="/daftar-online" class="btn-primary">
+                <a href="@daftarOnlineUrl" class="btn-primary" target="_blank" rel="noopener noreferrer">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                     </svg>
-                    Daftar Online (Mahasiswa)
+                    Link Daftar Online
                 </a>
                 <a href="#lacak" class="btn-secondary">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
@@ -189,18 +190,20 @@
     </div>
 </section>
 
+
 <!-- ══ ALUR PERMOHONAN ══ -->
 <section id="alur" class="section steps-bg">
     <div class="section-inner">
         <div style="text-align:center;margin-bottom:52px">
-            <div class="section-badge-oren" style="margin:0 auto 12px;width:fit-content"><span class="badge-dot-oren"></span>Panduan Layanan</div>
+            <div class="section-badge-oren" style="margin:0 auto 12px;width:fit-content"><span class="badge-dot-oren"></span>Perubahan Mekanisme Pengajuan</div>
             <h2 class="section-title" style="margin:0 auto 10px">Alur Permohonan Informasi</h2>
             <p class="section-sub" style="margin:0 auto;text-align:center">Ikuti langkah berikut untuk mengajukan permohonan data &amp; informasi di PPID DLH Jakarta</p>
         </div>
         <div class="steps-grid">
             @{
+
                 var steps=new[]{
-                    new{N="1",I="<path stroke-linecap='round' stroke-linejoin='round' d='M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z'/>",T="Datang ke Loket PPID",D="Kunjungi loket PPID DLH Jakarta. Bawa KTP asli, surat permohonan, dan dokumen pendukung sesuai kategori pemohon.",G="Senin–Jum'at · 08.00–16.00"},
+                    new{N="1",I="<path stroke-linecap='round' stroke-linejoin='round' d='M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z'/>",T="Pengajuan Permohonan",D=$"Permohonan dapat dilakukan secara online maupun offline.<br><br><strong>Online</strong> — daftar melalui sistem pendaftaran digital DLH Jakarta.<br><a href=\"{daftarOnlineUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"mt-2 inline-flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg hover:bg-emerald-100\"><svg width=\"14\" height=\"14\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2.2\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25\"/></svg>Link Daftar Online</a><br><br><strong>Offline</strong> — datang langsung ke loket pelayanan dan membawa dokumen yang dipersyaratkan sesuai kategori pemohon.",G="Online · Offline"},
                     new{N="2",I="<path stroke-linecap='round' stroke-linejoin='round' d='M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z'/>",T="Identifikasi &amp; Pendaftaran",D="Petugas memverifikasi berkas dan mendaftarkan permohonan. Nomor unik diterbitkan untuk melacak status.",G="± 15 menit proses"},
                     new{N="3",I="<path stroke-linecap='round' stroke-linejoin='round' d='M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10'/>",T="Tanda Tangan Formulir",D="Tanda tangani formulir identifikasi awal. Nomor permohonan tercetak di formulir — simpan dengan baik.",G="Simpan nomor Anda!"},
                     new{N="4",I="<path stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3'/>",T="Pantau &amp; Unduh Data",D="Gunakan nomor permohonan untuk cek status secara daring. Unduh data saat status berubah menjadi 'Data Siap'.",G="Pantau secara langsung"},
@@ -214,7 +217,7 @@
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">@Html.Raw(s.I)</svg>
                         </div>
                         <h3>@Html.Raw(s.T)</h3>
-                        <p>@s.D</p>
+                        <p>@Html.Raw(s.D)</p>
                         <span class="step-tag">@s.G</span>
                     </div>
                 </div>
@@ -244,7 +247,7 @@
                         </div>
                         <div>
                             <p class="req-head-title req-head-title-blue">Mahasiswa / Pelajar</p>
-                            <p class="req-head-sub req-head-sub-blue">3 dokumen wajib · <a href="/daftar-online" class="underline">Daftar online</a></p>
+                            <p class="req-head-sub req-head-sub-blue">3 dokumen wajib · <a href="@daftarOnlineUrl" class="underline" target="_blank" rel="noopener noreferrer">Daftar online</a></p>
                         </div>
                     </div>
                 </div>
@@ -301,6 +304,7 @@
                     </div>
                 </div>
                 <div class="req-body">
+
                     @foreach(var d in new[]{"Fotokopi KTP Pimpinan","Akta Notaris Lembaga/Organisasi","Surat Permohonan Informasi"}){
                         <div class="req-item">
                             <div class="req-check req-check-green">

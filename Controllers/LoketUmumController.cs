@@ -141,7 +141,10 @@ public async Task<IActionResult> Index(string? q, int? status, int page = 1)
         => View(new DaftarPemohonVm
         {
             Kategori = "LSM",
-            LoketJenis = LoketJenis.Umum
+            LoketJenis = LoketJenis.Umum,
+            IsPermintaanData = true,
+            IsObservasi = false,
+            IsWawancara = false
         });
 
     [HttpPost("daftar"), ValidateAntiForgeryToken]
@@ -150,10 +153,11 @@ public async Task<IActionResult> Index(string? q, int? status, int page = 1)
         vm.LoketJenis = LoketJenis.Umum;
         if (string.IsNullOrEmpty(vm.Kategori)) vm.Kategori = "LSM";
 
-        // LSM hanya permintaan data
-        vm.IsPermintaanData = true;
-        vm.IsObservasi      = false;
-        vm.IsWawancara      = false;
+        PermohonanRules.ApplyLsmKeperluanOnly(vm);
+
+        if (vm.IsObservasi || vm.IsWawancara)
+            ModelState.AddModelError(string.Empty,
+                "Permohonan LSM hanya dapat memilih keperluan Permintaan Data.");
 
         Guid? bidangGuid = null;
         if (!string.IsNullOrEmpty(vm.BidangID) && Guid.TryParse(vm.BidangID, out var parsed))

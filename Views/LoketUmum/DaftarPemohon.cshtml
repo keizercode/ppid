@@ -217,53 +217,24 @@
             </div>
         </div>
 
-        @* ── 5. KEPERLUAN ── *@
+        @* ── 5. KEPERLUAN (LSM: hanya Permintaan Data) ── *@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
             <div class="sec-header">
                 <span class="sec-num">5</span>
-                <p class="sec-title">Keperluan <span class="text-gray-400 font-normal text-xs">(bisa lebih dari 1)</span></p>
+                <p class="sec-title">Keperluan <span class="text-gray-400 font-normal text-xs">(LSM: hanya Permintaan Data)</span></p>
             </div>
-            <div class="space-y-3">
-                <div class="border border-gray-100 rounded-xl overflow-hidden">
-                    <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
-                        <input asp-for="IsObservasi"      type="checkbox" onchange="toggleDetail('det-obs',this)"  class="w-4 h-4 rounded accent-blue-600"/>
-                        <div>
-                            <span class="font-semibold text-gray-700 text-sm">🔍 Observasi Lapangan</span>
-                            <p class="text-[11px] text-gray-400 leading-tight mt-0.5">Kunjungan langsung ke lokasi / fasilitas</p>
-                        </div>
-                    </label>
-                    <div id="det-obs" class="@(!Model.IsObservasi ? "hidden" : "") px-4 pb-4">
-                        <textarea asp-for="DetailObservasi" rows="2" class="fld resize-none text-sm"
-                                  placeholder="Jelaskan tujuan observasi, lokasi yang ingin dikunjungi, dan aspek yang akan diamati..."></textarea>
-                    </div>
-                </div>
-                <div class="border border-gray-100 rounded-xl overflow-hidden">
-                    <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
-                        <input asp-for="IsPermintaanData" type="checkbox" onchange="toggleDetail('det-data',this)" class="w-4 h-4 rounded accent-blue-600"/>
-                        <div>
-                            <span class="font-semibold text-gray-700 text-sm">📊 Permintaan Data</span>
-                            <p class="text-[11px] text-gray-400 leading-tight mt-0.5">Data statistik, dokumen, atau informasi publik</p>
-                        </div>
-                    </label>
-                    <div id="det-data" class="@(!Model.IsPermintaanData ? "hidden" : "") px-4 pb-4">
-                        <textarea asp-for="DetailPermintaanData" rows="2" class="fld resize-none text-sm"
-                                  placeholder="Jelaskan data/dokumen yang dibutuhkan, periode data, format yang diinginkan..."></textarea>
-                    </div>
-                </div>
-                <div class="border border-gray-100 rounded-xl overflow-hidden">
-                    <label class="flex items-center gap-3 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
-                        <input asp-for="IsWawancara"      type="checkbox" onchange="toggleDetail('det-waw',this)"  class="w-4 h-4 rounded accent-blue-600"/>
-                        <div>
-                            <span class="font-semibold text-gray-700 text-sm">🎤 Wawancara</span>
-                            <p class="text-[11px] text-gray-400 leading-tight mt-0.5">Narasumber dari pejabat atau pegawai</p>
-                        </div>
-                    </label>
-                    <div id="det-waw" class="@(!Model.IsWawancara ? "hidden" : "") px-4 pb-4">
-                        <textarea asp-for="DetailWawancara" rows="2" class="fld resize-none text-sm"
-                                  placeholder="Jelaskan topik wawancara, jabatan narasumber yang diinginkan..."></textarea>
-                    </div>
-                </div>
+            <input type="hidden" asp-for="IsPermintaanData" value="true" />
+            <input type="hidden" asp-for="IsObservasi" value="false" />
+            <input type="hidden" asp-for="IsWawancara" value="false" />
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-3 text-xs text-emerald-800 leading-relaxed">
+                <strong>Ketentuan Khusus untuk LSM:</strong> Keperluan permohonan dibatasi hanya untuk <strong>Permintaan Data</strong>.
             </div>
+            <div class="border border-blue-100 bg-blue-50 rounded-xl p-4 mb-3">
+                <span class="font-semibold text-blue-800 text-sm">📊 Permintaan Data</span>
+                <p class="text-[11px] text-blue-600 mt-1">Data statistik, dokumen, atau informasi publik DLH Jakarta.</p>
+            </div>
+            <textarea asp-for="DetailPermintaanData" rows="3" class="fld resize-none text-sm"
+                      placeholder="Jelaskan data/dokumen yang dibutuhkan, periode data, format yang diinginkan, dan relevansinya dengan kegiatan lembaga..."></textarea>
         </div>
 
         @* ── 6. UPLOAD DOKUMEN ── *@

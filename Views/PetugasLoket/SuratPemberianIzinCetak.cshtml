@@ -55,7 +55,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Surat Pemberian Izin — @Model.NoPermohonan</title>
+    <title>Surat Izin — @Model.NoPermohonan</title>
     <style>
         /* ── Reset & base ── */
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -209,6 +209,12 @@
         /* ── TTD area ── */
         .ttd-section { display: flex; justify-content: flex-end; margin-top: 24px; page-break-inside: avoid; break-inside: avoid; }
         .ttd-block { text-align: center; font-size: 12pt; font-family: Arial;; }
+        .ttd-lokasi {
+            text-align: left;
+            margin-bottom: 4px;
+            line-height: 1.6;
+        }
+        .ttd-lokasi span { display: block; }
         .ttd-space { height: 70px; }
 
         /* ── Tembusan ── */
@@ -286,7 +292,7 @@
 
         <!-- Judul surat -->
         <div class="surat-title">
-            <div class="label">SURAT PEMBERIAN IZIN</div>
+            <div class="label">SURAT IZIN</div>
             <div class="nomor">
                 NOMOR :
                 @if (!string.IsNullOrEmpty(Model.NomorSurat))
@@ -295,7 +301,7 @@
                 }
                 else
                 {
-                    <span style="display:inline-block;min-width:200px;border-bottom:1px solid #000;">&nbsp;</span>
+                    <span style="display:inline-block;min-width:200px;">&nbsp;</span>
                 }
             </div>
             <div class="tentang">TENTANG</div>
@@ -413,8 +419,10 @@
             <!-- TTD -->
             <div class="ttd-section">
                 <div class="ttd-block">
-                    <div>Dikeluarkan di Jakarta</div>
-                    <div>Pada tanggal, &nbsp;&nbsp;&nbsp;@FmtTanggal(Model.TanggalSurat)</div>
+                    <div class="ttd-lokasi">
+                        <span>Dikeluarkan di Jakarta</span>
+                        <span>Pada tanggal @FmtTanggal(Model.TanggalSurat)</span>
+                    </div>
                     <br />
                     <div>@Model.JabatanPenandatangan</div>
                     <div>Provinsi DKI Jakarta,</div>

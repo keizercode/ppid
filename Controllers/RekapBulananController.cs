@@ -34,6 +34,26 @@ public class RekapBulananController(AppDbContext db) : Controller
         => Render(RekapBulananScope.KasubkelKdi, "/kasubkel-kdi/rekap-bulanan",
             "Kasubkel KDI", "Kasubkel KDI", year, month);
 
+    [HttpGet("petugas-loket/rekap-bulanan/export")]
+    [Authorize(Roles = $"{AppRoles.Loket},{AppRoles.Admin}")]
+    public Task<IActionResult> ExportLoketKepegawaian(int? year, int? month)
+        => ExportExcel(RekapBulananScope.LoketKepegawaian, "Loket_Kepegawaian", year, month);
+
+    [HttpGet("loket-umum/rekap-bulanan/export")]
+    [Authorize(Roles = $"{AppRoles.LoketUmum},{AppRoles.Admin}")]
+    public Task<IActionResult> ExportLoketUmum(int? year, int? month)
+        => ExportExcel(RekapBulananScope.LoketUmum, "Loket_Umum", year, month);
+
+    [HttpGet("kasubkel-kepegawaian/rekap-bulanan/export")]
+    [Authorize(Roles = $"{AppRoles.KasubkelKepegawaian},{AppRoles.Admin}")]
+    public Task<IActionResult> ExportKasubkelKepegawaian(int? year, int? month)
+        => ExportExcel(RekapBulananScope.KasubkelKepegawaian, "Kasubkel_Kepegawaian", year, month);
+
+    [HttpGet("kasubkel-kdi/rekap-bulanan/export")]
+    [Authorize(Roles = $"{AppRoles.KasubkelKDI},{AppRoles.Admin}")]
+    public Task<IActionResult> ExportKasubkelKdi(int? year, int? month)
+        => ExportExcel(RekapBulananScope.KasubkelKdi, "Kasubkel_KDI", year, month);
+
     private async Task<IActionResult> Render(
         RekapBulananScope scope, string routePrefix, string scopeTitle, string role,
         int? year, int? month)
@@ -49,5 +69,21 @@ public class RekapBulananController(AppDbContext db) : Controller
         ViewData["Title"] = "Rekap Bulanan";
         ViewData["Role"]  = role;
         return View("~/Views/Shared/RekapBulanan.cshtml", vm);
+    }
+
+    private async Task<IActionResult> ExportExcel(
+        RekapBulananScope scope, string scopeSlug, int? year, int? month)
+    {
+        var now = DateTime.Today;
+        var y   = year  ?? now.Year;
+        var m   = month ?? now.Month;
+
+        var vm = await db.BuildRekapBulanan(scope, y, m);
+        var bytes = RekapBulananExcelExporter.Build(vm);
+        var filename = $"Rekap_Bulanan_{scopeSlug}_{y}_{m:D2}.xlsx";
+
+        return File(bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename);
     }
 }

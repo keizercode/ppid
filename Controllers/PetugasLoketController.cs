@@ -504,6 +504,8 @@ public async Task<IActionResult> Wawancara(string? q, string? filterStatus, int 
     [HttpPost("daftar"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DaftarPemohonPost(DaftarPemohonVm vm)
     {
+        PermohonanRules.ApplyLsmKeperluanOnly(vm);
+
         Guid? bidangGuid = null;
         if (!string.IsNullOrEmpty(vm.BidangID))
         {
@@ -522,7 +524,7 @@ public async Task<IActionResult> Wawancara(string? q, string? filterStatus, int 
     ModelState.AddModelError(string.Empty,
         "Pilih minimal satu keperluan: Observasi, Permintaan Data, atau Wawancara.");
 
-        if (PermohonanRules.IsLsm(vm.Kategori, vm.LoketJenis) && !vm.IsPermintaanData)
+        if (PermohonanRules.IsLsm(vm.Kategori, vm.LoketJenis) && (vm.IsObservasi || vm.IsWawancara || !vm.IsPermintaanData))
             ModelState.AddModelError(string.Empty,
                 "Permohonan LSM hanya dapat memilih keperluan Permintaan Data.");
 
@@ -2270,15 +2272,7 @@ public async Task<IActionResult> TandaiSelesaiFeedback(
                 .Where(x => x.Length > 0)
                 .ToList();
 
-        var jenisKegiatan = (p.IsPermintaanData && p.IsWawancara && p.IsObservasi)
-            ? "Permintaan Data, Wawancara, dan Observasi"
-            : (p.IsPermintaanData && p.IsWawancara)
-            ? "Permintaan Data dan Wawancara"
-            : (p.IsPermintaanData && p.IsObservasi)
-            ? "Permintaan Data dan Observasi"
-            : p.IsObservasi
-            ? "Observasi"
-            : "Permintaan Data";
+        var jenisKegiatan = PermohonanRules.BuildJenisKegiatanLabel(p);
 
         var vm = new SuratPemberianIzinVm
         {
@@ -2319,8 +2313,12 @@ public async Task<IActionResult> TandaiSelesaiFeedback(
     /// Tidak menyimpan ke DB — hanya render HTML cetak.
     /// </summary>
     [HttpPost("surat-pemberian-izin/cetak"), ValidateAntiForgeryToken]
-    public IActionResult SuratPemberianIzinCetak(SuratPemberianIzinVm vm)
+    public async Task<IActionResult> SuratPemberianIzinCetak(SuratPemberianIzinVm vm)
     {
+        var permohonan = await db.PermohonanPPID.FindAsync(vm.PermohonanPPIDID);
+        if (permohonan is not null)
+            vm.JenisKegiatan = PermohonanRules.BuildJenisKegiatanLabel(permohonan);
+
         // Bersihkan anggota kosong sebelum validasi
         vm.Anggota = vm.Anggota
             .Where(a => !string.IsNullOrWhiteSpace(a.Nama))

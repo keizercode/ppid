@@ -11,12 +11,15 @@ namespace PermintaanData.Controllers;
 public class HomeController(
     AppDbContext db,
     ILogger<HomeController> logger,
-    IWebHostEnvironment env) : Controller
+    IWebHostEnvironment env,
+    IConfiguration cfg) : Controller
 {
     public IActionResult Index(string? noPermohonan, string? anchor)
 {
     if (anchor == "lacak")
         ViewData["ScrollTo"] = "lacak";
+    ViewData["DaftarOnlineUrl"] = cfg["ExternalApi:DaftarOnlineUrl"]
+        ?? "https://dev2.dinaslhdki.id/daftar-online";
     return View(new LacakViewModel { NoPermohonan = noPermohonan ?? string.Empty });
 }
 

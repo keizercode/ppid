@@ -1,7 +1,8 @@
 @* ── Views/PetugasLoket/SuratPemberianIzin.cshtml ────────────────────────── *@
+@using PermintaanData.Helpers
 @model SuratPemberianIzinVm
 @{
-    ViewData["Title"] = "Buat Surat Pemberian Izin";
+    ViewData["Title"] = "Buat Surat Izin";
     ViewData["Role"]  = "Petugas Loket";
     Layout = "_LayoutAdmin";
 }
@@ -20,7 +21,7 @@
         <div class="px-6 py-5 border-b border-gray-50 flex items-center gap-3">
             <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">📄</div>
             <div>
-                <h3 class="font-bold text-gray-800">Buat Surat Pemberian Izin Penelitian</h3>
+                <h3 class="font-bold text-gray-800">Buat Surat Izin Penelitian</h3>
                 <p class="text-xs font-mono text-gray-400 mt-0.5">@Model.NoPermohonan</p>
             </div>
         </div>
@@ -36,22 +37,29 @@
             <div class="p-6 space-y-8">
 
 
-                <!-- ══ BAGIAN 1: JENIS & MODE ══ -->
+                <!-- ══ BAGIAN 1: KEPERLUAN & MODE ══ -->
                 <div>
                     <div class="sec-header">
                         <div class="sec-num">1</div>
-                        <span class="sec-title">Jenis Kegiatan &amp; Mode Pemohon</span>
+                        <span class="sec-title">Keperluan &amp; Mode Pemohon</span>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="lbl">Jenis Kegiatan <span class="req">*</span></label>
-                            <select asp-for="JenisKegiatan" class="fld">
-                                <option value="Permintaan Data"                           selected="@(Model.JenisKegiatan == "Permintaan Data" ? "selected" : null)">Permintaan Data</option>
-                                <option value="Permintaan Data dan Wawancara"             selected="@(Model.JenisKegiatan == "Permintaan Data dan Wawancara" ? "selected" : null)">Permintaan Data dan Wawancara</option>
-                                <option value="Permintaan Data dan Observasi"             selected="@(Model.JenisKegiatan == "Permintaan Data dan Observasi" ? "selected" : null)">Permintaan Data dan Observasi</option>
-                                <option value="Observasi"                                  selected="@(Model.JenisKegiatan == "Observasi" ? "selected" : null)">Observasi</option>
-                                <option value="Permintaan Data, Wawancara, dan Observasi" selected="@(Model.JenisKegiatan == "Permintaan Data, Wawancara, dan Observasi" ? "selected" : null)">Permintaan Data, Wawancara, dan Observasi</option>
+                            <select asp-for="JenisKegiatan" class="fld" id="f-jenis-kegiatan">
+                                @foreach (var opt in PermohonanRules.JenisKegiatanOptions)
+                                {
+                                    if (opt == Model.JenisKegiatan)
+                                    {
+                                        <option value="@opt" selected>@opt</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@opt">@opt</option>
+                                    }
+                                }
                             </select>
+                            <p class="text-[11px] text-gray-400 mt-1">Otomatis disesuaikan dengan keperluan permohonan — dapat diubah jika perlu.</p>
                         </div>
                         <div>
                             <label class="lbl">Jenis Karya <span class="req">*</span></label>
@@ -401,7 +409,7 @@ function renumberRows() {
 // ── Live preview card ─────────────────────────────────────────────────────
 function updatePreview() {
     const isKelompok = document.querySelector('[name="IsKelompok"]:checked')?.value === 'true';
-    const jenis = document.querySelector('[name="JenisKegiatan"]')?.value || '';
+    const jenis = document.getElementById('f-jenis-kegiatan')?.value || '';
     const karya = document.querySelector('[name="JenisKarya"]')?.value || '';
     const nama  = isKelompok
         ? (document.querySelector('[name="NamaPerwakilan"]')?.value || '').toUpperCase()
