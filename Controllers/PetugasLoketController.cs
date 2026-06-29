@@ -131,6 +131,22 @@ public async Task<IActionResult> NotifikasiJson()
         .Take(30)
         .ToListAsync();
 
+        // ── 6. Permohonan baru dari pendaftaran online — belum diproses Loket ──
+    // SumberRegistrasi == Online berarti pemohon mendaftar mandiri lewat
+    // /daftar-online, bukan diinput langsung oleh petugas. Selama status
+    // masih TerdaftarSistem, Loket belum pernah membuka/identifikasi
+    // permohonan ini, sehingga tanpa notifikasi ini permohonan tidak
+    // akan terlihat sampai petugas membuka menu data secara manual.
+    var onlineBaruList = await db.PermohonanPPID
+        .Include(p => p.Pribadi)
+        .Where(p =>
+            p.LoketJenis == LoketJenis.Kepegawaian &&
+            p.SumberRegistrasi == SumberRegistrasi.Online &&
+            p.StatusPPIDID == StatusId.TerdaftarSistem)
+        .OrderBy(p => p.CratedAt)
+        .Take(30)
+        .ToListAsync();
+
 // ── Pakai value tuple agar sorting aman (tidak ada dynamic) ─────────
      var sortable = new List<(int Priority, string DateKey, object Payload)>();
 
@@ -208,6 +224,28 @@ public async Task<IActionResult> NotifikasiJson()
                 dateLabel = p.UpdatedAt?.ToString("dd MMM yyyy"),
                 severity  = "warning",
                 createdAt = p.UpdatedAt?.ToString("yyyy-MM-dd")
+            }
+        ));
+    }
+
+    foreach (var p in onlineBaruList)
+    {
+        sortable.Add((
+            Priority: 0,
+            DateKey:  p.CratedAt?.ToString("yyyy-MM-dd") ?? "0000-00-00",
+            Payload: new
+            {
+                id        = $"online_baru_{p.PermohonanPPIDID}",
+                type      = "online_baru",
+                icon      = "🌐",
+                title     = "Permohonan Online Baru",
+                message   = $"{p.Pribadi?.Nama ?? "—"} — {p.NoPermohonan}",
+                detail    = "Pemohon mendaftar mandiri secara online. Lakukan identifikasi awal & cetak formulir tanda tangan.",
+                href      = $"/petugas-loket/input-identifikasi/{p.PermohonanPPIDID}",
+                dateIso   = p.CratedAt?.ToString("yyyy-MM-dd"),
+                dateLabel = p.CratedAt?.ToString("dd MMM yyyy"),
+                severity  = "info",
+                createdAt = p.CratedAt?.ToString("yyyy-MM-dd")
             }
         ));
     }

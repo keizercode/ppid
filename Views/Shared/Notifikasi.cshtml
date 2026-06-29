@@ -296,7 +296,29 @@
 [data-theme="dark"] .filter-slider { background: rgba(59,130,246,.18); border-color: rgba(59,130,246,.35); }
 
 /* ── Notification list ───────────────────────────────────────── */
-.notif-list { display: flex; flex-direction: column; gap: 8px; }
+notif-list { display: flex; flex-direction: column; gap: 22px; }
+
+/* ── Kategori (grup) ─────────────────────────────────────────── */
+.notif-group { display: flex; flex-direction: column; gap: 8px; }
+.notif-group-header { display: flex; align-items: center; gap: 7px; padding: 0 4px; }
+.notif-group-icon { font-size: 13px; line-height: 1; }
+.notif-group-title {
+    font-size: 11px; font-weight: 800;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+[data-theme="dark"] .notif-group-title { color: rgba(255,255,255,.45); }
+.notif-group-count {
+    font-size: 10.5px; font-weight: 700;
+    color: #9CA3AF;
+    background: #F3F4F6;
+    border-radius: 999px;
+    padding: 1px 7px;
+    line-height: 1.4;
+}
+[data-theme="dark"] .notif-group-count { background: rgba(255,255,255,.08); color: rgba(255,255,255,.45); }
+.notif-group-items { display: flex; flex-direction: column; gap: 8px; }
 
 /* ── Notification card ───────────────────────────────────────── */
 .notif-card {
@@ -606,6 +628,33 @@ function setText(id, val) {
     if (el) el.textContent = val;
 }
 
+// ── Kategori notifikasi ─────────────────────────────────────────────────
+// Setiap "type" dari backend dipetakan ke satu grup, supaya tampilan tidak
+// tercampur rata berdasarkan tanggal saja — kategori seperti "Permohonan
+// Online Baru" jadi punya bagiannya sendiri, tidak tersembunyi di paling
+// bawah hanya karena tanggalnya paling baru.
+const TYPE_TO_GROUP = {
+    overdue:          'overdue',
+    online_baru:      'online_baru',
+    pengembalian:     'pengembalian',
+    surat_izin:       'surat_izin',
+    jadwal_observasi: 'jadwal',
+    jadwal_wawancara: 'jadwal',
+    laporan_feedback: 'laporan_feedback',
+};
+
+const GROUP_META = {
+    overdue:          { order: 0, icon: '⏰', label: 'Lewat Batas Waktu' },
+    online_baru:      { order: 1, icon: '🌐', label: 'Permohonan Online Baru' },
+    pengembalian:     { order: 2, icon: '↩️', label: 'Dokumen Dikembalikan' },
+    surat_izin:       { order: 3, icon: '📋', label: 'Menunggu Surat Izin' },
+    jadwal:           { order: 4, icon: '📅', label: 'Jadwal Observasi & Wawancara' },
+    laporan_feedback: { order: 5, icon: '📥', label: 'Laporan & Feedback Masuk' },
+    lainnya:          { order: 99, icon: '🔔', label: 'Lainnya' },
+};
+
+function groupKeyOf(n) { return TYPE_TO_GROUP[n.type] || 'lainnya'; }
+
 // ── Render list ───────────────────────────────────────────────────────────
 function renderList() {
     const read      = getRead();
@@ -629,7 +678,33 @@ function renderList() {
     }
     empty.classList.add('hidden');
 
-    list.innerHTML = visible.map((n, i) => buildCard(n, read, i)).join('');
+    // ── Kelompokkan per kategori. Urutan ITEM di dalam tiap grup tetap
+    // mengikuti urutan dari backend (mis. yang menunggu paling lama duluan).
+    const buckets = {};
+    visible.forEach(n => {
+        const key = groupKeyOf(n);
+        if (!buckets[key]) buckets[key] = [];
+        buckets[key].push(n);
+    });
+
+    const groupKeys = Object.keys(buckets)
+        .sort((a, b) => (GROUP_META[a]?.order ?? 99) - (GROUP_META[b]?.order ?? 99));
+
+    let idx = 0;
+    list.innerHTML = groupKeys.map(key => {
+        const meta  = GROUP_META[key] || GROUP_META.lainnya;
+        const cards = buckets[key].map(n => buildCard(n, read, idx++)).join('');
+        return `
+        <div class="notif-group">
+            <div class="notif-group-header">
+                <span class="notif-group-icon">${meta.icon}</span>
+                <span class="notif-group-title">${meta.label}</span>
+                <span class="notif-group-count">${buckets[key].length}</span>
+            </div>
+            <div class="notif-group-items">${cards}</div>
+        </div>`;
+    }).join('');
+
     renderStats();
 }
 
