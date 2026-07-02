@@ -148,8 +148,8 @@ public async Task<IActionResult> CekStatus([FromQuery] string? no)
 
         var jadUpdate = await db.JadwalPPID
             .Where(j => j.PermohonanPPIDID == p.PermohonanPPIDID && j.IsAktif)
-            .Select(j => j.UpdatedAt ?? j.CreatedAt)
-            .MaxAsync();
+            .Select(j => (DateTime?)(j.UpdatedAt ?? j.CreatedAt))
+            .MaxAsync() ?? (DateTime?)null;
 
         var allDates = new[] { p.UpdatedAt, stUpdate, jadUpdate }
             .Where(d => d.HasValue)
