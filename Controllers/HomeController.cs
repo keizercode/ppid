@@ -27,7 +27,7 @@ public class HomeController(
     // LACAK
     // ════════════════════════════════════════════════════════════════════════
 
-    [HttpGet]
+    [HttpGet("Home/Lacak", Name = "LacakDetail")]
     public async Task<IActionResult> Lacak(string? noPermohonan)
     {
         if (string.IsNullOrEmpty(noPermohonan))
@@ -103,7 +103,7 @@ public class HomeController(
     public IActionResult LacakPost(LacakViewModel model)
     {
         if (!ModelState.IsValid) return View("Index", model);
-        return RedirectToAction("Lacak", new
+        return RedirectToRoute("LacakDetail", new
         {
             noPermohonan = model.NoPermohonan.Trim().ToUpperInvariant()
         });
