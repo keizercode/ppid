@@ -144,12 +144,14 @@ public async Task<IActionResult> CekStatus([FromQuery] string? no)
         var stUpdate = await db.SubTaskPPID
             .Where(t => t.PermohonanPPIDID == p.PermohonanPPIDID)
             .Select(t => (DateTime?)t.UpdatedAt)
-            .MaxAsync() ?? (DateTime?)null;
+            .DefaultIfEmpty()
+            .MaxAsync();
 
         var jadUpdate = await db.JadwalPPID
             .Where(j => j.PermohonanPPIDID == p.PermohonanPPIDID && j.IsAktif)
             .Select(j => (DateTime?)(j.UpdatedAt ?? j.CreatedAt))
-            .MaxAsync() ?? (DateTime?)null;
+            .DefaultIfEmpty()
+            .MaxAsync();
 
         var allDates = new[] { p.UpdatedAt, stUpdate, jadUpdate }
             .Where(d => d.HasValue)
