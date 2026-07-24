@@ -1,13 +1,4 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/PetugasLoket/HasilFeedback.cshtml
-   Loket Kepegawaian — menerima dan melihat feedback pemohon beserta laporan.
 
-   Alur:
-   1. Status DataSiap  → feedback sudah bisa diisi pemohon (otomatis aktif)
-   2. Status FeedbackPemohon → Loket membuka akses secara eksplisit (tracking)
-   3. View ini menampilkan hasil feedback per task + laporan yang diunggah
-   4. Loket dapat menandai selesai manual jika pemohon tidak merespons
-════════════════════════════════════════════════════════════════════════════ *@
 @model HasilFeedbackVm
 @{
     ViewData["Title"] = $"Hasil Feedback — {Model.Permohonan.NoPermohonan}";

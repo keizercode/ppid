@@ -1,17 +1,4 @@
-@* ════════════════════════════════════════════════════════════════════════
-   Views/LoketUmum/DaftarPemohon.cshtml
 
-   v2 — DISEDERHANAKAN:
-   - Tidak ada lagi langkah Identifikasi terpisah
-   - Kategori dikunci ke "LSM", LoketJenis dikunci ke "Umum"
-   - Langsung ke formulir setelah klik "+ Permohonan Baru"
-
-   v2.1 — TUJUAN BUTTON ADVANCED:
-   - Toggle: klik ulang button aktif → batalkan pilihan, field dikosongkan
-   - Switch: klik button lain → ganti pilihan seketika
-   - Append-friendly: setelah pilih, kursor di akhir field → bisa langsung ketik tambahan
-   - Sync: mengetik manual di field → highlight button bila cocok persis
-   ════════════════════════════════════════════════════════════════════════ *@
 @model DaftarPemohonVm
 @{
     ViewData["Title"] = "Formulir Permohonan — Loket Umum (LSM)";
@@ -217,18 +204,17 @@
             </div>
         </div>
 
-        @* ── 5. KEPERLUAN (LSM: hanya Permintaan Data) ── *@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
             <div class="sec-header">
                 <span class="sec-num">5</span>
-                <p class="sec-title">Keperluan <span class="text-gray-400 font-normal text-xs">(LSM: hanya Permintaan Data)</span></p>
+                <p class="sec-title">Keperluan</p>
             </div>
             <input type="hidden" asp-for="IsPermintaanData" value="true" />
             <input type="hidden" asp-for="IsObservasi" value="false" />
             <input type="hidden" asp-for="IsWawancara" value="false" />
-            <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-3 text-xs text-emerald-800 leading-relaxed">
+            @* <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-3 text-xs text-emerald-800 leading-relaxed">
                 <strong>Ketentuan Khusus untuk LSM:</strong> Keperluan permohonan dibatasi hanya untuk <strong>Permintaan Data</strong>.
-            </div>
+            </div> *@
             <div class="border border-blue-100 bg-blue-50 rounded-xl p-4 mb-3">
                 <span class="font-semibold text-blue-800 text-sm">📊 Permintaan Data</span>
                 <p class="text-[11px] text-blue-600 mt-1">Data statistik, dokumen, atau informasi publik DLH Jakarta.</p>

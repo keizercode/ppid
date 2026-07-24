@@ -1,16 +1,4 @@
-@*
-   Views/Shared/Partials/_PublicNavBar.cshtml
-   ─────────────────────────────────────────────────────────────────────
-   Navbar publik PPID DLH Jakarta — reusable di semua halaman publik.
 
-   PENGGUNAAN:
-     <partial name="Partials/_PublicNavBar" />
-
-   ACTIVE STATE:
-     Set ViewData["ActiveNav"] di controller atau view:
-       ViewData["ActiveNav"] = "beranda";   // beranda | laporan | lacak
-   ─────────────────────────────────────────────────────────────────────
-*@
 @{
     var active = (ViewData["ActiveNav"] as string ?? "beranda").ToLower();
     bool isHome = active == "beranda";

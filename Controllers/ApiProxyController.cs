@@ -8,11 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 
 
 /// <summary>
-/// Proxy ke semua API eksternal — fully self-contained.
-/// Membaca URL langsung dari IConfiguration, tidak bergantung pada
-/// named HttpClient di Program.cs sehingga tidak perlu AddHttpClient("WilayahApi").
-///
-/// appsettings.json yang dibutuhkan:
 /// "ExternalApi": {
 ///   "WilayahBase": "https://api-wilayah.dinaslhdki.id",
 ///   "NikCheck":    "https://banksampah.jakarta.go.id/api/web/cek-nik",
@@ -53,7 +48,6 @@ public class ApiProxyController(
     }
 
     // ── GET /api/kabupaten ────────────────────────────────────────────────
-    // API wilayah DLH hanya menyediakan kabupaten DKJ — param prov diabaikan.
     [HttpGet("kabupaten")]
     public async Task<IActionResult> Kabupaten([FromQuery] string? prov)
     {
@@ -108,13 +102,6 @@ public async Task<IActionResult> Kelurahan([FromQuery] string? kec)
 }
 
     // ── GET /api/cek-nik?nik=3174XXXXXX ──────────────────────────────────
-    //
-    // Response banksampah:
-    // { noKTP, nik, nama, jenisKelamin, kota, kecamatan, kelurahan,
-    //   rw, rt, kelurahanID, kecamatanID, kabupatenID, provinsiID, kelurahanVal }
-    // Semua field null jika NIK tidak terdaftar → return null ke JS.
-    //
-    // Prioritas: DB lokal dulu → banksampah API.
 
 [HttpGet("cek-nik")]
 [Authorize] // Endpoint ini hanya untuk petugas loket yang sudah login
@@ -197,7 +184,7 @@ public async Task<IActionResult> CekNik([FromQuery] string? nik)
         }
         catch (Exception ex)
 {
-            // Tidak log bagian NIK — data pribadi tidak boleh masuk log (UU PDP).
+            // Tidak log bagian NIK data pribadi tidak boleh masuk log
         _logger.LogWarning(ex, "NIK check API error — external API unreachable");
     return Json(null);
 }
@@ -270,10 +257,6 @@ public async Task<IActionResult> CekNik([FromQuery] string? nik)
 [HttpGet("bidang-hierarki")]
 public async Task<IActionResult> BidangHierarki()
 {
-    // _HardcodedBidang adalah satu-satunya sumber urutan & nama yang benar.
-    // API eksternal hanya dipakai untuk mengetahui ID mana yang aktif —
-    // jika API tersedia, sembunyikan ID yang tidak dikenal API;
-    // jika API down atau kosong, tampilkan semua dari _HardcodedBidang.
     HashSet<string>? activeIds = null;
 
     if (!string.IsNullOrEmpty(BidangUrl))

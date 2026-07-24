@@ -1,13 +1,4 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/PetugasLoket/Batalkan.cshtml
-   Konfirmasi pembatalan permohonan oleh Petugas Loket Kepegawaian.
 
-   Guard: hanya tersedia untuk status ≤ MenungguSuratIzin
-   (TerdaftarSistem | IdentifikasiAwal | MenungguVerifikasi | MenungguSuratIzin)
-
-   Setelah SuratIzinTerbit, data sudah masuk ke pipeline KDI/Kepegawaian
-   sehingga pembatalan harus melalui otorisasi Kasubkel — bukan Loket.
-════════════════════════════════════════════════════════════════════════════ *@
 @model BatalkanPermohonanVm
 @{
     ViewData["Title"] = $"Batalkan Permohonan — {Model.NoPermohonan}";

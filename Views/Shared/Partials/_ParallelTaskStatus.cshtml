@@ -1,17 +1,4 @@
-@* ════════════════════════════════════════════════════════════════════════════
-   Views/Shared/Partials/_ParallelTaskStatus.cshtml
-   Partial reusable yang menampilkan progress sub-tugas paralel lintas controller.
 
-   Parameter (via ViewData atau @Model):
-     - allTasks     : List<SubTaskPPID>   — semua sub-tugas permohonan
-     - permohonanId : Guid
-     - currentUser  : string ("Kepegawaian" | "KDI")  — menentukan aksi yang ditampilkan
-
-   Usage:
-     <partial name="Partials/_ParallelTaskStatus" model="@allSubTasks" />
-     + ViewData["PermohonanId"] = p.PermohonanPPIDID;
-     + ViewData["CurrentUser"]  = "Kepegawaian"; // atau "KDI"
-════════════════════════════════════════════════════════════════════════════ *@
 @model List<SubTaskPPID>
 
 @{

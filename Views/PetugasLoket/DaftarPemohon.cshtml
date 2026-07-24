@@ -1,14 +1,4 @@
-@* ════════════════════════════════════════════════════════════════════════
-   Views/PetugasLoket/DaftarPemohon.cshtml
-   FIX: Semua label, placeholder, dan quick-fill button kini kontekstual
-        berdasarkan kategori pemohon (Mahasiswa vs LSM/Organisasi).
 
-   v2.1 — TUJUAN BUTTON ADVANCED:
-   - Toggle: klik ulang button aktif → batalkan pilihan, field dikosongkan
-   - Switch: klik button lain → ganti pilihan seketika
-   - Append-friendly: setelah pilih, kursor di akhir field → bisa langsung ketik tambahan
-   - Sync: mengetik manual di field → highlight button bila cocok persis
-   ════════════════════════════════════════════════════════════════════════ *@
 @model DaftarPemohonVm
 @{
     bool isPublicOnline = ViewData["IsPublicOnline"] as bool? == true;
